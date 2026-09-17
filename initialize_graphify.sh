@@ -1,0 +1,561 @@
+#!/usr/bin/env bash
+
+# Initialize Graphify for the project containing this script.
+#
+# Expected layout:
+#   project/
+#   ├── .conda/                 local Conda environment containing graphifyy
+#   └── initialize_graphify.sh  this file
+#
+# The script is safe to run repeatedly. It preserves custom rules outside its
+# managed section in .graphifyignore and refreshes that section on every run.
+
+set -Eeuo pipefail
+
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+else
+  SCRIPT_SOURCE="$0"
+fi
+
+SCRIPT_PATH="$(readlink -f -- "$SCRIPT_SOURCE" 2>/dev/null || realpath -- "$SCRIPT_SOURCE" 2>/dev/null || printf '%s' "$SCRIPT_SOURCE")"
+PROJECT_ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd -P)"
+readonly SCRIPT_PATH
+readonly PROJECT_ROOT
+readonly SCRIPT_NAME="$(basename -- "$SCRIPT_PATH")"
+readonly MANAGED_START="# >>> graphify initializer: managed ignores >>>"
+readonly MANAGED_END="# <<< graphify initializer: managed ignores <<<"
+
+# If invoked by double-clicking in a file manager without an interactive terminal,
+# relaunch inside an available terminal emulator so the user can see progress and output.
+if [[ (! -t 0 || ! -t 1) && (-n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}") && -z "${GRAPHIFY_TERMINAL_SPAWNED:-}" ]]; then
+  _batch_mode=0
+  for _arg in "$@"; do
+    if [[ "$_arg" == "--no-terminal" || "$_arg" == "--batch" ]]; then
+      _batch_mode=1
+      break
+    fi
+  done
+
+  if (( _batch_mode == 0 )); then
+    export GRAPHIFY_TERMINAL_SPAWNED=1
+    for term in x-terminal-emulator xfce4-terminal gnome-terminal konsole mate-terminal lxterminal alacritty kitty foot terminator xterm; do
+      if command -v "$term" >/dev/null 2>&1; then
+        case "$term" in
+          xfce4-terminal)
+            exec "$term" --title="Graphify Initializer" --working-directory="$PROJECT_ROOT" -x "$SCRIPT_PATH" "$@"
+            ;;
+          gnome-terminal)
+            exec "$term" --title="Graphify Initializer" --working-directory="$PROJECT_ROOT" -- "$SCRIPT_PATH" "$@"
+            ;;
+          konsole)
+            exec "$term" --workdir "$PROJECT_ROOT" -e "$SCRIPT_PATH" "$@"
+            ;;
+          mate-terminal|lxterminal|terminator|xterm)
+            exec "$term" --working-directory="$PROJECT_ROOT" -e "$SCRIPT_PATH" "$@"
+            ;;
+          *)
+            exec "$term" -e "$SCRIPT_PATH" "$@"
+            ;;
+        esac
+      fi
+    done
+  fi
+fi
+
+# Detect project-local Conda environment: check .conda first, then conda
+if [[ -d "$PROJECT_ROOT/.conda" ]]; then
+  CONDA_ENV="$PROJECT_ROOT/.conda"
+elif [[ -d "$PROJECT_ROOT/conda" ]]; then
+  CONDA_ENV="$PROJECT_ROOT/conda"
+else
+  CONDA_ENV="$PROJECT_ROOT/.conda"
+fi
+readonly CONDA_ENV
+readonly IGNORE_FILE="$PROJECT_ROOT/.graphifyignore"
+readonly OUTPUT_DIR="$PROJECT_ROOT/graphify-out"
+
+pause_before_exit() {
+  local exit_code=$?
+  trap - EXIT
+  set +e
+
+  printf '\n'
+  if (( exit_code == 0 )); then
+    printf 'Graphify initialization completed successfully.\n'
+    printf 'Output: %s\n' "$OUTPUT_DIR"
+  else
+    printf 'Graphify initialization failed (exit code %d).\n' "$exit_code" >&2
+  fi
+
+  # Keep a terminal opened by double-clicking visible so the user can read the output.
+  if [[ -t 0 && -t 1 ]]; then
+    read -r -p "Press Enter to close..." _ || true
+  elif [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+    if command -v zenity >/dev/null 2>&1; then
+      if (( exit_code == 0 )); then
+        zenity --info --title="Graphify Initializer" --text="Graphify initialization completed successfully.\n\nOutput: $OUTPUT_DIR" 2>/dev/null || true
+      else
+        zenity --error --title="Graphify Initializer" --text="Graphify initialization failed (exit code $exit_code).\n\nRun initialize_graphify.sh in a terminal to inspect the error." 2>/dev/null || true
+      fi
+    elif command -v notify-send >/dev/null 2>&1; then
+      if (( exit_code == 0 )); then
+        notify-send "Graphify Initializer" "Graphify initialization completed successfully." 2>/dev/null || true
+      else
+        notify-send -u critical "Graphify Initializer" "Graphify initialization failed (exit code $exit_code)." 2>/dev/null || true
+      fi
+    fi
+  fi
+
+  exit "$exit_code"
+}
+trap pause_before_exit EXIT
+
+fail() {
+  printf 'ERROR: %s\n' "$*" >&2
+  return 1
+}
+
+write_graphify_ignore() {
+  local temporary_file
+  temporary_file="$(mktemp "$PROJECT_ROOT/.graphifyignore.tmp.XXXXXX")"
+
+  # Preserve anything the user placed outside the managed section.
+  if [[ -f "$IGNORE_FILE" ]]; then
+    awk -v start="$MANAGED_START" -v end="$MANAGED_END" '
+      $0 == start { in_managed = 1; next }
+      $0 == end   { in_managed = 0; next }
+      !in_managed { print }
+    ' "$IGNORE_FILE" > "$temporary_file"
+  fi
+
+  # Ensure the preserved content and managed section are separated cleanly.
+  if [[ -s "$temporary_file" ]]; then
+    printf '\n' >> "$temporary_file"
+  fi
+
+  cat >> "$temporary_file" <<'GRAPHIFY_IGNORE'
+# >>> graphify initializer: managed ignores >>>
+# Generated by initialize_graphify.sh. Put custom rules outside this block.
+
+# ---------------------------------------------------------------------------
+# Graphify output (prevents Graphify from indexing its own generated files)
+# ---------------------------------------------------------------------------
+graphify-out/
+.graphify/
+
+# ---------------------------------------------------------------------------
+# Python: local environments, bytecode, builds, packages, caches, and reports
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyi.bak
+*.py,cover
+*.py.orig
+*.so
+*.pyd
+*.dylib
+.Python
+
+# Local Python/Conda environments
+.conda/
+conda-meta/
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+__pypackages__/
+.direnv/
+.envrc.local
+
+# Python packaging and installer output
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+.pdm-build/
+.pdm-python
+.pdm.toml
+.poetry/
+
+# Python test, coverage, type-checker, linter, and tool caches
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+nosetests.xml
+junit.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+pytestdebug.log
+cover/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.pyright/
+.ruff_cache/
+.cache/
+.ipynb_checkpoints/
+.jupyter/
+.virtual_documents/
+.spyderproject
+.spyproject
+.ropeproject/
+.prof
+*.prof
+*.lprof
+cython_debug/
+
+# Framework and documentation build artifacts
+instance/
+.webassets-cache/
+docs/_build/
+site/
+.scrapy/
+
+# ---------------------------------------------------------------------------
+# Node.js / JavaScript / TypeScript: dependencies, package managers, caches
+# ---------------------------------------------------------------------------
+node_modules/
+jspm_packages/
+bower_components/
+web_modules/
+vendor/
+
+# npm state, caches, and logs
+.npm/
+.npm-cache/
+.node_repl_history
+npm-debug.log
+npm-debug.log.*
+_logs/
+
+# pnpm state, virtual stores, caches, and logs
+.pnpm/
+.pnpm-store/
+node_modules/.pnpm/
+pnpm-debug.log
+pnpm-debug.log.*
+
+# Yarn/PnP artifacts commonly present in Node projects
+.pnp
+.pnp.js
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+yarn-debug.log
+yarn-debug.log.*
+yarn-error.log
+yarn-error.log.*
+
+# Package-manager lockfiles are generated dependency resolutions. Remove any
+# of these rules if you specifically want the lockfile represented in the graph.
+package-lock.json
+npm-shrinkwrap.json
+pnpm-lock.yaml
+yarn.lock
+
+# Node build, bundler, framework, and deployment output
+lib-cov/
+coverage/
+.nyc_output/
+lcov-report/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+.astro/
+.angular/
+.docusaurus/
+.vite/
+.vite-inspect/
+.rollup.cache/
+.parcel-cache/
+.turbo/
+.nx/
+.webpack/
+.rpt2_cache/
+.serverless/
+.vercel/
+.netlify/
+storybook-static/
+.storybook-out/
+public/build/
+tmp/
+temp/
+*.tsbuildinfo
+*.js.map
+*.css.map
+.eslintcache
+.stylelintcache
+.prettier-cache
+.swc/
+
+# Test runners and browser-test downloads/results
+.jest-cache/
+.vitest/
+.vitest-cache/
+.mocha-cache/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright/
+cypress/screenshots/
+cypress/videos/
+
+# ---------------------------------------------------------------------------
+# Rust / Cargo: dependencies, compiler output, coverage, and profiling output
+# ---------------------------------------------------------------------------
+target/
+Cargo.lock
+.cargo/registry/
+.cargo/git/
+.cargo/.package-cache
+.cargo/.global-cache
+*.crate
+*.rlib
+*.rmeta
+*.rs.bk
+*.rustc_info.json
+rustc-ice-*.txt
+pkg/
+tarpaulin-report.html
+cobertura.xml
+lcov.info
+flamegraph.svg
+perf.data
+perf.data.old
+
+# Native compiler/linker artifacts often emitted by Python, Node, and Rust
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.exe
+*.pdb
+*.dSYM/
+
+# ---------------------------------------------------------------------------
+# Shared generated files, logs, temporary files, editors, OS, and secrets
+# ---------------------------------------------------------------------------
+out/
+.cache-loader/
+logs/
+*.log
+*.log.*
+*.pid
+*.pid.lock
+*.seed
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Local secrets; keep shareable templates available
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# IDE/editor metadata
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Version-control internals
+.git/
+.hg/
+.svn/
+
+# OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Archives and generated binary bundles
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Backups made by this initializer, if any are created manually
+.graphifyignore.backup.*
+# <<< graphify initializer: managed ignores <<<
+GRAPHIFY_IGNORE
+
+  mv -- "$temporary_file" "$IGNORE_FILE"
+  printf 'Created/updated: %s\n' "$IGNORE_FILE"
+}
+
+ensure_conda_env() {
+  if [[ -x "$CONDA_ENV/bin/python" || -f "$CONDA_ENV/Scripts/python.exe" ]]; then
+    return 0
+  fi
+
+  printf 'Local environment not found at: %s\n' "$CONDA_ENV"
+  printf 'Creating local environment...\n'
+
+  local conda_tool=""
+  if command -v conda >/dev/null 2>&1; then
+    conda_tool="conda"
+  elif command -v mamba >/dev/null 2>&1; then
+    conda_tool="mamba"
+  elif command -v micromamba >/dev/null 2>&1; then
+    conda_tool="micromamba"
+  fi
+
+  if [[ -n "$conda_tool" ]]; then
+    printf 'Creating Conda environment at %s using %s...\n' "$CONDA_ENV" "$conda_tool"
+    "$conda_tool" create --prefix "$CONDA_ENV" python=3.12 pip -y
+  elif command -v python3 >/dev/null 2>&1; then
+    printf 'Conda not found on PATH; falling back to python3 -m venv...\n'
+    python3 -m venv "$CONDA_ENV"
+  elif command -v python >/dev/null 2>&1; then
+    printf 'Conda not found on PATH; falling back to python -m venv...\n'
+    python -m venv "$CONDA_ENV"
+  else
+    fail "Unable to create environment at '$CONDA_ENV': conda, mamba, micromamba, and python3 were not found."
+  fi
+}
+
+ensure_graphify_installed() {
+  # Check if graphify binary or module is already installed in CONDA_ENV
+  if [[ -x "$CONDA_ENV/bin/graphify" || -f "$CONDA_ENV/Scripts/graphify.exe" ]]; then
+    return 0
+  fi
+
+  local python_bin=""
+  if [[ -x "$CONDA_ENV/bin/python" ]]; then
+    python_bin="$CONDA_ENV/bin/python"
+  elif [[ -f "$CONDA_ENV/Scripts/python.exe" ]]; then
+    python_bin="$CONDA_ENV/Scripts/python.exe"
+  fi
+
+  if [[ -n "$python_bin" ]] && "$python_bin" -c "import graphify" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  printf 'Graphify is not installed in %s.\n' "$CONDA_ENV"
+  printf 'Installing graphifyy package...\n'
+
+  if [[ -n "$python_bin" ]]; then
+    if ! "$python_bin" -m pip install graphifyy; then
+      if command -v pipx >/dev/null 2>&1; then
+        printf 'Pip install failed; attempting pipx install graphifyy...\n'
+        pipx install graphifyy || true
+      fi
+    fi
+  elif command -v conda >/dev/null 2>&1; then
+    conda run --prefix "$CONDA_ENV" python -m pip install graphifyy
+  elif command -v pipx >/dev/null 2>&1; then
+    pipx install graphifyy
+  else
+    fail "Failed to install graphifyy: no Python interpreter or package manager found."
+  fi
+}
+
+resolve_graphify_command() {
+  GRAPHIFY_COMMAND=()
+
+  # POSIX Conda environment (Linux/macOS/WSL).
+  if [[ -x "$CONDA_ENV/bin/graphify" ]]; then
+    GRAPHIFY_COMMAND=("$CONDA_ENV/bin/graphify")
+  elif [[ -x "$CONDA_ENV/bin/python" ]] && "$CONDA_ENV/bin/python" -c "import graphify" >/dev/null 2>&1; then
+    GRAPHIFY_COMMAND=("$CONDA_ENV/bin/python" -m graphify)
+
+  # Native Windows Conda environment when launched through Git Bash/MSYS2.
+  elif [[ -f "$CONDA_ENV/Scripts/graphify.exe" ]]; then
+    GRAPHIFY_COMMAND=("$CONDA_ENV/Scripts/graphify.exe")
+  elif [[ -f "$CONDA_ENV/Scripts/python.exe" ]] && "$CONDA_ENV/Scripts/python.exe" -c "import graphify" >/dev/null 2>&1; then
+    GRAPHIFY_COMMAND=("$CONDA_ENV/Scripts/python.exe" -m graphify)
+
+  # Fallback to system/pipx graphify if available
+  elif command -v graphify >/dev/null 2>&1; then
+    GRAPHIFY_COMMAND=("$(command -v graphify)")
+  else
+    if [[ -d "$CONDA_ENV" ]]; then
+      fail "No Graphify executable was found in '$CONDA_ENV'.
+
+Install the official graphifyy package into this local environment, for example:
+  conda run --prefix \"$CONDA_ENV\" python -m pip install graphifyy"
+    else
+      fail "No Graphify executable was found in '$CONDA_ENV'.
+
+Create/install into the project-local environment first, for example:
+  conda create --prefix \"$CONDA_ENV\" python=3.12 -y
+  conda run --prefix \"$CONDA_ENV\" python -m pip install graphifyy"
+    fi
+  fi
+}
+
+main() {
+  printf 'Project: %s\n' "$PROJECT_ROOT"
+  cd -- "$PROJECT_ROOT"
+
+  write_graphify_ignore
+  mkdir -p -- "$OUTPUT_DIR"
+
+  ensure_conda_env
+  ensure_graphify_installed
+
+  resolve_graphify_command
+  printf 'Using Graphify from: %s\n' "${GRAPHIFY_COMMAND[0]}"
+  "${GRAPHIFY_COMMAND[@]}" --version
+
+  printf '\nBuilding the initial local code graph...\n'
+  "${GRAPHIFY_COMMAND[@]}" extract . --code-only
+
+  [[ -f "$OUTPUT_DIR/graph.json" ]] || fail \
+    "Graphify finished without creating '$OUTPUT_DIR/graph.json'."
+
+  printf '\nGenerating interactive graph visualization (graph.html)...\n'
+  "${GRAPHIFY_COMMAND[@]}" export html || true
+
+  printf '\nCreated Graphify output files:\n'
+  find "$OUTPUT_DIR" -maxdepth 1 -type f -print | sort
+}
+
+main "$@"
+

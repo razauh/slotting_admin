@@ -1,0 +1,31 @@
+.gradle/
+build/
+out/
+*.iml
+
+# Local developer state
+.conda/
+.idea/
+*.ipr
+*.iws
+.vscode/
+
+# Runtime and local configuration
+*.log
+*.pid
+application-local.yml
+application-local.yaml
+application-local.properties
+.env
+.env.*
+!.env.example
+
+# Test and tool output
+reports/
+test-results/
+evidence/private/
+graphify-out/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
