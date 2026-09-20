@@ -45,7 +45,7 @@ enum class CanonicalBackendModule(
     WALLET(
         id = "wallet",
         description = "Player wallet balances, withdrawals, and manual adjustments",
-        packages = setOf("com.slotting.admin.withdrawal", "com.slotting.admin.adjustment")
+        packages = setOf("com.slotting.admin.withdrawal", "com.slotting.admin.adjustment", "com.slotting.admin.wallet")
     ),
     LEDGER(
         id = "ledger",

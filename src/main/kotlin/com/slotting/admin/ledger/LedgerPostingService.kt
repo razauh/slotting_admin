@@ -96,7 +96,7 @@ data class PostingResult(
  * Semantic contract: "One accepted key→one result; payload mismatch conflicts; all direct balance writes prohibited."
  * Protected risk assertion: "duplicate/concurrent posting"
  */
-class LedgerPostingService(
+open class LedgerPostingService(
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val idempotencyStore = ConcurrentHashMap<String, Pair<String, PostingResult>>()
@@ -116,7 +116,7 @@ class LedgerPostingService(
     /**
      * Post an authoritative double-entry transaction under exact-once idempotency semantics.
      */
-    fun postTransaction(command: PostTransactionCommand): PostingResult {
+    open fun postTransaction(command: PostTransactionCommand): PostingResult {
         LedgerPostingBinding.checkBound()
 
         // 1. Authentication check
