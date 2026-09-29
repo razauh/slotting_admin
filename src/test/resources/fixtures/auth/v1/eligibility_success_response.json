@@ -1,0 +1,22 @@
+{
+  "decision_id": "d1e2f3a4-b5c6-7d8e-9f0a-1b2c3d4e5f6a",
+  "version": 1,
+  "tenant_id": "tenant-casino-1",
+  "player_id": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+  "eligible": true,
+  "account_status": "ACTIVE",
+  "kyc_status": "VERIFIED",
+  "aml_status": "CLEARED",
+  "jurisdiction": "NV",
+  "age_verified": true,
+  "min_age_required": 21,
+  "self_excluded": false,
+  "cool_off_until_epoch_ms": null,
+  "daily_wager_limit_minor": 500000,
+  "current_daily_wager_minor": 10000,
+  "single_wager_limit_minor": 100000,
+  "restrictions": [],
+  "evaluated_at_epoch_ms": 1790262000000,
+  "expires_at_epoch_ms": 1790262300000,
+  "evidence_reference": "ev-eligibility-verdict-001"
+}

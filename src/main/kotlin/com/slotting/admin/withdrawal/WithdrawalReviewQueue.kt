@@ -8,6 +8,8 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.OutboxEvent
+import com.slotting.admin.auth.DualControlReceipt
+import com.slotting.admin.auth.DualControlStatus
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -30,6 +32,7 @@ data class WithdrawalReviewCommand(
     val causationId: String,
     val expectedVersion: Long,
     val secondApproverId: String? = null,
+    val dualControlReceipt: DualControlReceipt? = null,
 )
 
 data class WithdrawalQueueItem(
@@ -60,6 +63,7 @@ interface WithdrawalQueueStore {
         audit: AuditEvent,
         outbox: OutboxEvent,
     )
+    fun countPending(tenantId: String): Long = 0L
 }
 
 class WithdrawalReviewQueue(
@@ -72,12 +76,8 @@ class WithdrawalReviewQueue(
 ) {
     @Synchronized
     fun operate(command: WithdrawalReviewCommand): WithdrawalReviewResult {
+        // 1. Authorize principal and context BEFORE idempotency lookup or disclosure
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-        val fingerprint = fingerprint(command)
-        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
-            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            return replay.second
-        }
         if (principal.kind != com.slotting.admin.auth.PrincipalKind.ADMIN || principal.tenantId != command.tenantId) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
@@ -92,9 +92,18 @@ class WithdrawalReviewQueue(
             throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
         }
         if (session == null || !session.active || !session.expiresAt.isAfter(now) ||
+            !session.mfaVerified || (session.mfaExpiresAt != null && !session.mfaExpiresAt.isAfter(now)) ||
             !policy.isPermitted(principal, AdminPermission.MANAGE_SUPPORT)) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
+
+        // 2. Verified caller: now check idempotency cache
+        val fingerprint = fingerprint(command)
+        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
+            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            return replay.second
+        }
+
         val current = store.findItem(command.tenantId, command.withdrawalReference)
             ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         val next = transition(current, command, principal.id, now)
@@ -122,11 +131,22 @@ class WithdrawalReviewQueue(
             }
             WithdrawalReviewAction.APPROVE, WithdrawalReviewAction.REJECT -> {
                 if (item.state != WithdrawalReviewState.CLAIMED || item.claimedBy != principalId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-                if (dualApprovalRequired && (command.secondApproverId.isNullOrBlank() || command.secondApproverId == principalId)) {
-                    throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+                if (dualApprovalRequired) {
+                    if (command.dualControlReceipt != null) {
+                        val receipt = command.dualControlReceipt
+                        if (receipt.tenantId != command.tenantId ||
+                            receipt.status != DualControlStatus.APPROVED ||
+                            receipt.maker.principalId == receipt.checker.principalId ||
+                            !receipt.expiresAt.isAfter(now)) {
+                            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+                        }
+                    } else if (command.secondApproverId.isNullOrBlank() || command.secondApproverId == principalId) {
+                        throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+                    }
                 }
                 item.copy(
                     state = if (command.action == WithdrawalReviewAction.APPROVE) WithdrawalReviewState.APPROVED else WithdrawalReviewState.REJECTED,
+                    claimedBy = null,
                     claimExpiresAt = null,
                     serverVersion = item.serverVersion + 1,
                 )
@@ -135,10 +155,11 @@ class WithdrawalReviewQueue(
     }
 
     private fun fingerprint(command: WithdrawalReviewCommand) = listOf(
-        command.tenantId, command.withdrawalReference, command.action, command.reason, command.expectedVersion, command.secondApproverId,
+        command.tenantId, command.withdrawalReference, command.action, command.reason, command.expectedVersion, command.secondApproverId, command.dualControlReceipt?.receiptId,
     ).joinToString("|") { sha256(it.toString()) }
 
     private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 }
+

@@ -1,0 +1,6 @@
+{
+  "error": "METHOD_UNAVAILABLE",
+  "code": "INACTIVE",
+  "methodId": "METHOD_DEPRECATED_CARD",
+  "message": "Payment method is no longer active"
+}

@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: ${SLOTTING_ADMIN_DATABASE_URL}
+    username: ${SLOTTING_ADMIN_DATABASE_USERNAME}
+    password: ${SLOTTING_ADMIN_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    clean-disabled: true
+    baseline-on-migrate: false
+    out-of-order: false
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,schemaMigration,identityReadiness,ledgerReadiness,providerReadiness,kmsReadiness,workerReadiness,policyReadiness
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    db:
+      enabled: true
+
+slotting:
+  schema:
+    supported-version: 37
+  outbox:
+    worker:
+      enabled: true
+      fixed-delay-ms: 1000

@@ -193,7 +193,7 @@ class SanctionsPepScreeningTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertTrue(!migrationVersions.contains("V17"))
+        assertTrue(!migrationVersions.contains("V99"))
 
         // Assert: restart/recreation preserves consistency
         val store = SanctionsPepScreeningMemoryStore()

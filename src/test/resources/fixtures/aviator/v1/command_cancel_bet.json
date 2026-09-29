@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "1.2.0",
+  "gameId": "AVIATOR",
+  "rulesVersion": "1.0.0",
+  "commandId": "cmd-cancel-001",
+  "causationId": "cmd-cancel-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_primary",
+  "action": "CANCEL_BET",
+  "expectedRoundVersion": 3
+}

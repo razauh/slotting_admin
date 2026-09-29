@@ -1,0 +1,12 @@
+{
+  "session_id": "adm-sess-uuid-001",
+  "tenant_id": "tenant-admin-1",
+  "admin_id": "admin-principal-01",
+  "requested_role": "SECURITY",
+  "mfa_assertion": "987654",
+  "idempotency_key": "adm-mfa-idem-001",
+  "correlation_id": "adm-mfa-corr-001",
+  "causation_id": "adm-mfa-caus-001",
+  "expected_version": 1,
+  "break_glass": false
+}

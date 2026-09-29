@@ -1,0 +1,8 @@
+{
+  "error": "invalid_grant",
+  "error_code": "TOKEN_REUSE_REVOKED",
+  "error_description": "Refresh token reuse detected; entire token family has been revoked",
+  "correlation_id": "corr-replay-uuid-001",
+  "timestamp_epoch_ms": 1790263500000,
+  "retryable": false
+}

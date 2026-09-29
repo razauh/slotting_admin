@@ -1,0 +1,8 @@
+{
+  "error": "access_denied",
+  "error_code": "FOREIGN_TENANT",
+  "error_description": "Cross-tenant access prohibited; caller tenant does not match resource tenant",
+  "correlation_id": "corr-tenant-err-005",
+  "timestamp_epoch_ms": 1790262200000,
+  "retryable": false
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "1.2.0",
+  "gameId": "AVIATOR",
+  "rulesVersion": "1.0.0",
+  "commandId": "cmd-bet-001",
+  "causationId": "cmd-bet-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_primary",
+  "action": "PLACE_BET",
+  "expectedRoundVersion": 1,
+  "accountMoney": {
+    "amountMinor": 2000,
+    "currency": "INR"
+  },
+  "autoCashOutMultiplier": "2.50x"
+}

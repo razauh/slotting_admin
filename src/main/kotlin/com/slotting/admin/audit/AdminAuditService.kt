@@ -82,12 +82,8 @@ class AdminAuditService(
 ) {
     @Synchronized
     fun operate(command: AuditQueryCommand): AuditQueryResult {
+        // 1. Authorize principal and context BEFORE idempotency lookup or disclosure
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-        val fingerprint = fingerprint(command)
-        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
-            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            return replay.second
-        }
 
         if (principal.kind != PrincipalKind.ADMIN || principal.tenantId != command.tenantId) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
@@ -104,7 +100,8 @@ class AdminAuditService(
         } catch (_: Exception) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
         }
-        if (session == null || !session.active || !session.expiresAt.isAfter(now)) {
+        if (session == null || !session.active || !session.expiresAt.isAfter(now) ||
+            !session.mfaVerified || (session.mfaExpiresAt != null && !session.mfaExpiresAt.isAfter(now))) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
 
@@ -116,6 +113,13 @@ class AdminAuditService(
             !policy.isPermitted(principal, AdminPermission.READ_SUPPORT) &&
             !policy.isPermitted(principal, AdminPermission.MANAGE_SUPPORT)) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
+        // 2. Verified caller: now check idempotency cache
+        val fingerprint = fingerprint(command)
+        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
+            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            return replay.second
         }
 
         val resultId = UUID.randomUUID()

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "commandId": "cmd-bet-currency-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_primary",
+  "action": "PLACE_BET",
+  "status": "REJECTED",
+  "timestampMillis": 1700000003000,
+  "sequenceId": 103,
+  "revision": 2,
+  "causationId": "cmd-bet-currency-001",
+  "rejection": {
+    "code": "OUT_OF_LIMITS",
+    "retryable": false,
+    "safeMessage": "Currency mismatch or invalid currency"
+  },
+  "evidenceReference": "ev-rejection-currency-001"
+}

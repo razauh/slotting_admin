@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "commandId": "cmd-bet-insufficient-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_primary",
+  "action": "PLACE_BET",
+  "status": "REJECTED",
+  "timestampMillis": 1700000002000,
+  "sequenceId": 102,
+  "revision": 2,
+  "causationId": "cmd-bet-insufficient-001",
+  "rejection": {
+    "code": "INSUFFICIENT_BALANCE",
+    "retryable": false,
+    "safeMessage": "Insufficient player balance"
+  },
+  "evidenceReference": "ev-rejection-insufficient-001"
+}

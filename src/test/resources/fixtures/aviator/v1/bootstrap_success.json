@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "gameId": "AVIATOR",
+  "rulesVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "minSupportedProtocolVersion": "1.0.0",
+  "serverTimeMillis": 1700000000000,
+  "limits": {
+    "minWagerMinor": 1000,
+    "maxWagerMinor": 10000000,
+    "currency": "INR"
+  },
+  "activeRoundId": "rnd-crash-100",
+  "phase": "BETTING"
+}

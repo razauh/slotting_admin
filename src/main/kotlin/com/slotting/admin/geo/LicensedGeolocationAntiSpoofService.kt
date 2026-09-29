@@ -118,6 +118,7 @@ class LicensedGeolocationAntiSpoofService(
     private val vendorEvidenceStore: GeoVendorEvidenceStore? = null,
     private val clock: Clock = Clock.systemUTC(),
     private val maxTimestampSkew: Duration = Duration.ofSeconds(120),
+    private val requireVendorEvidence: Boolean = true,
 ) {
     @Synchronized
     fun evaluate(command: EvaluateGeolocationAntiSpoofCommand): GeolocationAntiSpoofResult {
@@ -218,45 +219,74 @@ class LicensedGeolocationAntiSpoofService(
             )
         }
 
+        if (requireVendorEvidence && command.vendorEvidenceReference.isNullOrBlank()) {
+            return recordDecision(
+                command = command,
+                status = GeoAntiSpoofStatus.SUSPENDED,
+                verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
+                reasonCode = "VENDOR_EVIDENCE_REQUIRED",
+                fingerprint = fp,
+                now = now,
+            )
+        }
+
         // Cross-check vendor evidence reference if present
         command.vendorEvidenceReference?.let { vendorRef ->
-            if (vendorEvidenceStore != null) {
-                val cachedVendor = vendorEvidenceStore.findByIdempotency(command.tenantId, vendorRef)
-                if (cachedVendor == null) {
-                    return recordDecision(
-                        command = command,
-                        status = GeoAntiSpoofStatus.SUSPENDED,
-                        verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
-                        reasonCode = "VENDOR_EVIDENCE_NOT_FOUND",
-                        fingerprint = fp,
-                        now = now,
-                    )
-                }
-                val vendorResult = cachedVendor.second
-                if (vendorResult.canonicalStatus == GeoCanonicalStatus.FAILED_CLOSED ||
-                    vendorResult.vendorOutcome == GeoVendorOutcome.SUSPECTED_PROXY_OR_VPN ||
-                    vendorResult.vendorOutcome == GeoVendorOutcome.PROHIBITED_JURISDICTION) {
-                    return recordDecision(
-                        command = command,
-                        status = GeoAntiSpoofStatus.REJECTED,
-                        verdict = GeoAntiSpoofVerdict.SPOOFED_PROXY_OR_VPN,
-                        reasonCode = "VENDOR_CONFIRMED_PROHIBITED_OR_PROXY",
-                        fingerprint = fp,
-                        now = now,
-                    )
-                }
-                if (vendorResult.canonicalStatus == GeoCanonicalStatus.SUSPENDED ||
-                    vendorResult.vendorOutcome == GeoVendorOutcome.OUTAGE ||
-                    vendorResult.vendorOutcome == GeoVendorOutcome.INDETERMINATE) {
-                    return recordDecision(
-                        command = command,
-                        status = GeoAntiSpoofStatus.SUSPENDED,
-                        verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
-                        reasonCode = "VENDOR_OUTAGE_OR_INDETERMINATE",
-                        fingerprint = fp,
-                        now = now,
-                    )
-                }
+            if (vendorEvidenceStore == null) {
+                return recordDecision(
+                    command = command,
+                    status = GeoAntiSpoofStatus.SUSPENDED,
+                    verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
+                    reasonCode = "VENDOR_EVIDENCE_REQUIRED",
+                    fingerprint = fp,
+                    now = now,
+                )
+            }
+            val cachedVendor = vendorEvidenceStore.findByIdempotency(command.tenantId, vendorRef)
+            if (cachedVendor == null) {
+                return recordDecision(
+                    command = command,
+                    status = GeoAntiSpoofStatus.SUSPENDED,
+                    verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
+                    reasonCode = "VENDOR_EVIDENCE_NOT_FOUND",
+                    fingerprint = fp,
+                    now = now,
+                )
+            }
+            val vendorResult = cachedVendor.second
+            if (vendorResult.subjectReference != command.subjectReference) {
+                return recordDecision(
+                    command = command,
+                    status = GeoAntiSpoofStatus.SUSPENDED,
+                    verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
+                    reasonCode = "FOREIGN_SUBJECT_MISMATCH",
+                    fingerprint = fp,
+                    now = now,
+                )
+            }
+            if (vendorResult.canonicalStatus == GeoCanonicalStatus.FAILED_CLOSED ||
+                vendorResult.vendorOutcome == GeoVendorOutcome.SUSPECTED_PROXY_OR_VPN ||
+                vendorResult.vendorOutcome == GeoVendorOutcome.PROHIBITED_JURISDICTION) {
+                return recordDecision(
+                    command = command,
+                    status = GeoAntiSpoofStatus.REJECTED,
+                    verdict = GeoAntiSpoofVerdict.SPOOFED_PROXY_OR_VPN,
+                    reasonCode = "VENDOR_CONFIRMED_PROHIBITED_OR_PROXY",
+                    fingerprint = fp,
+                    now = now,
+                )
+            }
+            if (vendorResult.canonicalStatus == GeoCanonicalStatus.SUSPENDED ||
+                vendorResult.vendorOutcome == GeoVendorOutcome.OUTAGE ||
+                vendorResult.vendorOutcome == GeoVendorOutcome.INDETERMINATE) {
+                return recordDecision(
+                    command = command,
+                    status = GeoAntiSpoofStatus.SUSPENDED,
+                    verdict = GeoAntiSpoofVerdict.SUSPENDED_OR_AMBIGUOUS,
+                    reasonCode = "VENDOR_OUTAGE_OR_INDETERMINATE",
+                    fingerprint = fp,
+                    now = now,
+                )
             }
         }
 

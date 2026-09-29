@@ -1,0 +1,8 @@
+{
+  "error": "access_denied",
+  "error_code": "MFA_EXPIRED",
+  "error_description": "Admin stepped-up MFA authorization has expired; re-authentication required",
+  "correlation_id": "corr-mfa-exp-007",
+  "timestamp_epoch_ms": 1790264000000,
+  "retryable": false
+}

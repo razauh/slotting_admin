@@ -9,6 +9,7 @@ import com.slotting.admin.auth.PrincipalKind
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
+import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -314,6 +315,68 @@ class SandboxKmsBackendProviderAdapter : KmsBackendSecretsProviderPort {
             throw IllegalArgumentException("Invalid ciphertext payload for sandbox KMS decrypt")
         }
         return ciphertext.copyOfRange(prefix.size, ciphertext.size)
+    }
+}
+
+/**
+ * Genuine KMS provider adapter using real AES-256-GCM authenticated encryption.
+ * Does not expose plaintext or use fake prefixes.
+ */
+class GenuineKmsBackendProviderAdapter(
+    private val masterKeyProvider: MasterKeyProvider = LocalDevMasterKeyProvider(),
+    private val environment: String = "TEST",
+) : KmsBackendSecretsProviderPort {
+    private val keys = ConcurrentHashMap<String, ExternalKmsKey>()
+    private val encryptor = AesGcmEnvelopeEncryptor(masterKeyProvider, environment)
+
+    override fun createKey(tenantId: String, alias: String, algorithm: BackendKeyAlgorithm): ExternalKmsKey {
+        val uri = "kms://$tenantId/keys/$alias/v1"
+        val digest = sha256Hex("key-$tenantId-$alias-v1")
+        val key = ExternalKmsKey(uri, alias, 1, algorithm, digest)
+        keys[uri] = key
+        return key
+    }
+
+    override fun rotateKey(
+        tenantId: String,
+        currentKmsUri: String,
+        alias: String,
+        nextVersion: Int,
+        algorithm: BackendKeyAlgorithm
+    ): ExternalKmsKey {
+        val uri = "kms://$tenantId/keys/$alias/v$nextVersion"
+        val digest = sha256Hex("key-$tenantId-$alias-v$nextVersion")
+        val key = ExternalKmsKey(uri, alias, nextVersion, algorithm, digest)
+        keys[uri] = key
+        return key
+    }
+
+    override fun encrypt(tenantId: String, kmsKeyUri: String, plaintext: ByteArray): ByteArray {
+        val payload = encryptor.encrypt(tenantId, kmsKeyUri, plaintext)
+        val iv = Base64.getDecoder().decode(payload.ivBase64)
+        val ct = Base64.getDecoder().decode(payload.ciphertextBase64)
+        return byteArrayOf(payload.formatVersion.toByte()) + iv + ct
+    }
+
+    override fun decrypt(tenantId: String, kmsKeyUri: String, ciphertext: ByteArray): ByteArray {
+        if (ciphertext.size < 1 + 12 + 16) {
+            throw IllegalArgumentException("Invalid ciphertext payload for KMS decrypt")
+        }
+        val formatVer = ciphertext[0].toInt()
+        val iv = ciphertext.copyOfRange(1, 13)
+        val ct = ciphertext.copyOfRange(13, ciphertext.size)
+        val payload = EncryptedSecretPayload(
+            ciphertextBase64 = Base64.getEncoder().encodeToString(ct),
+            ivBase64 = Base64.getEncoder().encodeToString(iv),
+            keyVersion = 1,
+            formatVersion = formatVer
+        )
+        return encryptor.decrypt(tenantId, kmsKeyUri, payload)
+    }
+
+    private fun sha256Hex(input: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }
     }
 }
 

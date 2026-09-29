@@ -95,6 +95,8 @@ class FinancialRiskMonitoringService(
     private val store: FinancialRiskMonitoringStore,
     private val config: FinancialRiskRuleConfig = FinancialRiskRuleConfig(),
     private val clock: Clock = Clock.systemUTC(),
+    private val durableRiskStore: com.slotting.admin.fraud.DurableFraudRiskStore? = null,
+    private val windowDuration: java.time.Duration = java.time.Duration.ofHours(24),
 ) {
     @Synchronized
     fun evaluateTransaction(command: FinancialRiskEvaluationCommand): FinancialRiskEvaluationResult {
@@ -155,8 +157,22 @@ class FinancialRiskMonitoringService(
             }
         }
 
+        val (effectiveCount, effectiveVolume) = if (durableRiskStore != null) {
+            val windowEvents = durableRiskStore.findEventsForSubject(
+                tenantId = command.tenantId,
+                subjectReference = command.subjectReference,
+                fromTime = clock.instant().minus(windowDuration),
+                toTime = clock.instant(),
+            ).filter { it.money?.currencyCode == command.currencyCode }
+            val count = windowEvents.size
+            val volume = windowEvents.sumOf { it.money?.amountMinorUnits ?: 0L }
+            count to volume
+        } else {
+            command.historicalCountInWindow to command.historicalVolumeInWindowMinorUnits
+        }
+
         // 3. Velocity burst limit check
-        if (command.historicalCountInWindow > config.velocityMaxCountInWindow) {
+        if (effectiveCount > config.velocityMaxCountInWindow) {
             breachedRules += "VELOCITY_LIMIT_EXCEEDED"
             if (amlReason == null) {
                 amlReason = AmlReviewReason.SUSPICIOUS_ACTIVITY
@@ -164,7 +180,7 @@ class FinancialRiskMonitoringService(
         }
 
         // 4. Cumulative volume limit check
-        if ((command.historicalVolumeInWindowMinorUnits + command.amountMinorUnits) > config.cumulativeVolumeLimitMinorUnits) {
+        if ((effectiveVolume + command.amountMinorUnits) > config.cumulativeVolumeLimitMinorUnits) {
             breachedRules += "CUMULATIVE_VOLUME_EXCEEDED"
             if (amlReason == null) {
                 amlReason = AmlReviewReason.SUSPICIOUS_ACTIVITY
@@ -197,8 +213,8 @@ class FinancialRiskMonitoringService(
             configVersion = config.configVersion,
             breachedRules = breachedRules,
             evaluatedAmountMinorUnits = command.amountMinorUnits,
-            observedVelocityCount = command.historicalCountInWindow,
-            observedVolumeMinorUnits = command.historicalVolumeInWindowMinorUnits,
+            observedVelocityCount = effectiveCount,
+            observedVolumeMinorUnits = effectiveVolume,
             evaluatedAt = now,
         )
 

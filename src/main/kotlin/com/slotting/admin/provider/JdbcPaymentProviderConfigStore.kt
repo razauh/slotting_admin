@@ -42,12 +42,13 @@ class JdbcPaymentProviderConfigStore(private val jdbc: JdbcTemplate) : PaymentPr
     ) {
         val existing = findProvider(tenantId, result.provider.providerId)
         if (existing == null) {
-            jdbc.update(
+            val inserted = jdbc.update(
                 "insert into admin_payment_provider_config(tenant_id, provider_id, display_name, status, endpoint_url, secret_hash, masked_secret, incident_reference, server_version, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 tenantId, result.provider.providerId, result.provider.displayName, result.provider.status.name, result.provider.endpointUrl, secretHash, result.provider.maskedSecretPreview, result.provider.incidentReference, result.provider.serverVersion, result.serverTime
             )
+            com.slotting.admin.infra.VersionedCasHelper.requireUpdated(inserted)
         } else {
-            if (secretHash.isNotBlank()) {
+            val updated = if (secretHash.isNotBlank()) {
                 jdbc.update(
                     "update admin_payment_provider_config set display_name = ?, status = ?, endpoint_url = ?, secret_hash = ?, masked_secret = ?, incident_reference = ?, server_version = ?, updated_at = ? where tenant_id = ? and provider_id = ? and server_version = ?",
                     result.provider.displayName, result.provider.status.name, result.provider.endpointUrl, secretHash, result.provider.maskedSecretPreview, result.provider.incidentReference, result.provider.serverVersion, result.serverTime, tenantId, result.provider.providerId, result.provider.serverVersion - 1
@@ -58,6 +59,7 @@ class JdbcPaymentProviderConfigStore(private val jdbc: JdbcTemplate) : PaymentPr
                     result.provider.displayName, result.provider.status.name, result.provider.endpointUrl, result.provider.maskedSecretPreview, result.provider.incidentReference, result.provider.serverVersion, result.serverTime, tenantId, result.provider.providerId, result.provider.serverVersion - 1
                 )
             }
+            com.slotting.admin.infra.VersionedCasHelper.requireUpdated(updated)
         }
 
         jdbc.update(
@@ -70,11 +72,11 @@ class JdbcPaymentProviderConfigStore(private val jdbc: JdbcTemplate) : PaymentPr
         )
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, "{}"
+            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit)
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, "{}"
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit)
         )
     }
 

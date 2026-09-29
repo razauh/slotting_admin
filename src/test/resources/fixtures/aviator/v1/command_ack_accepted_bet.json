@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "commandId": "cmd-bet-001",
+  "causationId": "cmd-bet-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_primary",
+  "action": "PLACE_BET",
+  "status": "ACCEPTED",
+  "timestampMillis": 1700000000000,
+  "sequenceId": 101,
+  "revision": 2,
+  "result": {
+    "handStatus": "ACCEPTED",
+    "wager": {
+      "amountMinor": 2000,
+      "currency": "INR"
+    },
+    "accountMoneyAfter": {
+      "amountMinor": 498000,
+      "currency": "INR"
+    },
+    "cashOutMultiplier": null,
+    "payout": null
+  },
+  "rejection": null,
+  "evidenceReference": "ev-ack-bet-001"
+}

@@ -84,12 +84,8 @@ class LedgerFinancialTimeline(
 ) {
     @Synchronized
     fun read(command: LedgerTimelineCommand): LedgerTimelineResult {
+        // 1. Authorize principal and context BEFORE idempotency lookup or disclosure
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-        val fingerprint = fingerprint(command)
-        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
-            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            return replay.second
-        }
         if (principal.kind != com.slotting.admin.auth.PrincipalKind.ADMIN || principal.tenantId != command.tenantId) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
@@ -99,14 +95,23 @@ class LedgerFinancialTimeline(
             command.correlationId.isBlank() || command.causationId.isBlank() || command.sessionId.isBlank()) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
-        if (command.expectedVersion != store.currentVersion(command.tenantId)) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.STALE)
-        }
         val now = Instant.now(clock)
         val session = sessions.find(command.tenantId, principal.id, command.sessionId)
         if (session == null || !session.active || !session.expiresAt.isAfter(now) ||
-            !policy.isPermitted(principal, AdminPermission.READ_SUPPORT)) {
+            !session.mfaVerified || (session.mfaExpiresAt != null && !session.mfaExpiresAt.isAfter(now)) ||
+            (!policy.isPermitted(principal, AdminPermission.READ_SUPPORT) && !policy.isPermitted(principal, AdminPermission.FINANCIAL_REVIEW))) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
+        // 2. Verified caller: now check idempotency cache
+        val fingerprint = fingerprint(command)
+        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
+            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            return replay.second
+        }
+
+        if (command.expectedVersion != store.currentVersion(command.tenantId)) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.STALE)
         }
         val page = try {
             ledger.read(command.tenantId, command.playerReference, command.from, command.to, command.limit)

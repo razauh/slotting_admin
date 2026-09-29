@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "roundId": "rnd-crash-100",
+  "phase": "FLYING",
+  "multiplier": 2.50,
+  "currentMultiplier": 2.50,
+  "serverTimeMillis": 1700000005000,
+  "elapsedFlightSeconds": 4.5,
+  "sequenceId": 105
+}

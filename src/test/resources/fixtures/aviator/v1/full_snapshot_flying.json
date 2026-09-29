@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "1.2.0",
+  "roundId": "rnd-crash-100",
+  "phase": "FLYING",
+  "serverTimeMillis": 1700000005000,
+  "multiplier": 2.50,
+  "elapsedFlightSeconds": 4.5,
+  "sequenceId": 105,
+  "roundVersion": 4,
+  "currency": "INR",
+  "limits": {
+    "minWagerMinor": 1000,
+    "maxWagerMinor": 10000000,
+    "currency": "INR"
+  },
+  "user": {
+    "userId": "usr-player-123",
+    "userName": "Player123",
+    "balanceMinor": 510500,
+    "currency": "INR"
+  },
+  "primaryHand": {
+    "handId": "hand_primary",
+    "betted": false,
+    "cashedOut": false,
+    "wagerMinor": null,
+    "currency": "INR",
+    "cashOutMultiplier": null,
+    "payoutMinor": null
+  },
+  "secondaryHand": {
+    "handId": "hand_secondary",
+    "betted": true,
+    "cashedOut": true,
+    "wagerMinor": 5000,
+    "currency": "INR",
+    "cashOutMultiplier": 2.50,
+    "payoutMinor": 12500
+  },
+  "history": [1.50, 2.10, 1.15],
+  "serverSeedHash": "seed-hash-crash-100"
+}

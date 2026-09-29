@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "commandId": "cmd-bet-stale-001",
+  "roundId": "rnd-crash-099",
+  "handId": "hand_primary",
+  "action": "PLACE_BET",
+  "status": "REJECTED",
+  "timestampMillis": 1700000001000,
+  "sequenceId": 101,
+  "revision": 2,
+  "causationId": "cmd-bet-stale-001",
+  "rejection": {
+    "code": "ROUND_CLOSED",
+    "retryable": false,
+    "safeMessage": "Round is no longer accepting wagers"
+  },
+  "evidenceReference": "ev-rejection-stale-001"
+}

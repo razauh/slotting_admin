@@ -39,10 +39,11 @@ class JdbcRgReviewQueueStore(private val jdbc: JdbcTemplate) : RgQueueStore {
         audit: AuditEvent,
         outbox: OutboxEvent,
     ) {
-        jdbc.update(
+        val updated = jdbc.update(
             "update admin_rg_review_queue set state = ?, claimed_by = ?, claim_expires_at = ?, server_version = ? where tenant_id = ? and case_reference = ? and server_version = ?",
             result.item.state.name, result.item.claimedBy, result.item.claimExpiresAt, result.item.serverVersion, tenantId, result.item.caseReference, result.item.serverVersion - 1
         )
+        com.slotting.admin.infra.VersionedCasHelper.requireUpdated(updated)
         jdbc.update(
             "insert into admin_rg_review_result(result_id, tenant_id, case_reference, query_fingerprint, reason_code, state, claimed_by, second_approver_id, claim_expires_at, server_version, occurred_at, idempotency_key, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             result.resultId, tenantId, result.item.caseReference, queryFingerprint, reason.name, result.item.state.name, result.item.claimedBy, secondApproverId, result.item.claimExpiresAt, result.item.serverVersion, result.serverTime, idempotencyKey, audit.correlationId, audit.causationId
@@ -53,11 +54,11 @@ class JdbcRgReviewQueueStore(private val jdbc: JdbcTemplate) : RgQueueStore {
         )
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, "{}"
+            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit)
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, "{}"
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit)
         )
     }
 

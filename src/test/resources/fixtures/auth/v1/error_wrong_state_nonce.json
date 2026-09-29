@@ -1,0 +1,8 @@
+{
+  "error": "invalid_grant",
+  "error_code": "INVALID_STATE_OR_NONCE",
+  "error_description": "Authorization response state or nonce does not match persisted authorization session",
+  "correlation_id": "corr-state-err-010",
+  "timestamp_epoch_ms": 1790262250000,
+  "retryable": false
+}

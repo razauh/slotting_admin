@@ -127,6 +127,10 @@ class InMemoryAviatorSocketStore : AviatorSocketStore {
     }
 }
 
+@Deprecated(
+    message = "Superseded by AuthoritativeGameSnapshotAndEventService (TC-023). Retained for legacy test compatibility.",
+    level = DeprecationLevel.WARNING
+)
 class AviatorSocketReconciliationCompatibilityService(
     private val store: AviatorSocketStore,
     private val rbacPolicy: AdminRbacPolicy = AdminRbacPolicy(true),

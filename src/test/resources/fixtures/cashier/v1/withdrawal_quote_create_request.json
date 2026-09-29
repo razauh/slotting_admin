@@ -1,0 +1,7 @@
+{
+  "methodId": "METHOD_EASYPAISA",
+  "grossAmountMinorUnits": 200000,
+  "currencyCode": "PKR",
+  "destinationId": "d1e2f3a4-b5c6-4789-0123-456789abcdef",
+  "idempotencyKey": "idem-quote-contract-001"
+}

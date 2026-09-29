@@ -1,0 +1,18 @@
+{
+  "requestId": "f1e2d3c4-b5a6-4978-0123-456789abcdef",
+  "tenantId": "tenant-pk-1",
+  "ownerId": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+  "quoteId": "a1b2c3d4-e5f6-47a8-b9c0-123456789abc",
+  "reservationId": "r1e2d3c4-b5a6-4978-0123-456789abcdef",
+  "methodId": "METHOD_EASYPAISA",
+  "destinationReference": "03001234567",
+  "grossAmountMinorUnits": 200000,
+  "feeMinorUnits": 0,
+  "netPayoutAmountMinorUnits": 200000,
+  "currencyCode": "PKR",
+  "status": "REQUESTED",
+  "reviewState": "QUEUED",
+  "immutableDigest": "sha256-wdr-digest-contract-001",
+  "requestVersion": 1,
+  "serverTime": "2026-09-25T10:00:05Z"
+}

@@ -1,0 +1,8 @@
+{
+  "error": "invalid_request",
+  "error_code": "CLOCK_SKEW_DETECTED",
+  "error_description": "Request timestamp differs from server time beyond acceptable tolerance (+-60 seconds)",
+  "correlation_id": "corr-clock-skew-008",
+  "timestamp_epoch_ms": 1790269000000,
+  "retryable": true
+}

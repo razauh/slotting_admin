@@ -66,6 +66,9 @@ data class PostTransactionCommand(
     val correlationId: String,
     val causationId: String,
     val expectedVersion: Long = 0L,
+    val operationId: UUID = UUID.randomUUID(),
+    val effectiveAt: Instant? = null,
+    val compensationForReference: String? = null,
 )
 
 data class PostingResult(
@@ -86,6 +89,12 @@ data class PostingResult(
     val directBalanceWriteProhibited: Boolean = true,
     val evidenceReference: String,
     val semanticContract: String = "One accepted key→one result; payload mismatch conflicts; all direct balance writes prohibited.",
+    val effectiveTime: Instant = serverTime,
+    val recordedTime: Instant = serverTime,
+    val operationId: UUID = resultId,
+    val committedVersion: Long = serverVersion,
+    val compensationForReference: String? = null,
+    val legs: List<JournalEntryRecord> = emptyList(),
 )
 
 /**
@@ -97,10 +106,9 @@ data class PostingResult(
  * Protected risk assertion: "duplicate/concurrent posting"
  */
 open class LedgerPostingService(
+    val store: LedgerJournalStore = InMemoryLedgerJournalStore(),
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    private val idempotencyStore = ConcurrentHashMap<String, Pair<String, PostingResult>>()
-    private val transactionRefIndex = ConcurrentHashMap<String, UUID>() // "tenantId:transactionReference" -> resultId
     private val auditLogs = mutableListOf<AuditEvent>()
     private val inFlightLocks = ConcurrentHashMap<String, Any>()
 
@@ -151,10 +159,10 @@ open class LedgerPostingService(
         val signature = computePayloadSignature(command)
 
         // 5. Concurrency & Idempotency synchronization
-        val lock = inFlightLocks.computeIfAbsent(command.idempotencyKey) { Any() }
+        val lock = inFlightLocks.computeIfAbsent("${command.tenantId}:${command.idempotencyKey}") { Any() }
         synchronized(lock) {
             // Check if already posted under this idempotency key
-            idempotencyStore[command.idempotencyKey]?.let { (cachedSig, cachedResult) ->
+            store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { (cachedSig, cachedResult) ->
                 if (cachedSig == signature) {
                     // One accepted key -> one result (identical replay)
                     return cachedResult
@@ -167,12 +175,11 @@ open class LedgerPostingService(
             }
 
             // Check transaction reference uniqueness across tenant
-            val txKey = "${command.tenantId}:${command.transactionReference}"
-            if (transactionRefIndex.containsKey(txKey)) {
+            store.findByTransactionReference(command.tenantId, command.transactionReference)?.let {
                 throw IdempotencyConflictException("Duplicate transaction reference: '${command.transactionReference}'")
             }
 
-            // 6. Double-entry validation
+            // 6. Double-entry validation with checked minor-unit arithmetic
             var totalDebits = 0L
             var totalCredits = 0L
 
@@ -189,9 +196,13 @@ open class LedgerPostingService(
                     throw PostingInvalidException("Account reference cannot be blank")
                 }
 
-                when (entry.direction) {
-                    JournalEntryDirection.DEBIT -> totalDebits += entry.amountMinorUnits
-                    JournalEntryDirection.CREDIT -> totalCredits += entry.amountMinorUnits
+                try {
+                    when (entry.direction) {
+                        JournalEntryDirection.DEBIT -> totalDebits = Math.addExact(totalDebits, entry.amountMinorUnits)
+                        JournalEntryDirection.CREDIT -> totalCredits = Math.addExact(totalCredits, entry.amountMinorUnits)
+                    }
+                } catch (e: ArithmeticException) {
+                    throw PostingInvalidException("Arithmetic overflow detected in journal amounts")
                 }
             }
 
@@ -201,8 +212,26 @@ open class LedgerPostingService(
                 )
             }
 
-            val resultId = UUID.randomUUID()
+            val resultId = command.operationId
             val now = Instant.now(clock)
+            val effectiveTime = command.effectiveAt ?: now
+            val committedVersion = if (command.expectedVersion > 0) command.expectedVersion + 1L else store.nextLedgerVersion(command.tenantId)
+
+            val entryRecords = command.entries.mapIndexed { index, entry ->
+                JournalEntryRecord(
+                    entryId = UUID.randomUUID(),
+                    batchId = resultId,
+                    tenantId = command.tenantId,
+                    accountReference = entry.accountReference,
+                    direction = entry.direction,
+                    amountMinorUnits = entry.amountMinorUnits,
+                    currencyCode = entry.currencyCode,
+                    lineOrder = index + 1,
+                    narration = entry.narration,
+                    createdAt = now,
+                )
+            }
+
             val result = PostingResult(
                 resultId = resultId,
                 tenantId = command.tenantId,
@@ -215,30 +244,45 @@ open class LedgerPostingService(
                 entryCount = command.entries.size,
                 idempotencyKey = command.idempotencyKey,
                 serverTime = now,
-                serverVersion = command.expectedVersion + 1L,
+                serverVersion = committedVersion,
                 directEligibilityGranted = false,
                 financialMutationPermitted = false,
                 directBalanceWriteProhibited = true,
-                evidenceReference = "ledger-posting:$resultId?v=1",
+                evidenceReference = "ledger-posting:$resultId?v=$committedVersion",
+                effectiveTime = effectiveTime,
+                recordedTime = now,
+                operationId = resultId,
+                committedVersion = committedVersion,
+                compensationForReference = command.compensationForReference,
+                legs = entryRecords,
             )
 
-            // Persist idempotency mapping and transaction reference index
-            idempotencyStore[command.idempotencyKey] = Pair(signature, result)
-            transactionRefIndex[txKey] = resultId
-
-            // Record audit event
-            auditLogs.add(
-                AuditEvent(
-                    eventId = UUID.randomUUID(),
-                    resultId = resultId,
-                    tenantId = command.tenantId,
-                    type = "LEDGER_TRANSACTION_POSTED",
-                    occurredAt = now,
-                    correlationId = command.correlationId,
-                    causationId = command.causationId,
-                )
+            val audit = AuditEvent(
+                eventId = UUID.randomUUID(),
+                resultId = resultId,
+                tenantId = command.tenantId,
+                type = "LEDGER_TRANSACTION_POSTED",
+                occurredAt = now,
+                correlationId = command.correlationId,
+                causationId = command.causationId,
+            )
+            val outbox = OutboxEvent(
+                eventId = UUID.randomUUID(),
+                resultId = resultId,
+                tenantId = command.tenantId,
+                type = "LEDGER_TRANSACTION_POSTED",
+                createdAt = now,
             )
 
+            store.save(
+                result = result,
+                legs = entryRecords,
+                payloadDigest = signature,
+                audit = audit,
+                outbox = outbox,
+            )
+
+            auditLogs.add(audit)
             return result
         }
     }
@@ -253,6 +297,7 @@ open class LedgerPostingService(
             append(command.transactionReference).append('|')
             append(command.currencyCode).append('|')
             append(command.expectedVersion).append('|')
+            append(command.compensationForReference ?: "").append('|')
             for (entry in command.entries) {
                 append(entry.accountReference).append(':')
                 append(entry.direction.name).append(':')

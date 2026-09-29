@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "1.2.0",
+  "gameId": "AVIATOR",
+  "rulesVersion": "1.0.0",
+  "commandId": "cmd-cashout-001",
+  "causationId": "cmd-cashout-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_secondary",
+  "action": "CASH_OUT",
+  "expectedRoundVersion": 3
+}

@@ -206,6 +206,7 @@ interface LeasedOutboxStore {
     fun getHealthMetrics(tenantId: String, now: Instant): OutboxWorkerHealthReport
     fun findReplayByIdempotency(tenantId: String, idempotencyKey: String): Pair<String, ReplayOutboxResult>?
     fun saveReplayIdempotency(tenantId: String, idempotencyKey: String, fingerprint: String, result: ReplayOutboxResult)
+    fun tenantsWithPendingWork(): List<String> = emptyList()
 }
 
 class InMemoryLeasedOutboxStore : LeasedOutboxStore {
@@ -317,6 +318,11 @@ class InMemoryLeasedOutboxStore : LeasedOutboxStore {
     override fun saveReplayIdempotency(tenantId: String, idempotencyKey: String, fingerprint: String, result: ReplayOutboxResult) {
         replayIdempotency["$tenantId:$idempotencyKey"] = fingerprint to result
     }
+
+    override fun tenantsWithPendingWork(): List<String> = events.values
+        .filter { it.status == WorkerOutboxStatus.PENDING || it.status == WorkerOutboxStatus.LEASED }
+        .map { it.tenantId }
+        .distinct()
 }
 
 // =============================================================================

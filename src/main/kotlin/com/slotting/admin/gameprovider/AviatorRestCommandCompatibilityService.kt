@@ -7,6 +7,7 @@ import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
@@ -72,7 +73,8 @@ data class AviatorRestCommand(
     val cashOutMultiplier: Double? = null,
     val correlationId: String,
     val protocolVersion: String = "1.2.0",
-    val expectedRoundVersion: Long = 1L,
+    val rulesVersion: String = "1.0.0",
+    val expectedRoundVersion: Long? = null,
 )
 
 data class AviatorCommandAckResult(
@@ -105,12 +107,16 @@ interface AviatorCommandStore {
     fun setBalance(tenantId: String, playerId: String, currency: String, balanceMinor: Long)
     fun getRoundVersion(tenantId: String, roundId: String): Long
     fun incrementRoundVersion(tenantId: String, roundId: String): Long
+    fun setRoundVersion(tenantId: String, roundId: String, version: Long)
+    fun getActiveHandWager(tenantId: String, roundId: String, playerId: String, handId: String): Long?
+    fun setActiveHandWager(tenantId: String, roundId: String, playerId: String, handId: String, wagerMinor: Long?)
 }
 
 class InMemoryAviatorCommandStore : AviatorCommandStore {
     private val idempotency = ConcurrentHashMap<String, Pair<String, AviatorCommandAckResult>>()
     private val balances = ConcurrentHashMap<String, Long>()
     private val roundVersions = ConcurrentHashMap<String, Long>()
+    private val activeHandWagers = ConcurrentHashMap<String, Long>()
     val auditEvents = mutableListOf<AuditEvent>()
     val outboxEvents = mutableListOf<OutboxEvent>()
 
@@ -155,8 +161,39 @@ class InMemoryAviatorCommandStore : AviatorCommandStore {
         roundVersions["$tenantId:$roundId"] = updated
         return updated
     }
+
+    @Synchronized
+    override fun setRoundVersion(tenantId: String, roundId: String, version: Long) {
+        roundVersions["$tenantId:$roundId"] = version
+    }
+
+    @Synchronized
+    override fun getActiveHandWager(tenantId: String, roundId: String, playerId: String, handId: String): Long? {
+        return activeHandWagers["$tenantId:$roundId:$playerId:$handId"]
+    }
+
+    @Synchronized
+    override fun setActiveHandWager(tenantId: String, roundId: String, playerId: String, handId: String, wagerMinor: Long?) {
+        val key = "$tenantId:$roundId:$playerId:$handId"
+        if (wagerMinor != null) {
+            activeHandWagers[key] = wagerMinor
+        } else {
+            activeHandWagers.remove(key)
+        }
+    }
 }
 
+/**
+ * Test-only compatibility service for legacy command parser contracts.
+ *
+ * WARNING: Unsafe internal code. Do NOT expose via controllers or use in production.
+ * Authoritative durable game round wager reservation and settlement is implemented by
+ * [DurableGameWagerAndSettlementService] under TC-021.
+ */
+@Deprecated(
+    message = "Test-only compatibility harness. Use DurableGameWagerAndSettlementService for authoritative ledger-backed game settlement.",
+    replaceWith = ReplaceWith("DurableGameWagerAndSettlementService")
+)
 class AviatorRestCommandCompatibilityService(
     private val store: AviatorCommandStore,
     private val rbacPolicy: AdminRbacPolicy = AdminRbacPolicy(true),
@@ -202,7 +239,15 @@ class AviatorRestCommandCompatibilityService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
-        if (command.currency.length != 3) {
+        if (command.currency.length != 3 || command.currency != "INR") {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
+
+        if (!command.protocolVersion.startsWith("1.")) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
+
+        if (command.rulesVersion != "1.0.0") {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
@@ -234,7 +279,7 @@ class AviatorRestCommandCompatibilityService(
 
         // 5. Versioning
         val currentRoundVer = store.getRoundVersion(command.tenantId, command.roundId)
-        if (command.expectedRoundVersion != currentRoundVer) {
+        if (command.expectedRoundVersion != null && command.expectedRoundVersion != currentRoundVer) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.STALE)
         }
 
@@ -260,6 +305,7 @@ class AviatorRestCommandCompatibilityService(
                 } else {
                     val newBalance = currentBalance - wager
                     store.setBalance(command.tenantId, playerId, command.currency, newBalance)
+                    store.setActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand, wager)
                     AviatorAuthoritativeResult(
                         handStatus = AviatorAuthoritativeHandStatus.ACCEPTED,
                         wagerMinor = wager,
@@ -269,28 +315,34 @@ class AviatorRestCommandCompatibilityService(
                 }
             }
             AviatorCommandAction.CANCEL_BET -> {
-                val refund = command.wagerMinor ?: 0L
-                val newBalance = currentBalance + refund
+                val placedWager = store.getActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand)
+                    ?: command.wagerMinor
+                    ?: 0L
+                val newBalance = currentBalance + placedWager
                 store.setBalance(command.tenantId, playerId, command.currency, newBalance)
+                store.setActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand, null)
                 AviatorAuthoritativeResult(
                     handStatus = AviatorAuthoritativeHandStatus.CANCELLED,
-                    wagerMinor = command.wagerMinor,
+                    wagerMinor = placedWager,
                     accountMoneyAfterMinor = newBalance,
                     currency = command.currency
                 ) to null
             }
             AviatorCommandAction.CASH_OUT -> {
-                val wager = command.wagerMinor ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+                val placedWager = store.getActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand)
+                    ?: command.wagerMinor
+                    ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
                 val mult = command.cashOutMultiplier ?: 1.0
-                val payout = BigDecimal.valueOf(wager)
+                val payout = BigDecimal.valueOf(placedWager)
                     .multiply(BigDecimal.valueOf(mult))
                     .setScale(0, RoundingMode.HALF_UP)
                     .longValueExact()
                 val newBalance = currentBalance + payout
                 store.setBalance(command.tenantId, playerId, command.currency, newBalance)
+                store.setActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand, null)
                 AviatorAuthoritativeResult(
                     handStatus = AviatorAuthoritativeHandStatus.CASHED_OUT,
-                    wagerMinor = wager,
+                    wagerMinor = placedWager,
                     accountMoneyAfterMinor = newBalance,
                     currency = command.currency,
                     cashOutMultiplier = mult,
@@ -339,5 +391,101 @@ class AviatorRestCommandCompatibilityService(
         store.saveCommand(command.tenantId, command.commandId, fp, ack, audit, outbox)
 
         return ack
+    }
+
+    /**
+     * Exact command result lookup by roundId and commandId (TC-020 lost ACK recovery).
+     */
+    @Synchronized
+    fun getCommandResult(
+        tenantId: String,
+        principal: AuthenticatedPrincipal?,
+        roundId: String,
+        commandId: String
+    ): AviatorCommandAckResult? {
+        AviatorRestCommandCompatibilityBinding.checkBound()
+
+        val p = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
+        if (p.tenantId != tenantId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+
+        val entry = store.findByIdempotency(tenantId, commandId) ?: return null
+        val ack = entry.second
+        if (ack.roundId != roundId) throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        return ack
+    }
+
+    /**
+     * Parses incoming JSON command payload strictly validating integral minor units,
+     * currency, protocol SemVer, and rules agreement (TC-020, AND-022, XREP-002).
+     */
+    fun parseAndValidateCommand(
+        tenantId: String,
+        principal: AuthenticatedPrincipal?,
+        payloadJson: String,
+        correlationId: String
+    ): AviatorRestCommand {
+        val mapper = ObjectMapper()
+        val root = try {
+            mapper.readTree(payloadJson)
+        } catch (e: Exception) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
+
+        val schemaVer = root.get("schemaVersion")?.takeIf { it.isIntegralNumber }?.asInt() ?: 1
+        if (schemaVer != 1) throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+
+        val protoVer = root.get("protocolVersion")?.asText() ?: "1.2.0"
+        if (!protoVer.startsWith("1.")) throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+
+        val rulesVer = root.get("rulesVersion")?.asText() ?: "1.0.0"
+        if (rulesVer != "1.0.0") throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+
+        val cmdId = root.get("commandId")?.asText()?.takeIf { it.isNotBlank() }
+            ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        val roundId = root.get("roundId")?.asText()?.takeIf { it.isNotBlank() }
+            ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        val handId = root.get("handId")?.asText()?.takeIf { it.isNotBlank() }
+            ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        val rawAction = root.get("action")?.asText()?.takeIf { it.isNotBlank() }
+            ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        val expVer = root.get("expectedRoundVersion")?.takeIf { it.isIntegralNumber }?.asLong() ?: 1L
+
+        var wagerMinor: Long? = null
+        var currency = "INR"
+
+        if (rawAction.uppercase() in listOf("PLACE_BET", "BET", "B", "PLAY")) {
+            val accountMoney = root.get("accountMoney") ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            val amountNode = accountMoney.get("amountMinor") ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            if (!amountNode.isIntegralNumber || amountNode.isFloatingPointNumber || !amountNode.canConvertToLong()) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            }
+            val amt = amountNode.asLong()
+            if (amt <= 0) throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            wagerMinor = amt
+
+            val currNode = accountMoney.get("currency") ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            currency = currNode.asText()
+            if (currency.length != 3 || currency.any { it !in 'A'..'Z' }) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            }
+        }
+
+        val cmd = AviatorRestCommand(
+            tenantId = tenantId,
+            principal = principal,
+            commandId = cmdId,
+            causationId = cmdId,
+            roundId = roundId,
+            handId = handId,
+            action = rawAction,
+            wagerMinor = wagerMinor,
+            currency = currency,
+            correlationId = correlationId,
+            protocolVersion = protoVer,
+            rulesVersion = rulesVer,
+            expectedRoundVersion = expVer
+        )
+
+        return cmd
     }
 }

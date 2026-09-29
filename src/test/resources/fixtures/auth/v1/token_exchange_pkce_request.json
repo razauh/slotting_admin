@@ -1,0 +1,10 @@
+{
+  "grant_type": "authorization_code",
+  "code": "auth-code-valid-998877",
+  "code_verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  "code_challenge_method": "S256",
+  "state": "state-random-uuid-xyz-123",
+  "nonce": "nonce-secure-random-456",
+  "redirect_uri": "https://auth.slotting.com/callback",
+  "client_id": "slotting-android"
+}

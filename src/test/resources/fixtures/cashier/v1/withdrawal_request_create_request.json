@@ -1,0 +1,6 @@
+{
+  "quoteId": "a1b2c3d4-e5f6-47a8-b9c0-123456789abc",
+  "destinationId": "d1e2f3a4-b5c6-4789-0123-456789abcdef",
+  "idempotencyKey": "idem-wdr-contract-001",
+  "stepUpToken": "STEPUP-ASSERTION-TOKEN-VALID"
+}

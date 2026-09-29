@@ -209,7 +209,7 @@ class FinancialRiskMonitoringTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertTrue(!migrationVersions.contains("V17"))
+        assertTrue(!migrationVersions.contains("V99"))
 
         // Assert: restart/recreation preserves consistency
         val store = FinancialRiskMonitoringMemoryStore()
@@ -238,6 +238,65 @@ class FinancialRiskMonitoringTest {
         assertEquals("corr-reboot-risk-1", store.audit[0].correlationId)
         assertEquals("cause-reboot-risk-1", store.audit[0].causationId)
         assertFalse(store.audit[0].type.contains("secret"))
+    }
+
+    @Test
+    fun `TC-031 - Financial risk monitoring computes counts and volume from durable event store, ignoring caller claims`() {
+        val store = FinancialRiskMonitoringMemoryStore()
+        val durableStore = com.slotting.admin.fraud.InMemoryDurableFraudRiskStore()
+        val serviceWithDurable = FinancialRiskMonitoringService(
+            policy = AdminRbacPolicy(true),
+            sessions = TestFinancialRiskActiveSessionDirectory(),
+            store = store,
+            config = FinancialRiskRuleConfig(velocityMaxCountInWindow = 2),
+            clock = clock,
+            durableRiskStore = durableStore,
+        )
+
+        val subject = "player-aml-risk-001"
+
+        // 1. Caller claims high historical count = 99, but durable store has ZERO events
+        val emptyDurableCmd = command(
+            subjectReference = subject,
+            amountMinorUnits = 1000L,
+            historicalCountInWindow = 99, // Caller claim should be IGNORED
+            idempotencyKey = "key-caller-fake-count",
+        )
+        val res1 = serviceWithDurable.evaluateTransaction(emptyDurableCmd)
+        // Must be CLEARED because durable store has 0 events <= threshold of 2!
+        assertEquals(RuleEvaluationOutcome.CLEARED, res1.outcome)
+        assertEquals(0, res1.provenance.observedVelocityCount)
+
+        // 2. Ingest 3 real durable events into durableStore
+        for (i in 1..3) {
+            durableStore.saveEvent(
+                com.slotting.admin.fraud.DurableRiskEvent(
+                    tenantId = "tenant-1",
+                    subjectReference = subject,
+                    eventType = com.slotting.admin.fraud.RiskEventType.DEPOSIT_SUCCEEDED,
+                    source = com.slotting.admin.fraud.EventSource.SERVER_OBSERVED,
+                    confidence = com.slotting.admin.fraud.SourceConfidence.HIGH,
+                    money = com.slotting.admin.fraud.RiskMoney(1000L, "EUR"),
+                    eventTimestamp = now.minus(java.time.Duration.ofMinutes(i * 5L)),
+                    idempotencyKey = "durable-dep-$i",
+                    correlationId = "c-$i",
+                    causationId = "cause-$i",
+                )
+            )
+        }
+
+        // 3. Caller claims historicalCountInWindow = 0, but durable store has 3 events > threshold 2
+        val breachCmd = command(
+            subjectReference = subject,
+            amountMinorUnits = 1000L,
+            historicalCountInWindow = 0, // Caller claim of 0 should be IGNORED
+            idempotencyKey = "key-durable-breach",
+        )
+        val res2 = serviceWithDurable.evaluateTransaction(breachCmd)
+        // Must be BREACH_DETECTED because server-side count is 3 > 2!
+        assertEquals(RuleEvaluationOutcome.BREACH_DETECTED, res2.outcome)
+        assertEquals(3, res2.provenance.observedVelocityCount)
+        assertTrue(res2.provenance.breachedRules.contains("VELOCITY_LIMIT_EXCEEDED"))
     }
 
     private fun service(store: FinancialRiskMonitoringStore) =

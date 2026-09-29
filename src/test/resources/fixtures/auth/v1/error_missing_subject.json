@@ -1,0 +1,11 @@
+{
+  "access_token": "atk_malformed_missing_subject",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "rtk_malformed_missing_subject",
+  "scope": "player:game",
+  "tenant_id": "tenant-casino-1",
+  "token_family_id": "f8a1e2d3-c4b5-4a67-8901-234567890abc",
+  "session_id": "e7b0c1a2-9876-4fed-ba98-76543210fedc",
+  "issued_at_epoch_ms": 1790262000000
+}

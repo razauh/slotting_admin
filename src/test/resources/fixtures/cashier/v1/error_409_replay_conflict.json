@@ -1,0 +1,5 @@
+{
+  "error": "IDEMPOTENCY_CONFLICT",
+  "code": "CONFLICT",
+  "message": "Replay with altered payload detected"
+}

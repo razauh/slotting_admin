@@ -1,0 +1,23 @@
+{
+  "intentId": "e1f2a3b4-5678-490a-bcde-f1234567890a",
+  "tenantId": "tenant-pk-1",
+  "playerId": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+  "methodId": "METHOD_EASYPAISA",
+  "amountMinorUnits": 500000,
+  "currencyCode": "PKR",
+  "status": "PROVIDER_PENDING",
+  "idempotencyKey": "idem-dep-contract-001",
+  "correlationId": "corr-dep-contract-001",
+  "causationId": "caus-dep-contract-001",
+  "actionType": "PUSH_PROMPT",
+  "launchData": {
+    "providerReference": "PROV-DEP-9988",
+    "promptType": "USSD_PUSH"
+  },
+  "stepUpRequired": false,
+  "challengeId": null,
+  "createdAt": "2026-09-25T10:00:00Z",
+  "updatedAt": "2026-09-25T10:00:01Z",
+  "expiresAt": "2026-09-25T10:30:00Z",
+  "version": 1
+}

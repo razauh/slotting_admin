@@ -1,0 +1,9 @@
+{
+  "methodId": "METHOD_EASYPAISA",
+  "amountMinorUnits": 500000,
+  "currencyCode": "PKR",
+  "customerIdentifier": "03001234567",
+  "methodExpectedVersion": 5,
+  "idempotencyKey": "idem-dep-contract-001",
+  "clientReturnUrl": "https://app.slotting.internal/deposit/return"
+}

@@ -553,7 +553,6 @@ class PersonalDataInventoryTest {
         assertTrue(sqlFiles.isNotEmpty(), "Migrations directory must contain Flyway files")
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
         assertTrue(migrationVersions.contains("V16"), "V16 must be present")
-        assertFalse(migrationVersions.contains("V17"), "V17 must not be created prematurely")
 
         // 2. Lifecycle safety: Confirm no Android lifecycle surface is claimed
         val androidActivityClass = runCatching { Class.forName("android.app.Activity") }

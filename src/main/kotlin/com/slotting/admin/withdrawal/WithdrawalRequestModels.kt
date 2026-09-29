@@ -98,6 +98,10 @@ interface StepUpTokenValidator {
     fun validateToken(token: String, ownerId: UUID): Boolean
 }
 
+@Deprecated(
+    message = "DefaultStepUpTokenValidator accepts textual prefixes and is prohibited in production (BE-010). Use AuthoritativeWithdrawalService / StepUpAssertionRecord.",
+    level = DeprecationLevel.WARNING
+)
 class DefaultStepUpTokenValidator : StepUpTokenValidator {
     override fun validateToken(token: String, ownerId: UUID): Boolean {
         // Valid step-up tokens must be non-blank, start with "MFA-STEPUP-VALID-",

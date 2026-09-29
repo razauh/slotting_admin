@@ -46,15 +46,17 @@ class JdbcManualAdjustmentStore(private val jdbc: JdbcTemplate) : ManualAdjustme
     ) {
         val existing = findItem(tenantId, result.item.adjustmentReference)
         if (existing == null) {
-            jdbc.update(
+            val inserted = jdbc.update(
                 "insert into admin_manual_adjustment_batch(tenant_id, adjustment_reference, state, currency_code, total_debits, total_credits, maker_id, second_approver_id, posting_reference, server_version, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 tenantId, result.item.adjustmentReference, result.item.state.name, result.item.currencyCode, result.totalDebits, result.totalCredits, result.item.makerId, result.item.secondApproverId, result.item.postingReference, result.item.serverVersion, result.serverTime
             )
+            com.slotting.admin.infra.VersionedCasHelper.requireUpdated(inserted)
         } else {
-            jdbc.update(
+            val updated = jdbc.update(
                 "update admin_manual_adjustment_batch set state = ?, second_approver_id = ?, posting_reference = ?, server_version = ?, updated_at = ? where tenant_id = ? and adjustment_reference = ? and server_version = ?",
                 result.item.state.name, result.item.secondApproverId, result.item.postingReference, result.item.serverVersion, result.serverTime, tenantId, result.item.adjustmentReference, result.item.serverVersion - 1
             )
+            com.slotting.admin.infra.VersionedCasHelper.requireUpdated(updated)
         }
 
         jdbc.update(
@@ -67,11 +69,11 @@ class JdbcManualAdjustmentStore(private val jdbc: JdbcTemplate) : ManualAdjustme
         )
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, "{}"
+            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit)
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, "{}"
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit)
         )
     }
 

@@ -157,27 +157,74 @@ class SanctionsPepScreeningService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
         }
 
+        val isScoreInvalid = !vendorResponse.matchScore.isFinite() ||
+            vendorResponse.matchScore.isNaN() ||
+            vendorResponse.matchScore < 0.0 ||
+            vendorResponse.matchScore > 1.0
+
         val (outcome, status, appliedThreshold) = when {
-            vendorResponse.indeterminate -> Triple(
+            vendorResponse.indeterminate || isScoreInvalid -> Triple(
                 SanctionsPepOutcome.INDETERMINATE,
                 ScreeningDecisionStatus.HOLD,
                 thresholdConfig.sanctionsMatchThreshold,
             )
-            vendorResponse.matchScore >= thresholdConfig.sanctionsMatchThreshold -> Triple(
-                SanctionsPepOutcome.SANCTION_HIT,
-                ScreeningDecisionStatus.HOLD,
-                thresholdConfig.sanctionsMatchThreshold,
-            )
-            command.checkType != ScreeningCheckType.SANCTIONS && vendorResponse.matchScore >= thresholdConfig.pepMatchThreshold -> Triple(
-                SanctionsPepOutcome.PEP_MATCH,
-                ScreeningDecisionStatus.HOLD,
-                thresholdConfig.pepMatchThreshold,
-            )
-            else -> Triple(
-                SanctionsPepOutcome.CLEAR,
-                ScreeningDecisionStatus.CLEARED,
-                thresholdConfig.sanctionsMatchThreshold,
-            )
+            command.checkType == ScreeningCheckType.PEP -> {
+                if (vendorResponse.matchScore >= thresholdConfig.pepMatchThreshold) {
+                    Triple(
+                        SanctionsPepOutcome.PEP_MATCH,
+                        ScreeningDecisionStatus.HOLD,
+                        thresholdConfig.pepMatchThreshold,
+                    )
+                } else {
+                    Triple(
+                        SanctionsPepOutcome.CLEAR,
+                        ScreeningDecisionStatus.CLEARED,
+                        thresholdConfig.pepMatchThreshold,
+                    )
+                }
+            }
+            command.checkType == ScreeningCheckType.SANCTIONS -> {
+                if (vendorResponse.matchScore >= thresholdConfig.sanctionsMatchThreshold) {
+                    Triple(
+                        SanctionsPepOutcome.SANCTION_HIT,
+                        ScreeningDecisionStatus.HOLD,
+                        thresholdConfig.sanctionsMatchThreshold,
+                    )
+                } else {
+                    Triple(
+                        SanctionsPepOutcome.CLEAR,
+                        ScreeningDecisionStatus.CLEARED,
+                        thresholdConfig.sanctionsMatchThreshold,
+                    )
+                }
+            }
+            else -> {
+                // SANCTIONS_AND_PEP
+                val hasOnlyPepLists = vendorResponse.matchedLists.isNotEmpty() &&
+                    vendorResponse.matchedLists.all { it.contains("PEP", ignoreCase = true) }
+                when {
+                    hasOnlyPepLists && vendorResponse.matchScore >= thresholdConfig.pepMatchThreshold -> Triple(
+                        SanctionsPepOutcome.PEP_MATCH,
+                        ScreeningDecisionStatus.HOLD,
+                        thresholdConfig.pepMatchThreshold,
+                    )
+                    vendorResponse.matchScore >= thresholdConfig.sanctionsMatchThreshold -> Triple(
+                        SanctionsPepOutcome.SANCTION_HIT,
+                        ScreeningDecisionStatus.HOLD,
+                        thresholdConfig.sanctionsMatchThreshold,
+                    )
+                    vendorResponse.matchScore >= thresholdConfig.pepMatchThreshold -> Triple(
+                        SanctionsPepOutcome.PEP_MATCH,
+                        ScreeningDecisionStatus.HOLD,
+                        thresholdConfig.pepMatchThreshold,
+                    )
+                    else -> Triple(
+                        SanctionsPepOutcome.CLEAR,
+                        ScreeningDecisionStatus.CLEARED,
+                        thresholdConfig.sanctionsMatchThreshold,
+                    )
+                }
+            }
         }
 
         val (amlCaseRef, queueItem) = if (status == ScreeningDecisionStatus.HOLD) {

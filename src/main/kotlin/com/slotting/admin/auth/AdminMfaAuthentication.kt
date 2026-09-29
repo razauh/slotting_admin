@@ -1,5 +1,6 @@
 package com.slotting.admin.auth
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -57,6 +58,35 @@ data class OutboxEvent(
     val type: String,
     val createdAt: Instant,
 )
+
+/** Minimal forensic metadata only; never include credentials, tokens, or raw provider payloads. */
+object RedactedEventJson {
+    private val mapper = ObjectMapper()
+
+    fun audit(event: AuditEvent): String = mapper.writeValueAsString(
+        mapOf(
+            "eventId" to event.eventId,
+            "resultId" to event.resultId,
+            "tenantId" to event.tenantId,
+            "eventType" to event.type,
+            "occurredAt" to event.occurredAt,
+            "correlationId" to event.correlationId,
+            "causationId" to event.causationId,
+        ),
+    )
+
+    fun outbox(event: OutboxEvent, audit: AuditEvent): String = mapper.writeValueAsString(
+        mapOf(
+            "eventId" to event.eventId,
+            "resultId" to event.resultId,
+            "tenantId" to event.tenantId,
+            "eventType" to event.type,
+            "createdAt" to event.createdAt,
+            "correlationId" to audit.correlationId,
+            "causationId" to audit.causationId,
+        ),
+    )
+}
 
 sealed class AuthenticationFailure(val code: AuthErrorCode) : RuntimeException() {
     class Rejected(code: AuthErrorCode) : AuthenticationFailure(code)
@@ -128,7 +158,7 @@ class AdminMfaAuthenticator(
         return result
     }
 
-    private fun fingerprint(command: AdminMfaCommand): String = listOf(
+    private fun fingerprint(command: AdminMfaCommand): String = sha256(listOf(
         command.principal?.tenantId,
         command.principal?.id,
         command.requestedRole,
@@ -136,7 +166,7 @@ class AdminMfaAuthenticator(
         command.expectedVersion,
         command.breakGlass,
         sha256(command.mfaAssertion),
-    ).joinToString("|")
+    ).joinToString("|"))
 
     private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8))

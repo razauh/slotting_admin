@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "roundId": "rnd-crash-100",
+  "finalCrashMultiplier": 2.50,
+  "timestampMillis": 1700000005500,
+  "serverSignature": "sig-server-rnd-crash-100",
+  "userSettlement": {
+    "hand_primary": {
+      "cashedOut": false,
+      "multiplier": 0.0,
+      "payout": 0.0
+    },
+    "hand_secondary": {
+      "cashedOut": true,
+      "multiplier": 2.50,
+      "payout": 12500.0
+    }
+  }
+}

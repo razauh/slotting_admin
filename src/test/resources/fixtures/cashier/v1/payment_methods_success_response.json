@@ -1,0 +1,94 @@
+{
+  "tenantId": "tenant-pk-1",
+  "transactionType": "DEPOSIT",
+  "generatedAtEpochMillis": 1727270000000,
+  "expiresAtEpochMillis": 1727273600000,
+  "configurationVersion": 5,
+  "isStale": false,
+  "options": [
+    {
+      "methodId": "METHOD_EASYPAISA",
+      "methodType": "WALLET",
+      "displayName": "Easypaisa Direct",
+      "instructions": "Enter mobile number to receive push payment prompt",
+      "safeAccountTitle": "Slotting Treasury",
+      "safeAccountNumber": "03001234567",
+      "iconUrl": "https://cdn.slotting.internal/methods/easypaisa.png",
+      "supportedCurrencies": [
+        "PKR"
+      ],
+      "allowsDeposit": true,
+      "allowsWithdrawal": true,
+      "minMinorUnits": 10000,
+      "maxMinorUnits": 5000000,
+      "feeFlatMinorUnits": 0,
+      "feePercentageBps": 0,
+      "isSelectable": true,
+      "availabilityCode": "AVAILABLE",
+      "serverVersion": 5
+    },
+    {
+      "methodId": "METHOD_JAZZCASH",
+      "methodType": "WALLET",
+      "displayName": "JazzCash Direct",
+      "instructions": "Authenticate in JazzCash app",
+      "safeAccountTitle": "Slotting Treasury",
+      "safeAccountNumber": "03009876543",
+      "iconUrl": "https://cdn.slotting.internal/methods/jazzcash.png",
+      "supportedCurrencies": [
+        "PKR"
+      ],
+      "allowsDeposit": true,
+      "allowsWithdrawal": true,
+      "minMinorUnits": 10000,
+      "maxMinorUnits": 5000000,
+      "feeFlatMinorUnits": 0,
+      "feePercentageBps": 0,
+      "isSelectable": true,
+      "availabilityCode": "AVAILABLE",
+      "serverVersion": 5
+    },
+    {
+      "methodId": "METHOD_BANK_TRANSFER",
+      "methodType": "BANK_TRANSFER",
+      "displayName": "Online Banking",
+      "instructions": "Transfer funds to treasury account",
+      "safeAccountTitle": "Slotting Treasury",
+      "safeAccountNumber": "PK36MEZN0001234567890123",
+      "iconUrl": "https://cdn.slotting.internal/methods/bank.png",
+      "supportedCurrencies": [
+        "PKR",
+        "INR"
+      ],
+      "allowsDeposit": true,
+      "allowsWithdrawal": true,
+      "minMinorUnits": 50000,
+      "maxMinorUnits": 50000000,
+      "feeFlatMinorUnits": 5000,
+      "feePercentageBps": 100,
+      "isSelectable": true,
+      "availabilityCode": "AVAILABLE",
+      "serverVersion": 5
+    },
+    {
+      "methodId": "METHOD_OUTAGE_CARD",
+      "methodType": "CARD",
+      "displayName": "Debit / Credit Card",
+      "instructions": "Card checkout",
+      "iconUrl": "https://cdn.slotting.internal/methods/card.png",
+      "supportedCurrencies": [
+        "PKR"
+      ],
+      "allowsDeposit": true,
+      "allowsWithdrawal": false,
+      "minMinorUnits": 10000,
+      "maxMinorUnits": 10000000,
+      "feeFlatMinorUnits": 0,
+      "feePercentageBps": 0,
+      "isSelectable": false,
+      "availabilityCode": "PROVIDER_OUTAGE",
+      "availabilityReason": "Provider undergoing scheduled maintenance",
+      "serverVersion": 5
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "error": "SERVICE_UNAVAILABLE",
+  "code": "DEPENDENCY_UNAVAILABLE",
+  "message": "Cashier service currently unavailable"
+}

@@ -1,0 +1,8 @@
+{
+  "error": "invalid_request",
+  "error_code": "PROTOCOL_DOWNGRADE_REJECTED",
+  "error_description": "PKCE transformation method must be S256; plain challenge method is rejected",
+  "correlation_id": "corr-downgrade-err-003",
+  "timestamp_epoch_ms": 1790262150000,
+  "retryable": false
+}

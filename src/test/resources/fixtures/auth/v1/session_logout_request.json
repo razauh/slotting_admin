@@ -1,0 +1,5 @@
+{
+  "session_id": "e7b0c1a2-9876-4fed-ba98-76543210fedc",
+  "idempotency_key": "logout-idem-uuid-001",
+  "correlation_id": "corr-logout-uuid-001"
+}

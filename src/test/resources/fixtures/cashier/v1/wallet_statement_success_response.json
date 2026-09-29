@@ -1,0 +1,38 @@
+{
+  "entries": [
+    {
+      "entryId": "b1a2c3d4-e5f6-47a8-b9c0-123456789abc",
+      "tenantId": "tenant-pk-1",
+      "ownerReference": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+      "currencyCode": "PKR",
+      "direction": "CREDIT",
+      "entryType": "DEPOSIT",
+      "amountMinorUnits": 500000,
+      "runningBalanceMinorUnits": 750000,
+      "transactionReference": "TX-DEP-998877",
+      "ledgerVersion": 142,
+      "postedAt": "2026-09-25T09:45:00Z",
+      "sequenceNumber": 1
+    },
+    {
+      "entryId": "b2a3c4d5-e6f7-48a9-c0d1-234567890def",
+      "tenantId": "tenant-pk-1",
+      "ownerReference": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+      "currencyCode": "PKR",
+      "direction": "DEBIT",
+      "entryType": "WITHDRAWAL",
+      "amountMinorUnits": 200000,
+      "runningBalanceMinorUnits": 250000,
+      "transactionReference": "TX-WDR-112233",
+      "ledgerVersion": 141,
+      "postedAt": "2026-09-25T09:30:00Z",
+      "sequenceNumber": 2
+    }
+  ],
+  "nextCursor": null,
+  "hasMore": false,
+  "pageSize": 20,
+  "ledgerVersion": 142,
+  "asOfTime": "2026-09-25T10:00:00Z",
+  "evidenceReference": "EVID-STATEMENT-PAGE-001"
+}

@@ -1,0 +1,8 @@
+{
+  "error": "invalid_grant",
+  "error_code": "INVALID_VERIFIER",
+  "error_description": "PKCE S256 code verifier does not match registered challenge",
+  "correlation_id": "corr-pkce-err-002",
+  "timestamp_epoch_ms": 1790262100000,
+  "retryable": false
+}

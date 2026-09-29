@@ -32,11 +32,11 @@ class JdbcPlayerProfileSearchStore(private val jdbc: JdbcTemplate) : ProfileSear
         jdbc.update("insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)", result.resultId, tenantId, "PLAYER_PROFILE_SEARCH", result.serverTime)
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, "{}",
+            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit),
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, "{}",
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit),
         )
     }
 

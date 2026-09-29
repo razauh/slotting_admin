@@ -203,7 +203,9 @@ class PlayIntegrityService(
     private val auditLog = mutableListOf<PlayIntegrityAuditEntry>()
 
     companion object {
-        const val EXPECTED_PACKAGE_NAME = "com.slotting.game"
+        const val DEFAULT_EXPECTED_PACKAGE_NAME = "com.slotting.game.connected"
+        const val LEGACY_EXPECTED_PACKAGE_NAME = "com.slotting.game"
+        const val EXPECTED_PACKAGE_NAME = DEFAULT_EXPECTED_PACKAGE_NAME
         const val NONCE_TTL_SECONDS = 300L // 5 minutes
     }
 
@@ -366,7 +368,7 @@ class PlayIntegrityService(
         }
 
         // 5. Package Name check
-        if (verdict.packageName != EXPECTED_PACKAGE_NAME) {
+        if (verdict.packageName != EXPECTED_PACKAGE_NAME && verdict.packageName != LEGACY_EXPECTED_PACKAGE_NAME) {
             recordAudit(tenantId, "VERIFY_TOKEN", principal, false, "REJECTED: Package name mismatch ${verdict.packageName}")
             val result = PlayIntegrityVerificationResult(
                 verificationId = "verif-${UUID.randomUUID()}",

@@ -83,12 +83,8 @@ class ManualAdjustmentService(
 ) {
     @Synchronized
     fun operate(command: ManualAdjustmentCommand): ManualAdjustmentResult {
+        // 1. Authorize principal and context BEFORE checking idempotency store or disclosing cached state
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-        val fingerprint = fingerprint(command)
-        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
-            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            return replay.second
-        }
         if (principal.kind != PrincipalKind.ADMIN || principal.tenantId != command.tenantId) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
@@ -102,8 +98,18 @@ class ManualAdjustmentService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
-        val debits = command.legs.filter { it.direction == AdjustmentLegDirection.DEBIT }.sumOf { it.amountMinorUnits }
-        val credits = command.legs.filter { it.direction == AdjustmentLegDirection.CREDIT }.sumOf { it.amountMinorUnits }
+        var debits = 0L
+        var credits = 0L
+        try {
+            for (leg in command.legs) {
+                when (leg.direction) {
+                    AdjustmentLegDirection.DEBIT -> debits = Math.addExact(debits, leg.amountMinorUnits)
+                    AdjustmentLegDirection.CREDIT -> credits = Math.addExact(credits, leg.amountMinorUnits)
+                }
+            }
+        } catch (_: ArithmeticException) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
         if (debits != credits || debits <= 0) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
@@ -115,9 +121,17 @@ class ManualAdjustmentService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
         }
         if (session == null || !session.active || !session.expiresAt.isAfter(now) ||
+            !session.mfaVerified || (session.mfaExpiresAt != null && !session.mfaExpiresAt.isAfter(now)) ||
             (!policy.isPermitted(principal, AdminPermission.MANAGE_SUPPORT) &&
              !policy.isPermitted(principal, AdminPermission.MANAGE_SECURITY))) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
+        // 2. Verified caller: now check idempotency cache
+        val fingerprint = fingerprint(command)
+        store.findByIdempotency(command.tenantId, command.idempotencyKey)?.let { replay ->
+            if (replay.first != fingerprint) throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            return replay.second
         }
 
         val resultId = UUID.randomUUID()
@@ -210,16 +224,20 @@ class ManualAdjustmentService(
         return result
     }
 
-    private fun fingerprint(command: ManualAdjustmentCommand): String = listOf(
-        command.tenantId,
-        command.adjustmentReference,
-        command.action,
-        command.reason,
-        command.currencyCode,
-        command.legs.map { "${it.accountReference}:${it.amountMinorUnits}:${it.direction}" }.joinToString(","),
-        command.expectedVersion,
-        command.secondApproverId,
-    ).joinToString("|") { sha256(it.toString()) }
+    private fun fingerprint(command: ManualAdjustmentCommand): String {
+        val canonical = listOf(
+            command.tenantId,
+            command.adjustmentReference,
+            command.action.name,
+            command.reason.name,
+            command.currencyCode,
+            command.legs.joinToString(",") { "${it.accountReference}:${it.amountMinorUnits}:${it.direction.name}" },
+            command.expectedVersion.toString(),
+            command.secondApproverId ?: "",
+            command.evidenceReference,
+        ).joinToString("|")
+        return sha256(canonical)
+    }
 
     private fun sha256(value: String) = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8))

@@ -1,0 +1,5 @@
+{
+  "error": "FORBIDDEN",
+  "code": "FORBIDDEN",
+  "message": "Access to another user's financial record is prohibited"
+}

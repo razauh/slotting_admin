@@ -50,6 +50,7 @@ class LicensedGeolocationAntiSpoofTest {
         vendorEvidenceStore = vendorEvidenceStore,
         clock = clock,
         maxTimestampSkew = Duration.ofSeconds(120),
+        requireVendorEvidence = false,
     )
 
     private fun sampleCommand(

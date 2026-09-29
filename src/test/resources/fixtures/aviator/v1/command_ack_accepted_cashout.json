@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "commandId": "cmd-cashout-001",
+  "causationId": "cmd-cashout-001",
+  "roundId": "rnd-crash-100",
+  "handId": "hand_secondary",
+  "action": "CASH_OUT",
+  "status": "ACCEPTED",
+  "timestampMillis": 1700000005000,
+  "sequenceId": 102,
+  "revision": 4,
+  "result": {
+    "handStatus": "CASHED_OUT",
+    "wager": {
+      "amountMinor": 5000,
+      "currency": "INR"
+    },
+    "accountMoneyAfter": {
+      "amountMinor": 510500,
+      "currency": "INR"
+    },
+    "cashOutMultiplier": 2.50,
+    "payout": {
+      "amountMinor": 12500,
+      "currency": "INR"
+    }
+  },
+  "rejection": null,
+  "evidenceReference": "ev-ack-cashout-001"
+}

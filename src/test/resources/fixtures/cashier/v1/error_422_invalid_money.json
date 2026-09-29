@@ -1,0 +1,5 @@
+{
+  "error": "INVALID_MONEY",
+  "code": "UNPROCESSABLE_ENTITY",
+  "message": "Amount must be a non-negative integer minor unit with valid 3-letter currency code"
+}

@@ -1,0 +1,23 @@
+{
+  "tenantId": "tenant-pk-1",
+  "ownerReference": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+  "currencyBalances": [
+    {
+      "currencyCode": "PKR",
+      "balanceMinorUnits": 1000000,
+      "futureFieldInner": "v1"
+    }
+  ],
+  "ledgerVersion": 200,
+  "serverVersion": 200,
+  "syncStatus": "FRESH",
+  "unknownFutureFieldTop": "future_val",
+  "unknownMetadata": {
+    "extraFlag": true,
+    "nestedList": [
+      1,
+      2,
+      3
+    ]
+  }
+}

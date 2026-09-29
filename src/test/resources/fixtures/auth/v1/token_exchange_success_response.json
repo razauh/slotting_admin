@@ -1,0 +1,12 @@
+{
+  "access_token": "atk_synthetic_valid_access_token_redacted",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "rtk_synthetic_valid_refresh_token_redacted",
+  "scope": "player:game player:account",
+  "player_id": "c1f7b0a8-3482-4cf4-91fa-404c00000001",
+  "tenant_id": "tenant-casino-1",
+  "token_family_id": "f8a1e2d3-c4b5-4a67-8901-234567890abc",
+  "session_id": "e7b0c1a2-9876-4fed-ba98-76543210fedc",
+  "issued_at_epoch_ms": 1790262000000
+}

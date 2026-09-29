@@ -30,23 +30,42 @@ class JdbcLedgerTimelineStore(private val jdbc: JdbcTemplate) : LedgerTimelineSt
             "insert into admin_ledger_timeline_read(result_id, tenant_id, query_fingerprint, access_reason, state, ledger_version, entry_count, server_version, occurred_at, idempotency_key, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             result.resultId, tenantId, queryFingerprint, accessReason.name, result.state.name, result.ledgerVersion, result.entries.size, result.serverVersion, result.serverTime, idempotencyKey, audit.correlationId, audit.causationId,
         )
+        for ((index, entry) in result.entries.withIndex()) {
+            jdbc.update(
+                "insert into admin_ledger_timeline_read_entry(read_entry_id, result_id, ledger_entry_id, player_reference, occurred_at, entry_type, amount_minor_units, currency_code, line_order) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                UUID.randomUUID(), result.resultId, entry.ledgerEntryId, entry.playerReference, entry.occurredAt, entry.entryType, entry.value.minorUnits, entry.value.currencyCode, index + 1
+            )
+        }
         jdbc.update("insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)", result.resultId, tenantId, "LEDGER_TIMELINE_READ", result.serverTime)
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, "{}",
+            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit),
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, "{}",
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit),
         )
     }
 
     private fun ResultSet.toResult(): Pair<String, LedgerTimelineResult> {
         val id = getObject("result_id", UUID::class.java)
+        val entries = jdbc.query(
+            "select ledger_entry_id, player_reference, occurred_at, entry_type, amount_minor_units, currency_code from admin_ledger_timeline_read_entry where result_id = ? order by line_order",
+            { rs, _ ->
+                LedgerEntry(
+                    ledgerEntryId = rs.getString("ledger_entry_id"),
+                    playerReference = rs.getString("player_reference"),
+                    occurredAt = rs.getTimestamp("occurred_at").toInstant(),
+                    entryType = rs.getString("entry_type"),
+                    value = LedgerMoney(rs.getLong("amount_minor_units"), rs.getString("currency_code")),
+                )
+            },
+            id
+        )
         return getString("query_fingerprint") to LedgerTimelineResult(
             id,
             TimelineState.valueOf(getString("state")),
-            emptyList(),
+            entries,
             getLong("ledger_version"),
             getTimestamp("occurred_at").toInstant(),
             getLong("server_version"),
