@@ -46,6 +46,7 @@ class DurableGameWagerAndSettlementService(
     private val clock: Clock = Clock.systemUTC(),
     private val fairnessAuthority: ProvablyFairOutcomeAuthority? = null,
     private val houseMaxRoundExposure: Long = DEFAULT_HOUSE_MAX_ROUND_EXPOSURE,
+    val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
@@ -57,57 +58,60 @@ class DurableGameWagerAndSettlementService(
 
     fun createOrUpdateRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
         DurableGameWagerAndSettlementBinding.checkBound()
-        val now = clock.instant()
-        val existing = store.findRound(command.tenantId, command.gameId, command.roundId)
-        if (existing == null) {
-            val round = GameRoundRecord(
-                tenantId = command.tenantId,
-                gameId = command.gameId,
-                roundId = command.roundId,
-                phase = command.phase,
-                roundVersion = command.roundVersion,
-                currentMultiplier = command.currentMultiplier,
-                crashMultiplier = command.crashMultiplier,
-                startedAt = now,
-                crashedAt = if (command.phase == GameRoundPhase.CRASHED) now else null,
-                closedAt = if (command.phase == GameRoundPhase.CLOSED) now else null,
-                serverTime = now,
-                createdAt = now,
-                updatedAt = now,
-            )
-            store.insertRound(round)
-            return round
-        } else {
-            val expectedVersion = command.expectedVersion ?: existing.roundVersion
-            val targetVersion = if (command.roundVersion > expectedVersion) command.roundVersion else expectedVersion + 1
-            val allowedPrior = legalPriorPhases(command.phase)
-            if (existing.phase !in allowedPrior) {
-                throw RoundVersionConflictException(
-                    "Illegal round phase transition for round ${command.roundId}: cannot transition from ${existing.phase} to ${command.phase}"
+        val action = {
+            val now = clock.instant()
+            val existing = store.findRoundForUpdate(command.tenantId, command.gameId, command.roundId)
+            if (existing == null) {
+                val round = GameRoundRecord(
+                    tenantId = command.tenantId,
+                    gameId = command.gameId,
+                    roundId = command.roundId,
+                    phase = command.phase,
+                    roundVersion = command.roundVersion,
+                    currentMultiplier = command.currentMultiplier,
+                    crashMultiplier = command.crashMultiplier,
+                    startedAt = now,
+                    crashedAt = if (command.phase == GameRoundPhase.CRASHED) now else null,
+                    closedAt = if (command.phase == GameRoundPhase.CLOSED) now else null,
+                    serverTime = now,
+                    createdAt = now,
+                    updatedAt = now,
                 )
-            }
-            if (command.phase == GameRoundPhase.FLYING && existing.phase == GameRoundPhase.FLYING) {
-                if (command.currentMultiplier < existing.currentMultiplier) {
+                store.insertRound(round)
+                round
+            } else {
+                val expectedVersion = command.expectedVersion ?: existing.roundVersion
+                val targetVersion = if (command.roundVersion > expectedVersion) command.roundVersion else expectedVersion + 1
+                val allowedPrior = legalPriorPhases(command.phase)
+                if (existing.phase !in allowedPrior) {
                     throw RoundVersionConflictException(
-                        "Multiplier cannot regress in FLYING phase for round ${command.roundId}: existing ${existing.currentMultiplier} target ${command.currentMultiplier}"
+                        "Illegal round phase transition for round ${command.roundId}: cannot transition from ${existing.phase} to ${command.phase}"
                     )
                 }
+                if (command.phase == GameRoundPhase.FLYING && existing.phase == GameRoundPhase.FLYING) {
+                    if (command.currentMultiplier < existing.currentMultiplier) {
+                        throw RoundVersionConflictException(
+                            "Multiplier cannot regress in FLYING phase for round ${command.roundId}: existing ${existing.currentMultiplier} target ${command.currentMultiplier}"
+                        )
+                    }
+                }
+                existing.phase = command.phase
+                existing.roundVersion = targetVersion
+                existing.currentMultiplier = command.currentMultiplier
+                existing.crashMultiplier = command.crashMultiplier ?: existing.crashMultiplier
+                existing.serverTime = now
+                existing.updatedAt = now
+                if (command.phase == GameRoundPhase.CRASHED && existing.crashedAt == null) {
+                    existing.crashedAt = now
+                }
+                if (command.phase == GameRoundPhase.CLOSED && existing.closedAt == null) {
+                    existing.closedAt = now
+                }
+                store.updateRound(existing, expectedVersion, allowedPrior)
+                existing
             }
-            existing.phase = command.phase
-            existing.roundVersion = targetVersion
-            existing.currentMultiplier = command.currentMultiplier
-            existing.crashMultiplier = command.crashMultiplier ?: existing.crashMultiplier
-            existing.serverTime = now
-            existing.updatedAt = now
-            if (command.phase == GameRoundPhase.CRASHED && existing.crashedAt == null) {
-                existing.crashedAt = now
-            }
-            if (command.phase == GameRoundPhase.CLOSED && existing.closedAt == null) {
-                existing.closedAt = now
-            }
-            store.updateRound(existing, expectedVersion, allowedPrior)
-            return existing
         }
+        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
     }
 
     fun settleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
@@ -198,7 +202,11 @@ class DurableGameWagerAndSettlementService(
 
     fun processCommand(command: AviatorRestCommand): AviatorCommandAckResult {
         DurableGameWagerAndSettlementBinding.checkBound()
+        val action = { executeCommand(command) }
+        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+    }
 
+    private fun executeCommand(command: AviatorRestCommand): AviatorCommandAckResult {
         // 1. Authentication & Tenant Authorization Check
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         if (principal.tenantId != command.tenantId) {
@@ -220,7 +228,7 @@ class DurableGameWagerAndSettlementService(
         }
 
         // 3. Resolve Round
-        val round = store.findRound(command.tenantId, gameId, command.roundId)
+        val round = store.findRoundForShare(command.tenantId, gameId, command.roundId)
             ?: run {
                 return recordAndReturnRejection(
                     command = command,

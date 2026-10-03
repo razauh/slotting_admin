@@ -479,7 +479,7 @@ class AviatorCrossRepoCertificationContractTest {
               "roundId": "rnd-test-100",
               "handId": "hand_primary",
               "action": "CANCEL_BET",
-              "expectedRoundVersion": 2
+              "expectedRoundVersion": 1
             }
         """.trimIndent()
 

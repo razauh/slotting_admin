@@ -134,7 +134,8 @@ class AviatorRoundCasPostgresTest {
             registrationStore = registrationStore,
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
-            clock = clock
+            clock = clock,
+            txManager = txManager,
         )
         fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
@@ -180,6 +181,8 @@ class AviatorRoundCasPostgresTest {
             Timestamp.from(now.minusSeconds(86400)),
             Timestamp.from(now.minusSeconds(86400))
         )
+
+
 
         eligibilityStore.saveComplianceProfile(
             PlayerComplianceProfile(
@@ -433,71 +436,433 @@ class AviatorRoundCasPostgresTest {
         assertEquals(GameRoundPhase.CLOSED, closed.phase)
     }
 
+    class LockOrderTracingStore(
+        private val delegate: DurableGameWagerAndSettlementStore,
+        val eventLog: MutableList<Pair<String, Int>> = mutableListOf(),
+        val onRoundShared: (() -> Unit)? = null,
+        val onBeforeRoundExclusive: (() -> Unit)? = null,
+        val onAfterRoundExclusive: (() -> Unit)? = null,
+    ) : DurableGameWagerAndSettlementStore by delegate {
+        override fun findReceipt(tenantId: String, commandId: String): GameCommandReceiptRecord? {
+            eventLog.add("RECEIPT" to 1)
+            return delegate.findReceipt(tenantId, commandId)
+        }
+
+        override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+            val r = delegate.findRoundForShare(tenantId, gameId, roundId)
+            eventLog.add("ROUND_SHARED" to 2)
+            onRoundShared?.invoke()
+            return r
+        }
+
+        override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+            eventLog.add("ROUND_EXCLUSIVE_ATTEMPT" to 2)
+            onBeforeRoundExclusive?.invoke()
+            val r = delegate.findRoundForUpdate(tenantId, gameId, roundId)
+            eventLog.add("ROUND_EXCLUSIVE" to 2)
+            onAfterRoundExclusive?.invoke()
+            return r
+        }
+
+        override fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {
+            eventLog.add("BET" to 3)
+            return delegate.findBet(tenantId, gameId, roundId, ownerId, handId)
+        }
+
+        override fun nextSequenceId(tenantId: String): Long {
+            eventLog.add("SEQUENCE_COUNTER" to 5)
+            return delegate.nextSequenceId(tenantId)
+        }
+
+        override fun saveReceipt(receipt: GameCommandReceiptRecord) {
+            eventLog.add("RECEIPT_WRITE" to 1)
+            delegate.saveReceipt(receipt)
+        }
+    }
+
     @Test
     fun `GivenMixedOperations_WhenLocksAreObserved_ThenGlobalOrderIsPreserved`() {
-        val pool = Executors.newFixedThreadPool(2)
+        val pool = Executors.newFixedThreadPool(4)
         val rankInversions = ConcurrentLinkedQueue<String>()
 
-        for (i in 0 until 100) {
-            val roundId = "rnd-lock-cas-$i-${UUID.randomUUID().toString().take(6)}"
-            lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId, properties)
+        ledgerService.postTransaction(
+            PostTransactionCommand(
+                principal = adminPrincipal,
+                tenantId = tenantId,
+                transactionReference = "TX-SEED-LOCK-TEST-${UUID.randomUUID()}",
+                currencyCode = "INR",
+                entries = listOf(
+                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 20_000_000L, "INR"),
+                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, 10_000_000L, "INR"),
+                    JournalEntryDraft("HOUSE:GAME:$gameId", JournalEntryDirection.CREDIT, 10_000_000L, "INR"),
+                ),
+                idempotencyKey = "IDEM-SEED-LOCK-${UUID.randomUUID()}",
+                correlationId = "corr-seed",
+                causationId = "caus-seed",
+            )
+        )
 
-            val latch = CountDownLatch(2)
-            val workerAcquisitions = ConcurrentHashMap<String, MutableList<Pair<String, Int>>>()
+        val actionTypes = listOf("PLACE_BET", "CANCEL_BET", "CASH_OUT")
+        for ((idx, actionType) in actionTypes.withIndex()) {
+            for (i in 0 until 5) {
+                val roundId = "rnd-lock-cas-$idx-$i-${UUID.randomUUID().toString().take(6)}"
+                gameService.createOrUpdateRound(
+                    CreateOrUpdateRoundCommand(
+                        tenantId = tenantId,
+                        gameId = gameId,
+                        roundId = roundId,
+                        phase = GameRoundPhase.BET_COUNTDOWN,
+                        roundVersion = 1L,
+                    )
+                )
 
-            val workerCommand = Runnable {
-                try {
-                    val list = mutableListOf<Pair<String, Int>>()
-                    val txTemplate = TransactionTemplate(txManager)
-                    txTemplate.execute {
-                        list.add("RECEIPT" to 1)
-                        jdbc.queryForList(
-                            "select round_id from game_authoritative_round where tenant_id = ? and game_id = ? and round_id = ? for share",
-                            tenantId, gameId, roundId
+                if (actionType == "CANCEL_BET") {
+                    val placeAck = gameService.processCommand(
+                        AviatorRestCommand(
+                            tenantId = tenantId,
+                            principal = playerPrincipal,
+                            commandId = "cmd-pre-cancel-$idx-$i-${UUID.randomUUID().toString().take(4)}",
+                            roundId = roundId,
+                            handId = "hand_primary",
+                            action = "PLACE_BET",
+                            wagerMinor = 100L,
+                            currency = "INR",
+                            correlationId = "corr-pre-cancel-$idx-$i",
                         )
-                        list.add("ROUND_SHARED" to 2)
-                    }
-                    workerAcquisitions["cmd"] = list
-                } finally {
-                    latch.countDown()
-                }
-            }
-
-            val workerLifecycle = Runnable {
-                try {
-                    val list = mutableListOf<Pair<String, Int>>()
-                    val txTemplate = TransactionTemplate(txManager)
-                    txTemplate.execute {
-                        list.add("ROUND_EXCLUSIVE" to 2)
-                        jdbc.queryForList(
-                            "select round_id from game_authoritative_round where tenant_id = ? and game_id = ? and round_id = ? for update",
-                            tenantId, gameId, roundId
+                    )
+                    assertEquals(AviatorCommandAckStatus.ACCEPTED, placeAck.status)
+                } else if (actionType == "CASH_OUT") {
+                    val placeAck = gameService.processCommand(
+                        AviatorRestCommand(
+                            tenantId = tenantId,
+                            principal = playerPrincipal,
+                            commandId = "cmd-pre-cashout-$idx-$i-${UUID.randomUUID().toString().take(4)}",
+                            roundId = roundId,
+                            handId = "hand_primary",
+                            action = "PLACE_BET",
+                            wagerMinor = 100L,
+                            currency = "INR",
+                            correlationId = "corr-pre-cashout-$idx-$i",
                         )
-                    }
-                    workerAcquisitions["lifecycle"] = list
-                } finally {
-                    latch.countDown()
+                    )
+                    assertEquals(AviatorCommandAckStatus.ACCEPTED, placeAck.status)
+                    gameService.createOrUpdateRound(
+                        CreateOrUpdateRoundCommand(
+                            tenantId = tenantId,
+                            gameId = gameId,
+                            roundId = roundId,
+                            phase = GameRoundPhase.FLYING,
+                            roundVersion = 2L,
+                            expectedVersion = 1L,
+                            currentMultiplier = BigDecimal("1.2500"),
+                        )
+                    )
                 }
-            }
 
-            pool.submit(workerCommand)
-            pool.submit(workerLifecycle)
-            assertTrue(latch.await(5, TimeUnit.SECONDS))
+                val cmdStore = LockOrderTracingStore(gameStore)
+                val cmdService = DurableGameWagerAndSettlementService(
+                    store = cmdStore,
+                    ledgerService = ledgerService,
+                    registrationStore = registrationStore,
+                    eligibilityStore = eligibilityStore,
+                    adminPrincipal = adminPrincipal,
+                    clock = clock,
+                    txManager = txManager,
+                )
 
-            for ((worker, events) in workerAcquisitions) {
+                val lifecycleStore = LockOrderTracingStore(gameStore)
+                val lifecycleService = DurableGameWagerAndSettlementService(
+                    store = lifecycleStore,
+                    ledgerService = ledgerService,
+                    registrationStore = registrationStore,
+                    eligibilityStore = eligibilityStore,
+                    adminPrincipal = adminPrincipal,
+                    clock = clock,
+                    txManager = txManager,
+                )
+
+                val latch = CountDownLatch(2)
+
+                val workerCommand = Runnable {
+                    try {
+                        val ack = cmdService.processCommand(
+                            AviatorRestCommand(
+                                tenantId = tenantId,
+                                principal = playerPrincipal,
+                                commandId = "cmd-lock-$idx-$i-${UUID.randomUUID().toString().take(4)}",
+                                roundId = roundId,
+                                handId = "hand_primary",
+                                action = actionType,
+                                wagerMinor = if (actionType == "PLACE_BET") 100L else null,
+                                currency = "INR",
+                                correlationId = "corr-lock-$idx-$i",
+                            )
+                        )
+                        assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status)
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+
+                val workerLifecycle = Runnable {
+                    try {
+                        if (actionType == "CASH_OUT") {
+                            lifecycleService.createOrUpdateRound(
+                                CreateOrUpdateRoundCommand(
+                                    tenantId = tenantId,
+                                    gameId = gameId,
+                                    roundId = roundId,
+                                    phase = GameRoundPhase.FLYING,
+                                    roundVersion = 3L,
+                                    expectedVersion = 2L,
+                                    currentMultiplier = BigDecimal("1.3000"),
+                                )
+                            )
+                        } else {
+                            lifecycleService.createOrUpdateRound(
+                                CreateOrUpdateRoundCommand(
+                                    tenantId = tenantId,
+                                    gameId = gameId,
+                                    roundId = roundId,
+                                    phase = GameRoundPhase.FLYING,
+                                    roundVersion = 2L,
+                                    expectedVersion = 1L,
+                                    currentMultiplier = BigDecimal("1.0000"),
+                                )
+                            )
+                        }
+                    } catch (_: RoundVersionConflictException) {
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+
+                pool.submit(workerCommand)
+                pool.submit(workerLifecycle)
+                assertTrue(latch.await(5, TimeUnit.SECONDS))
+
                 var prevRank = 0
-                for ((resource, rank) in events) {
-                    if (rank < prevRank) {
-                        rankInversions.add("Inversion on $worker: $resource($rank) after rank $prevRank")
+                for ((resource, rank) in cmdStore.eventLog) {
+                    if (resource != "RECEIPT_WRITE" && rank < prevRank) {
+                        rankInversions.add("Inversion on command $actionType: $resource($rank) after rank $prevRank")
                     }
-                    prevRank = rank
+                    if (resource != "RECEIPT_WRITE") {
+                        prevRank = rank
+                    }
                 }
+                assertTrue(cmdStore.eventLog.any { it.first == "ROUND_SHARED" }, "Command $actionType must acquire shared round lock")
+                assertTrue(lifecycleStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "Lifecycle must acquire exclusive round lock")
             }
         }
-        pool.shutdown()
-        pool.awaitTermination(5, TimeUnit.SECONDS)
 
         assertTrue(rankInversions.isEmpty(), "Zero lock rank inversions expected: $rankInversions")
+
+        for (actionType in listOf("PLACE_BET", "CANCEL_BET", "CASH_OUT")) {
+            val testRoundId = "rnd-lock-share-hold-$actionType-${UUID.randomUUID().toString().take(6)}"
+            gameService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(
+                    tenantId = tenantId,
+                    gameId = gameId,
+                    roundId = testRoundId,
+                    phase = GameRoundPhase.BET_COUNTDOWN,
+                    roundVersion = 1L,
+                )
+            )
+
+            if (actionType == "CANCEL_BET") {
+                val preBetAck = gameService.processCommand(
+                    AviatorRestCommand(
+                        tenantId = tenantId,
+                        principal = playerPrincipal,
+                        commandId = "cmd-pre-hold-cancel-${UUID.randomUUID().toString().take(4)}",
+                        roundId = testRoundId,
+                        handId = "hand_hold",
+                        action = "PLACE_BET",
+                        wagerMinor = 200L,
+                        currency = "INR",
+                        correlationId = "corr-pre-hold-cancel",
+                    )
+                )
+                assertEquals(AviatorCommandAckStatus.ACCEPTED, preBetAck.status)
+            } else if (actionType == "CASH_OUT") {
+                val preBetAck = gameService.processCommand(
+                    AviatorRestCommand(
+                        tenantId = tenantId,
+                        principal = playerPrincipal,
+                        commandId = "cmd-pre-hold-cashout-${UUID.randomUUID().toString().take(4)}",
+                        roundId = testRoundId,
+                        handId = "hand_hold",
+                        action = "PLACE_BET",
+                        wagerMinor = 200L,
+                        currency = "INR",
+                        correlationId = "corr-pre-hold-cashout",
+                    )
+                )
+                assertEquals(AviatorCommandAckStatus.ACCEPTED, preBetAck.status)
+                gameService.createOrUpdateRound(
+                    CreateOrUpdateRoundCommand(
+                        tenantId = tenantId,
+                        gameId = gameId,
+                        roundId = testRoundId,
+                        phase = GameRoundPhase.FLYING,
+                        roundVersion = 2L,
+                        expectedVersion = 1L,
+                        currentMultiplier = BigDecimal("1.2500"),
+                    )
+                )
+            }
+
+            var cmdPid: Int? = null
+            var lifecyclePid: Int? = null
+
+            val roundLockedLatch = CountDownLatch(1)
+            val releaseCommandLatch = CountDownLatch(1)
+
+            val blockingStore = LockOrderTracingStore(
+                gameStore,
+                onRoundShared = {
+                    cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
+                    roundLockedLatch.countDown()
+                    releaseCommandLatch.await(5, TimeUnit.SECONDS)
+                }
+            )
+            val blockingService = DurableGameWagerAndSettlementService(
+                store = blockingStore,
+                ledgerService = ledgerService,
+                registrationStore = registrationStore,
+                eligibilityStore = eligibilityStore,
+                adminPrincipal = adminPrincipal,
+                clock = clock,
+                txManager = txManager,
+            )
+
+            val lifecycleAttemptLatch = CountDownLatch(1)
+            val lifecycleTracingStore = LockOrderTracingStore(
+                gameStore,
+                onBeforeRoundExclusive = {
+                    lifecyclePid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
+                    lifecycleAttemptLatch.countDown()
+                }
+            )
+            val lifecycleTracingService = DurableGameWagerAndSettlementService(
+                store = lifecycleTracingStore,
+                ledgerService = ledgerService,
+                registrationStore = registrationStore,
+                eligibilityStore = eligibilityStore,
+                adminPrincipal = adminPrincipal,
+                clock = clock,
+                txManager = txManager,
+            )
+
+            val cmdFuture = pool.submit<AviatorCommandAckResult> {
+                blockingService.processCommand(
+                    AviatorRestCommand(
+                        tenantId = tenantId,
+                        principal = playerPrincipal,
+                        commandId = "cmd-holding-share-$actionType-${UUID.randomUUID().toString().take(6)}",
+                        roundId = testRoundId,
+                        handId = if (actionType == "PLACE_BET") "hand_new" else "hand_hold",
+                        action = actionType,
+                        wagerMinor = if (actionType == "PLACE_BET") 500L else null,
+                        currency = "INR",
+                        correlationId = "corr-share-hold-$actionType",
+                    )
+                )
+            }
+
+            assertTrue(roundLockedLatch.await(5, TimeUnit.SECONDS), "Command $actionType must acquire shared round lock")
+
+            val lifecycleFuture = pool.submit<GameRoundRecord> {
+                if (actionType == "CASH_OUT") {
+                    lifecycleTracingService.createOrUpdateRound(
+                        CreateOrUpdateRoundCommand(
+                            tenantId = tenantId,
+                            gameId = gameId,
+                            roundId = testRoundId,
+                            phase = GameRoundPhase.CRASHED,
+                            roundVersion = 3L,
+                            expectedVersion = 2L,
+                            crashMultiplier = BigDecimal("1.2500"),
+                        )
+                    )
+                } else {
+                    lifecycleTracingService.createOrUpdateRound(
+                        CreateOrUpdateRoundCommand(
+                            tenantId = tenantId,
+                            gameId = gameId,
+                            roundId = testRoundId,
+                            phase = GameRoundPhase.FLYING,
+                            roundVersion = 2L,
+                            expectedVersion = 1L,
+                            currentMultiplier = BigDecimal("1.0000"),
+                        )
+                    )
+                }
+            }
+
+            assertTrue(lifecycleAttemptLatch.await(5, TimeUnit.SECONDS), "Lifecycle must attempt exclusive round lock")
+
+            var ungrantedCount = 0
+            var blockedSpecifically = false
+            for (attempt in 0 until 50) {
+                val currentLifecyclePid = lifecyclePid
+                val currentCmdPid = cmdPid
+                if (currentLifecyclePid != null && currentCmdPid != null) {
+                    ungrantedCount = jdbc.queryForObject(
+                        "SELECT count(*) FROM pg_locks WHERE pid = ? AND NOT granted",
+                        Int::class.java,
+                        currentLifecyclePid,
+                    ) ?: 0
+                    val blockerMatches = jdbc.queryForObject(
+                        """
+                        SELECT count(*) FROM pg_stat_activity
+                        WHERE pid = ?
+                          AND wait_event_type = 'Lock'
+                          AND query LIKE '%game_authoritative_round%for update%'
+                          AND ? = ANY(pg_blocking_pids(pid))
+                        """.trimIndent(),
+                        Int::class.java,
+                        currentLifecyclePid,
+                        currentCmdPid,
+                    ) ?: 0
+                    val relationLockCount = jdbc.queryForObject(
+                        "SELECT count(*) FROM pg_locks WHERE pid = ? AND relation = 'game_authoritative_round'::regclass::oid",
+                        Int::class.java,
+                        currentLifecyclePid,
+                    ) ?: 0
+                    if (ungrantedCount > 0 && blockerMatches > 0 && relationLockCount > 0) {
+                        blockedSpecifically = true
+                        break
+                    }
+                }
+                Thread.sleep(20)
+            }
+            assertNotNull(lifecyclePid, "Lifecycle backend PID must be captured")
+            assertNotNull(cmdPid, "Command backend PID must be captured")
+            assertTrue(ungrantedCount > 0, "PostgreSQL must report ungranted lock for lifecycle PID $lifecyclePid while $actionType holds FOR SHARE")
+            assertTrue(blockedSpecifically, "Lifecycle connection $lifecyclePid must be specifically blocked on game_authoritative_round FOR UPDATE by command connection $cmdPid")
+            kotlin.test.assertFalse(lifecycleFuture.isDone, "Exclusive lifecycle write must be blocked in PostgreSQL while $actionType holds FOR SHARE")
+            kotlin.test.assertFalse(lifecycleTracingStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "ROUND_EXCLUSIVE must not be granted yet")
+
+            releaseCommandLatch.countDown()
+
+            val ack = cmdFuture.get(5, TimeUnit.SECONDS)
+            assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status)
+
+            val updatedRound = lifecycleFuture.get(5, TimeUnit.SECONDS)
+            assertNotNull(updatedRound)
+            assertTrue(lifecycleTracingStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "Lifecycle must acquire ROUND_EXCLUSIVE after command releases")
+
+            val remainingUngranted = jdbc.queryForObject(
+                "SELECT count(*) FROM pg_locks WHERE pid = ? AND NOT granted",
+                Int::class.java,
+                lifecyclePid,
+            ) ?: 0
+            assertEquals(0, remainingUngranted, "PostgreSQL ungranted locks for lifecycle PID $lifecyclePid must be cleared after transaction commits")
+        }
+
+        pool.shutdown()
+        pool.awaitTermination(5, TimeUnit.SECONDS)
     }
 
     @Test

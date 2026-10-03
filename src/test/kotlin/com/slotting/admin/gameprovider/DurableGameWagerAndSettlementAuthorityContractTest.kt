@@ -324,15 +324,8 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
         assertEquals(102500L, balanceAfterWin) // 100000 - 5000 + 7500 = 102500
 
         // Set round back to BET_COUNTDOWN to test cancellation attempt on settled bet
-        service.createOrUpdateRound(
-            CreateOrUpdateRoundCommand(
-                tenantId = tenantId,
-                gameId = gameId,
-                roundId = "rnd-003",
-                phase = GameRoundPhase.BET_COUNTDOWN,
-                roundVersion = 3L
-            )
-        )
+        val roundRecord = gameStore.findRound(tenantId, gameId, "rnd-003")!!
+        gameStore.saveRound(roundRecord.copy(phase = GameRoundPhase.BET_COUNTDOWN, roundVersion = 3L))
 
         // Attempt CANCEL_BET on settled bet
         val cancelAck = service.processCommand(

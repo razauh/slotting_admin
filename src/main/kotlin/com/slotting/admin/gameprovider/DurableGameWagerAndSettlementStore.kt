@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 interface DurableGameWagerAndSettlementStore {
     fun findRound(tenantId: String, gameId: String, roundId: String): GameRoundRecord?
+    fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord?
+    fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord?
     fun saveRound(round: GameRoundRecord)
     fun insertRound(round: GameRoundRecord)
     fun updateRound(round: GameRoundRecord, expectedVersion: Long, allowedPriorPhases: Set<GameRoundPhase> = emptySet())
@@ -49,6 +51,14 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
 
     override fun findRound(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
         return rounds[roundKey(tenantId, gameId, roundId)]?.copy()
+    }
+
+    override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+        return findRound(tenantId, gameId, roundId)
+    }
+
+    override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+        return findRound(tenantId, gameId, roundId)
     }
 
     @Synchronized
@@ -204,6 +214,30 @@ open class JdbcDurableGameWagerAndSettlementStore(
                    crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ? and round_id = ?
+        """.trimIndent()
+        val list = jdbcTemplate.query(sql, { rs, _ -> mapRound(rs) }, tenantId, gameId, roundId)
+        return list.firstOrNull()
+    }
+
+    override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+        val sql = """
+            select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
+                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+            from game_authoritative_round
+            where tenant_id = ? and game_id = ? and round_id = ?
+            for share
+        """.trimIndent()
+        val list = jdbcTemplate.query(sql, { rs, _ -> mapRound(rs) }, tenantId, gameId, roundId)
+        return list.firstOrNull()
+    }
+
+    override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+        val sql = """
+            select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
+                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+            from game_authoritative_round
+            where tenant_id = ? and game_id = ? and round_id = ?
+            for update
         """.trimIndent()
         val list = jdbcTemplate.query(sql, { rs, _ -> mapRound(rs) }, tenantId, gameId, roundId)
         return list.firstOrNull()
