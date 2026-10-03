@@ -26,7 +26,7 @@ class AviatorRoundLifecycleOrchestratorTest {
         val orchestrator = AviatorRoundLifecycleOrchestrator(port, properties, clock)
 
         val scheduled = orchestrator.ensureRunning("tenant-a")
-        assertThat(port.operations.take(3)).containsExactly("commitment", "persist:SCHEDULED", "event:SCHEDULED")
+        assertThat(port.operations.take(3)).containsExactly("persist:SCHEDULED", "commitment", "event:SCHEDULED")
         assertThat(scheduled.phase).isEqualTo(GameRoundPhase.SCHEDULED)
 
         clock.advanceMillis(1_000)
@@ -90,12 +90,37 @@ class AviatorRoundLifecycleOrchestratorTest {
 
         override fun latestRound(tenantId: String, gameId: String): GameRoundRecord? = round?.copy()
 
+        override fun createScheduledRoundWithCommitment(
+            tenantId: String,
+            gameId: String,
+            roundId: String,
+            properties: AviatorLifecycleProperties,
+        ): Pair<GameRoundRecord, String> {
+            val round = persistRound(
+                CreateOrUpdateRoundCommand(
+                    tenantId = tenantId,
+                    gameId = gameId,
+                    roundId = roundId,
+                    phase = GameRoundPhase.SCHEDULED,
+                    roundVersion = 1,
+                    currentMultiplier = BigDecimal("1.0000"),
+                    crashMultiplier = null,
+                )
+            )
+            val commitment = ensureCommitment(tenantId, gameId, roundId, properties)
+            return round to commitment
+        }
+
         override fun ensureCommitment(
             tenantId: String,
             gameId: String,
             roundId: String,
             properties: AviatorLifecycleProperties,
         ): String {
+            val existing = round
+            check(existing != null && existing.roundId == roundId) {
+                "Foreign key violation: parent round $roundId does not exist"
+            }
             operations += "commitment"
             return "commitment-$roundId"
         }

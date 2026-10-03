@@ -100,6 +100,7 @@ data class CreateOrUpdateRoundCommand(
     val roundVersion: Long = 1L,
     val currentMultiplier: BigDecimal = BigDecimal("1.0000"),
     val crashMultiplier: BigDecimal? = null,
+    val expectedVersion: Long? = null,
 )
 
 data class SettleRoundCrashCommand(
@@ -114,3 +115,13 @@ data class SettleRoundCrashResult(
     val settledBetsCount: Int,
     val crashMultiplier: BigDecimal,
 )
+
+class RoundVersionConflictException(message: String) : RuntimeException(message)
+
+fun legalPriorPhases(targetPhase: GameRoundPhase): Set<GameRoundPhase> = when (targetPhase) {
+    GameRoundPhase.SCHEDULED -> setOf(GameRoundPhase.SCHEDULED)
+    GameRoundPhase.BET_COUNTDOWN -> setOf(GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN)
+    GameRoundPhase.FLYING -> setOf(GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN, GameRoundPhase.FLYING)
+    GameRoundPhase.CRASHED -> setOf(GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN, GameRoundPhase.FLYING)
+    GameRoundPhase.CLOSED -> setOf(GameRoundPhase.CRASHED, GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN)
+}

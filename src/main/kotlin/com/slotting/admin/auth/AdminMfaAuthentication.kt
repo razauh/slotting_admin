@@ -61,15 +61,15 @@ data class OutboxEvent(
 
 /** Minimal forensic metadata only; never include credentials, tokens, or raw provider payloads. */
 object RedactedEventJson {
-    private val mapper = ObjectMapper()
+    private val mapper = ObjectMapper().findAndRegisterModules()
 
     fun audit(event: AuditEvent): String = mapper.writeValueAsString(
         mapOf(
-            "eventId" to event.eventId,
-            "resultId" to event.resultId,
+            "eventId" to event.eventId.toString(),
+            "resultId" to event.resultId.toString(),
             "tenantId" to event.tenantId,
             "eventType" to event.type,
-            "occurredAt" to event.occurredAt,
+            "occurredAt" to event.occurredAt.toString(),
             "correlationId" to event.correlationId,
             "causationId" to event.causationId,
         ),
@@ -77,11 +77,11 @@ object RedactedEventJson {
 
     fun outbox(event: OutboxEvent, audit: AuditEvent): String = mapper.writeValueAsString(
         mapOf(
-            "eventId" to event.eventId,
-            "resultId" to event.resultId,
+            "eventId" to event.eventId.toString(),
+            "resultId" to event.resultId.toString(),
             "tenantId" to event.tenantId,
             "eventType" to event.type,
-            "createdAt" to event.createdAt,
+            "createdAt" to event.createdAt.toString(),
             "correlationId" to audit.correlationId,
             "causationId" to audit.causationId,
         ),

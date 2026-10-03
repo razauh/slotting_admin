@@ -45,6 +45,10 @@ class DurableWorkerConfiguration {
     fun loggingWorkerAlerts(): WorkerOutboxAlertSink = LoggingWorkerOutboxAlertSink()
 
     @Bean
+    @ConditionalOnMissingBean(WorkerOutboxBrokerSink::class)
+    fun loggingWorkerBrokerSink(): WorkerOutboxBrokerSink = LoggingWorkerOutboxBrokerSink()
+
+    @Bean
     fun scheduledOutboxDispatcher(worker: LeasedOutboxWorkerService, store: LeasedOutboxStore): ScheduledOutboxDispatcher =
         ScheduledOutboxDispatcher(worker, store)
 }
@@ -118,4 +122,17 @@ class LoggingWorkerOutboxAlertSink : WorkerOutboxAlertSink {
     }
 
     override fun getAlerts(): List<WorkerOutboxAlert> = emptyList()
+}
+
+class LoggingWorkerOutboxBrokerSink : WorkerOutboxBrokerSink {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    override fun publish(event: LeasedOutboxEventRecord) {
+        logger.info(
+            "outbox_event_published eventId={} tenantId={} topic={}",
+            event.eventId,
+            event.tenantId,
+            event.topic,
+        )
+    }
 }

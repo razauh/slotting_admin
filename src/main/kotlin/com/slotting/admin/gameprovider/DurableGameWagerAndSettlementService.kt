@@ -37,7 +37,6 @@ object DurableGameWagerAndSettlementBinding {
     }
 }
 
-@Service
 class DurableGameWagerAndSettlementService(
     val store: DurableGameWagerAndSettlementStore,
     private val ledgerService: LedgerPostingService,
@@ -60,23 +59,8 @@ class DurableGameWagerAndSettlementService(
         DurableGameWagerAndSettlementBinding.checkBound()
         val now = clock.instant()
         val existing = store.findRound(command.tenantId, command.gameId, command.roundId)
-        val round = if (existing != null) {
-            existing.apply {
-                this.phase = command.phase
-                this.roundVersion = command.roundVersion
-                this.currentMultiplier = command.currentMultiplier
-                this.crashMultiplier = command.crashMultiplier ?: this.crashMultiplier
-                this.serverTime = now
-                this.updatedAt = now
-                if (command.phase == GameRoundPhase.CRASHED && this.crashedAt == null) {
-                    this.crashedAt = now
-                }
-                if (command.phase == GameRoundPhase.CLOSED && this.closedAt == null) {
-                    this.closedAt = now
-                }
-            }
-        } else {
-            GameRoundRecord(
+        if (existing == null) {
+            val round = GameRoundRecord(
                 tenantId = command.tenantId,
                 gameId = command.gameId,
                 roundId = command.roundId,
@@ -91,9 +75,39 @@ class DurableGameWagerAndSettlementService(
                 createdAt = now,
                 updatedAt = now,
             )
+            store.insertRound(round)
+            return round
+        } else {
+            val expectedVersion = command.expectedVersion ?: existing.roundVersion
+            val targetVersion = if (command.roundVersion > expectedVersion) command.roundVersion else expectedVersion + 1
+            val allowedPrior = legalPriorPhases(command.phase)
+            if (existing.phase !in allowedPrior) {
+                throw RoundVersionConflictException(
+                    "Illegal round phase transition for round ${command.roundId}: cannot transition from ${existing.phase} to ${command.phase}"
+                )
+            }
+            if (command.phase == GameRoundPhase.FLYING && existing.phase == GameRoundPhase.FLYING) {
+                if (command.currentMultiplier < existing.currentMultiplier) {
+                    throw RoundVersionConflictException(
+                        "Multiplier cannot regress in FLYING phase for round ${command.roundId}: existing ${existing.currentMultiplier} target ${command.currentMultiplier}"
+                    )
+                }
+            }
+            existing.phase = command.phase
+            existing.roundVersion = targetVersion
+            existing.currentMultiplier = command.currentMultiplier
+            existing.crashMultiplier = command.crashMultiplier ?: existing.crashMultiplier
+            existing.serverTime = now
+            existing.updatedAt = now
+            if (command.phase == GameRoundPhase.CRASHED && existing.crashedAt == null) {
+                existing.crashedAt = now
+            }
+            if (command.phase == GameRoundPhase.CLOSED && existing.closedAt == null) {
+                existing.closedAt = now
+            }
+            store.updateRound(existing, expectedVersion, allowedPrior)
+            return existing
         }
-        store.saveRound(round)
-        return round
     }
 
     fun settleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
@@ -110,11 +124,15 @@ class DurableGameWagerAndSettlementService(
                 )
             )
 
-        round.phase = GameRoundPhase.CRASHED
-        round.crashMultiplier = command.crashMultiplier
-        round.crashedAt = round.crashedAt ?: now
-        round.updatedAt = now
-        store.saveRound(round)
+        if (round.phase != GameRoundPhase.CRASHED) {
+            val expectedVersion = round.roundVersion
+            round.phase = GameRoundPhase.CRASHED
+            round.roundVersion = expectedVersion + 1
+            round.crashMultiplier = command.crashMultiplier
+            round.crashedAt = round.crashedAt ?: now
+            round.updatedAt = now
+            store.updateRound(round, expectedVersion, legalPriorPhases(GameRoundPhase.CRASHED))
+        }
 
         val pendingBets = store.findBetsForRound(command.tenantId, command.gameId, command.roundId)
             .filter { it.status == GameBetStatus.ACCEPTED }
@@ -524,10 +542,6 @@ class DurableGameWagerAndSettlementService(
         )
         store.addDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor)
 
-        round.roundVersion += 1
-        round.updatedAt = now
-        store.saveRound(round)
-
         val balanceAfter = ledgerService.store.findBalance(command.tenantId, "PLAYER:$playerId", command.currency)
         val seq = store.nextSequenceId(command.tenantId)
         val evidenceRef = sha256("${command.tenantId}:$reservationId:$txRef:${now.toEpochMilli()}")
@@ -630,10 +644,6 @@ class DurableGameWagerAndSettlementService(
         bet.status = GameBetStatus.CANCELLED
         bet.updatedAt = now
         store.updateBet(bet)
-
-        round.roundVersion += 1
-        round.updatedAt = now
-        store.saveRound(round)
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(
@@ -791,10 +801,6 @@ class DurableGameWagerAndSettlementService(
         bet.status = GameBetStatus.CASHED_OUT
         bet.updatedAt = now
         store.updateBet(bet)
-
-        round.roundVersion += 1
-        round.updatedAt = now
-        store.saveRound(round)
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(

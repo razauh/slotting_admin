@@ -109,6 +109,18 @@ class AviatorGameRestControllerTest {
         fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         eventJournalStore = InMemoryGameEventJournalStore()
 
+        val authStore = InMemoryDurableAuthStore()
+        authStore.createSession(
+            PlayerSessionRecord(
+                sessionId = playerUuid,
+                tenantId = tenantId,
+                playerId = playerUuid,
+                createdAt = now,
+                expiresAt = now.plusSeconds(3600),
+                state = com.slotting.admin.auth.SessionState.ACTIVE,
+            )
+        )
+
         snapshotAndEventService = AuthoritativeGameSnapshotAndEventService(
             gameStore = gameStore,
             gameService = gameService,
@@ -117,7 +129,8 @@ class AviatorGameRestControllerTest {
             fairnessStore = fairnessStore,
             eventJournalStore = eventJournalStore,
             registrationStore = registrationStore,
-            clock = clock
+            clock = clock,
+            authStore = authStore,
         )
 
         controller = AviatorGameRestController(

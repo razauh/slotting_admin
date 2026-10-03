@@ -447,4 +447,14 @@ class DurableAuthService(
         val digest = MessageDigest.getInstance("SHA-256").digest(token.toByteArray(Charsets.UTF_8))
         return PasswordKdfService.bytesToHex(digest)
     }
+
+    fun revokeAllPlayerSessionsAndTokens(tenantId: String, playerId: UUID): Int {
+        val now = Instant.now(clock)
+        val revokedSessions = store.revokeAllSessionsForPlayer(tenantId, playerId, now)
+        store.revokeAllTokenFamiliesForPlayer(tenantId, playerId, "PASSWORD_RESET")
+        store.revokeAllAuthorizationCodesForPlayer(tenantId, playerId, now)
+        tokenCache.entries.removeIf { it.value.playerId == playerId && it.value.tenantId == tenantId }
+        logger.info("Revoked all active sessions and token families for player {} (count={})", playerId, revokedSessions)
+        return revokedSessions
+    }
 }

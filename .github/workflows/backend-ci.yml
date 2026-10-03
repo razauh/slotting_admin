@@ -3,8 +3,22 @@ name: Backend CI, Artifact Provenance, and Release Gating
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - 'src/main/kotlin/com/slotting/admin/gameprovider/**'
+      - 'src/main/kotlin/com/slotting/admin/ledger/**'
+      - 'src/main/resources/db/migration/**'
+      - 'src/**'
+      - 'build.gradle.kts'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [ main, master ]
+    paths:
+      - 'src/main/kotlin/com/slotting/admin/gameprovider/**'
+      - 'src/main/kotlin/com/slotting/admin/ledger/**'
+      - 'src/main/resources/db/migration/**'
+      - 'src/**'
+      - 'build.gradle.kts'
+      - '.github/workflows/backend-ci.yml'
 
 permissions:
   contents: read

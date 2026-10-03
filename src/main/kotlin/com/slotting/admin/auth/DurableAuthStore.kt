@@ -41,6 +41,10 @@ interface DurableAuthStore {
     fun findRefreshTokenByHash(tokenHash: String): RefreshTokenRecord?
     fun rotateRefreshToken(oldTokenHash: String, newToken: RefreshTokenRecord, rotatedAt: Instant): Boolean
     fun revokeRefreshToken(tokenHash: String, revokedAt: Instant)
+
+    fun revokeAllSessionsForPlayer(tenantId: String, playerId: UUID, terminatedAt: Instant): Int
+    fun revokeAllTokenFamiliesForPlayer(tenantId: String, playerId: UUID, reason: String): Int
+    fun revokeAllAuthorizationCodesForPlayer(tenantId: String, playerId: UUID, consumedAt: Instant): Int
 }
 
 /**
@@ -181,6 +185,39 @@ class InMemoryDurableAuthStore : DurableAuthStore {
             it.status = RefreshTokenStatus.REVOKED
             it.revokedAt = revokedAt
         }
+    }
+
+    @Synchronized
+    override fun revokeAllSessionsForPlayer(tenantId: String, playerId: UUID, terminatedAt: Instant): Int {
+        var count = 0
+        sessions.values.filter { it.tenantId == tenantId && it.playerId == playerId && it.state == SessionState.ACTIVE }.forEach {
+            it.state = SessionState.TERMINATED
+            it.terminatedAt = terminatedAt
+            it.version++
+            count++
+        }
+        return count
+    }
+
+    @Synchronized
+    override fun revokeAllTokenFamiliesForPlayer(tenantId: String, playerId: UUID, reason: String): Int {
+        var count = 0
+        families.values.filter { it.tenantId == tenantId && it.playerId == playerId && !it.isRevoked }.forEach {
+            revokeTokenFamily(it.familyId, reason)
+            count++
+        }
+        return count
+    }
+
+    @Synchronized
+    override fun revokeAllAuthorizationCodesForPlayer(tenantId: String, playerId: UUID, consumedAt: Instant): Int {
+        var count = 0
+        authCodes.values.filter { it.tenantId == tenantId && it.playerId == playerId && !it.consumed }.forEach {
+            it.consumed = true
+            it.consumedAt = consumedAt
+            count++
+        }
+        return count
     }
 }
 
@@ -363,6 +400,34 @@ class JdbcDurableAuthStore(private val jdbc: JdbcTemplate) : DurableAuthStore {
         jdbc.update(
             "update refresh_token_record set status = 'REVOKED', revoked_at = ? where token_hash = ?",
             Timestamp.from(revokedAt), tokenHash
+        )
+    }
+
+    @Transactional
+    override fun revokeAllSessionsForPlayer(tenantId: String, playerId: UUID, terminatedAt: Instant): Int {
+        return jdbc.update(
+            "update player_session set state = 'TERMINATED', terminated_at = ?, version = version + 1 where tenant_id = ? and player_id = ? and state = 'ACTIVE'",
+            Timestamp.from(terminatedAt), tenantId, playerId
+        )
+    }
+
+    @Transactional
+    override fun revokeAllTokenFamiliesForPlayer(tenantId: String, playerId: UUID, reason: String): Int {
+        val families = jdbc.queryForList(
+            "select family_id from token_family where tenant_id = ? and player_id = ? and is_revoked = false",
+            UUID::class.java, tenantId, playerId
+        )
+        for (fId in families) {
+            revokeTokenFamily(fId, reason)
+        }
+        return families.size
+    }
+
+    @Transactional
+    override fun revokeAllAuthorizationCodesForPlayer(tenantId: String, playerId: UUID, consumedAt: Instant): Int {
+        return jdbc.update(
+            "update authorization_code_session set consumed = true, consumed_at = ? where tenant_id = ? and player_id = ? and consumed = false",
+            Timestamp.from(consumedAt), tenantId, playerId
         )
     }
 

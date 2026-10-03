@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.sql.ResultSet
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
@@ -113,9 +114,9 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
             on conflict (event_id) do nothing
             """.trimIndent(),
             envelope.eventId, envelope.tenantId, envelope.aggregateType, envelope.aggregateId,
-            envelope.operationId, envelope.eventType, envelope.schemaVersion, envelope.occurredAt,
+            envelope.operationId, envelope.eventType, envelope.schemaVersion, Timestamp.from(envelope.occurredAt),
             envelope.correlationId, envelope.causationId, envelope.redactedPayload,
-            envelope.payloadSha256, event.createdAt,
+            envelope.payloadSha256, Timestamp.from(event.createdAt),
         )
         jdbc.update(
             """
@@ -125,7 +126,7 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
             on conflict (event_id) do nothing
             """.trimIndent(),
             event.eventId, event.tenantId, event.topic, event.status.name, event.retryCount,
-            event.maxRetries, event.nextRetryAt ?: event.createdAt, event.createdAt, event.version,
+            event.maxRetries, Timestamp.from(event.nextRetryAt ?: event.createdAt), Timestamp.from(event.createdAt), event.version,
         )
         return findById(event.tenantId, event.eventId) ?: event
     }
@@ -163,7 +164,7 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
             order by d.created_at, d.event_id
             limit ?
             for update of d skip locked
-            """.trimIndent(), { rs, _ -> rs.toEvent() }, tenantId, now, now, limit,
+            """.trimIndent(), { rs, _ -> rs.toEvent() }, tenantId, Timestamp.from(now), Timestamp.from(now), limit,
         )
         return candidates.mapNotNull { candidate ->
             val leased = candidate.copy(
@@ -180,16 +181,16 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
                   and ((status = 'PENDING' and next_attempt_at <= ?) or
                        (status = 'LEASED' and lease_expires_at < ?))
                 """.trimIndent(),
-                workerId, leased.leaseExpiresAt, candidate.eventId, tenantId, candidate.version, now, now,
+                workerId, leased.leaseExpiresAt?.let { Timestamp.from(it) }, candidate.eventId, tenantId, candidate.version, Timestamp.from(now), Timestamp.from(now),
             )
             if (changed == 1) {
                 jdbc.update(
                     "update admin_delivery_attempt set status = 'EXPIRED', finished_at = ? where tenant_id = ? and event_id = ? and status = 'CLAIMED'",
-                    now, tenantId, candidate.eventId,
+                    Timestamp.from(now), tenantId, candidate.eventId,
                 )
                 jdbc.update(
                     "insert into admin_delivery_attempt(attempt_id, tenant_id, event_id, attempt_number, worker_id, status, started_at, correlation_id, causation_id) values (?, ?, ?, ?, ?, 'CLAIMED', ?, ?, ?)",
-                    UUID.randomUUID(), tenantId, candidate.eventId, candidate.retryCount + 1, workerId, now, candidate.correlationId, candidate.causationId,
+                    UUID.randomUUID(), tenantId, candidate.eventId, candidate.retryCount + 1, workerId, Timestamp.from(now), candidate.correlationId, candidate.causationId,
                 )
                 leased
             } else null
@@ -206,8 +207,8 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
             where event_id = ? and tenant_id = ? and version = ? - 1
               and (lease_expires_at is null or lease_expires_at > now())
             """.trimIndent(),
-            event.status.name, event.retryCount, event.nextRetryAt ?: event.createdAt, event.lastError,
-            event.leaseOwner, event.leaseExpiresAt, event.publishedAt, event.version,
+            event.status.name, event.retryCount, Timestamp.from(event.nextRetryAt ?: event.createdAt), event.lastError,
+            event.leaseOwner, event.leaseExpiresAt?.let { Timestamp.from(it) }, event.publishedAt?.let { Timestamp.from(it) }, event.version,
             event.eventId, event.tenantId, event.version,
         )
         if (changed != 1) throw StaleWorkerLeaseException("outbox event ${event.eventId} lease or version is stale")
@@ -225,7 +226,7 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
                 WorkerOutboxStatus.PUBLISHED -> "ACKNOWLEDGED"
                 WorkerOutboxStatus.QUARANTINED -> "QUARANTINED"
                 else -> "FAILED"
-            }, Instant.now(), event.lastError?.substringBefore(":") ?: null, event.lastError?.take(512),
+            }, Timestamp.from(Instant.now()), event.lastError?.substringBefore(":") ?: null, event.lastError?.take(512),
             event.tenantId, event.eventId,
         )
         return event
@@ -266,7 +267,7 @@ class JdbcLeasedOutboxStore(private val jdbc: JdbcTemplate) : LeasedOutboxStore 
             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             tenantId, idempotencyKey, fingerprint, result.resultId, result.eventId, result.replayedBy,
-            result.replayedAt, result.status.name, result.evidenceReference,
+            Timestamp.from(result.replayedAt), result.status.name, result.evidenceReference,
             result.auditEvent.correlationId, result.auditEvent.causationId,
         )
     }
@@ -286,7 +287,7 @@ private class JdbcWorkerHealthMetrics(private val jdbc: JdbcTemplate) {
         tenantId = tenantId,
         status = com.slotting.admin.worker.WorkerHealthStatus.HEALTHY,
         pendingCount = jdbc.queryForObject("select count(*) from admin_outbox_delivery where tenant_id = ? and status in ('PENDING', 'LEASED')", Long::class.java, tenantId) ?: 0L,
-        activeLeasesCount = jdbc.queryForObject("select count(*) from admin_outbox_delivery where tenant_id = ? and status = 'LEASED' and lease_expires_at > ?", Long::class.java, tenantId, now) ?: 0L,
+        activeLeasesCount = jdbc.queryForObject("select count(*) from admin_outbox_delivery where tenant_id = ? and status = 'LEASED' and lease_expires_at > ?", Long::class.java, tenantId, Timestamp.from(now)) ?: 0L,
         publishedCount = jdbc.queryForObject("select count(*) from admin_outbox_delivery where tenant_id = ? and status = 'PUBLISHED'", Long::class.java, tenantId) ?: 0L,
         quarantinedCount = jdbc.queryForObject("select count(*) from admin_outbox_delivery where tenant_id = ? and status = 'QUARANTINED'", Long::class.java, tenantId) ?: 0L,
         oldestPendingAgeSeconds = 0L,
@@ -336,8 +337,8 @@ class JdbcDurableInboxStore(private val jdbc: JdbcTemplate) {
                 lease_expires_at = ?, version = version + 1
             where tenant_id = ? and event_id = ? and consumer_name = ?
               and version = ? and (status in ('RECEIVED', 'FAILED') or (status = 'PROCESSING' and lease_expires_at < ?))
-            """.trimIndent(), workerId, now.plusSeconds(leaseDurationSeconds), tenantId, eventId, consumerName,
-            currentVersion, now,
+            """.trimIndent(), workerId, Timestamp.from(now.plusSeconds(leaseDurationSeconds)), tenantId, eventId, consumerName,
+            currentVersion, Timestamp.from(now),
         )
         if (changed != 1) throw OutboxWorkerConflictException("inbox message is already claimed or processed")
         return jdbc.queryForObject(
@@ -351,7 +352,7 @@ class JdbcDurableInboxStore(private val jdbc: JdbcTemplate) {
     fun complete(claim: DurableInboxClaim, now: Instant) {
         val changed = jdbc.update(
             "update admin_inbox_consumer set status = 'PROCESSED', processed_at = ?, lease_owner = null, lease_expires_at = null, version = version + 1 where tenant_id = ? and event_id = ? and consumer_name = ? and version = ? and lease_owner = ? and lease_expires_at > now()",
-            now, claim.tenantId, claim.eventId, claim.consumerName, claim.version, claim.leaseOwner,
+            Timestamp.from(now), claim.tenantId, claim.eventId, claim.consumerName, claim.version, claim.leaseOwner,
         )
         if (changed != 1) throw StaleWorkerLeaseException("inbox claim ${claim.eventId} lease or version is stale")
     }
@@ -367,7 +368,7 @@ class JdbcDurableInboxStore(private val jdbc: JdbcTemplate) {
         if (quarantine) {
             jdbc.update(
                 "insert into admin_delivery_dead_letter(dead_letter_id, tenant_id, event_id, consumer_name, reason, failure_detail, quarantined_at) values (?, ?, ?, ?, ?, ?, ?)",
-                UUID.randomUUID(), claim.tenantId, claim.eventId, claim.consumerName, errorType, detail.take(512), now,
+                UUID.randomUUID(), claim.tenantId, claim.eventId, claim.consumerName, errorType, detail.take(512), Timestamp.from(now),
             )
         }
     }

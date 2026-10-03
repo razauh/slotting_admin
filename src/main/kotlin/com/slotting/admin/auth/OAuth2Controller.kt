@@ -473,6 +473,9 @@ class OAuth2Controller(
                     
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required autocomplete="current-password" />
+                    <div style="text-align: right; margin-top: -8px; margin-bottom: 16px;">
+                        <a href="/auth/forgot-password" style="color: #58a6ff; font-size: 13px; text-decoration: none;">Forgot Password?</a>
+                    </div>
                     
                     <button type="submit">Sign In &amp; Authorize</button>
                     <button type="submit" formaction="/oauth2/register" class="btn-secondary">Create New Account</button>

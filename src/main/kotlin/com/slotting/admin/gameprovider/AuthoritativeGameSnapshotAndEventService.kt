@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.DurableAuthService
+import com.slotting.admin.auth.DurableAuthStore
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.ledger.LedgerJournalStore
@@ -29,7 +31,6 @@ object AuthoritativeGameSnapshotBinding {
     }
 }
 
-@Service
 class AuthoritativeGameSnapshotAndEventService(
     private val gameStore: DurableGameWagerAndSettlementStore,
     private val gameService: DurableGameWagerAndSettlementService,
@@ -39,6 +40,8 @@ class AuthoritativeGameSnapshotAndEventService(
     private val eventJournalStore: GameEventJournalStore,
     private val registrationStore: PlayerRegistrationStore,
     private val clock: Clock = Clock.systemUTC(),
+    private val authService: DurableAuthService? = null,
+    private val authStore: DurableAuthStore? = null,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
@@ -239,7 +242,8 @@ class AuthoritativeGameSnapshotAndEventService(
         val sequenceId = eventJournalStore.nextSequenceId(tenantId, gameId)
 
         val existingRound = gameStore.findRound(tenantId, gameId, roundId)
-        if (existingRound != null) {
+        if (existingRound != null && (existingRound.roundVersion < roundVersion || existingRound.phase != phase || existingRound.currentMultiplier != multiplier)) {
+            val expectedVer = existingRound.roundVersion
             existingRound.phase = phase
             existingRound.currentMultiplier = multiplier
             existingRound.roundVersion = roundVersion
@@ -248,7 +252,7 @@ class AuthoritativeGameSnapshotAndEventService(
                 existingRound.crashMultiplier = multiplier
                 existingRound.crashedAt = now
             }
-            gameStore.saveRound(existingRound)
+            gameStore.updateRound(existingRound, expectedVer, legalPriorPhases(phase))
         }
 
         val payload = mapOf(
@@ -305,15 +309,64 @@ class AuthoritativeGameSnapshotAndEventService(
 
     fun authenticateSession(tenantId: String, rawSessionToken: String): AuthenticatedPrincipal {
         AuthoritativeGameSnapshotBinding.checkBound()
-        if (rawSessionToken.isBlank() || rawSessionToken.startsWith("expired") || rawSessionToken.startsWith("invalid")) {
+        val cleanToken = rawSessionToken.trim().removePrefix("Bearer ").trim()
+        if (cleanToken.isBlank()) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         }
-        return AuthenticatedPrincipal(
-            id = rawSessionToken,
-            tenantId = tenantId,
-            kind = PrincipalKind.PLAYER,
-            roles = emptySet(),
-        )
+
+        if (authService != null) {
+            val principal = try {
+                authService.validateAccessToken(cleanToken)
+            } catch (e: AuthenticationFailure.Rejected) {
+                throw e
+            } catch (e: SessionStoreOutageException) {
+                throw e
+            } catch (e: Throwable) {
+                throw SessionStoreOutageException("Authentication store error during token validation", e)
+            }
+            if (principal != null) {
+                if (principal.kind != PrincipalKind.PLAYER || principal.tenantId != tenantId) {
+                    throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+                }
+                return principal
+            }
+        }
+
+        if (authStore != null) {
+            val sessionId = try {
+                UUID.fromString(cleanToken)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+            if (sessionId != null) {
+                val session = try {
+                    authStore.findSession(sessionId)
+                } catch (e: AuthenticationFailure.Rejected) {
+                    throw e
+                } catch (e: SessionStoreOutageException) {
+                    throw e
+                } catch (e: Throwable) {
+                    throw SessionStoreOutageException("Authentication store error during session lookup", e)
+                }
+                if (session != null) {
+                    val now = clock.instant()
+                    if (session.state != com.slotting.admin.auth.SessionState.ACTIVE || session.terminatedAt != null || !now.isBefore(session.expiresAt)) {
+                        throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
+                    }
+                    if (session.tenantId != tenantId) {
+                        throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+                    }
+                    return AuthenticatedPrincipal(
+                        id = session.playerId.toString(),
+                        tenantId = session.tenantId,
+                        kind = PrincipalKind.PLAYER,
+                        roles = emptySet(),
+                    )
+                }
+            }
+        }
+
+        throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
     }
 
     fun getPrivatePlayerRoom(tenantId: String, playerId: String): String = "tenant:$tenantId:player:$playerId"

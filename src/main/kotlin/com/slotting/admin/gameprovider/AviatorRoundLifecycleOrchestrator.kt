@@ -45,6 +45,7 @@ data class LifecycleOutcome(val multiplier: BigDecimal)
 interface AviatorLifecyclePort {
     fun latestRound(tenantId: String, gameId: String): GameRoundRecord?
     fun ensureCommitment(tenantId: String, gameId: String, roundId: String, properties: AviatorLifecycleProperties): String
+    fun createScheduledRoundWithCommitment(tenantId: String, gameId: String, roundId: String, properties: AviatorLifecycleProperties): Pair<GameRoundRecord, String>
     fun deriveOutcome(tenantId: String, gameId: String, roundId: String): LifecycleOutcome
     fun persistRound(command: CreateOrUpdateRoundCommand): GameRoundRecord
     fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double): GameEventRecord
@@ -53,13 +54,45 @@ interface AviatorLifecyclePort {
 }
 
 @Component
+@ConditionalOnProperty(
+    prefix = "slotting.aviator.lifecycle",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = false,
+)
 class ProductionAviatorLifecyclePort(
     private val gameService: DurableGameWagerAndSettlementService,
     private val fairnessAuthority: ProvablyFairOutcomeAuthority,
     private val snapshotService: AuthoritativeGameSnapshotAndEventService,
+    private val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
 ) : AviatorLifecyclePort {
     override fun latestRound(tenantId: String, gameId: String): GameRoundRecord? =
         gameService.store.findLatestRound(tenantId, gameId)
+
+    @org.springframework.transaction.annotation.Transactional
+    override fun createScheduledRoundWithCommitment(
+        tenantId: String,
+        gameId: String,
+        roundId: String,
+        properties: AviatorLifecycleProperties,
+    ): Pair<GameRoundRecord, String> {
+        val action = {
+            val round = persistRound(
+                CreateOrUpdateRoundCommand(
+                    tenantId = tenantId,
+                    gameId = gameId,
+                    roundId = roundId,
+                    phase = GameRoundPhase.SCHEDULED,
+                    roundVersion = 1,
+                    currentMultiplier = BigDecimal("1.0000"),
+                    crashMultiplier = null,
+                )
+            )
+            val commitment = ensureCommitment(tenantId, gameId, roundId, properties)
+            round to commitment
+        }
+        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+    }
 
     override fun ensureCommitment(
         tenantId: String,
@@ -126,7 +159,7 @@ class ProductionAviatorLifecyclePort(
     prefix = "slotting.aviator.lifecycle",
     name = ["enabled"],
     havingValue = "true",
-    matchIfMissing = true,
+    matchIfMissing = false,
 )
 class AviatorRoundLifecycleOrchestrator(
     private val port: AviatorLifecyclePort,
@@ -234,11 +267,11 @@ class AviatorRoundLifecycleOrchestrator(
         val stepMultiplier = round.currentMultiplier.add(properties.multiplierStep).setScale(4, RoundingMode.DOWN)
         val nextMultiplier = curveMultiplier.max(stepMultiplier).min(crash)
         return if (nextMultiplier >= crash) {
-            // This operation is idempotent and is repeated during CRASHED recovery before reveal.
             flightStartTimes.remove(round.roundId)
+            val crashed = transition(round, GameRoundPhase.CRASHED, crash, crash)
             port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
             logger.info("AVIATOR_CRASHED roundId={} roundVersion={} crashMultiplier={}", round.roundId, round.roundVersion, crash)
-            transition(round, GameRoundPhase.CRASHED, crash, crash)
+            crashed
         } else {
             persistAndPublish(round, GameRoundPhase.FLYING, nextMultiplier, crash)
         }
@@ -249,7 +282,8 @@ class AviatorRoundLifecycleOrchestrator(
         port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
         port.revealIfNeeded(round.tenantId, round.gameId, round.roundId, crash)
         logger.info("AVIATOR_REVEALED roundId={} phase={} roundVersion={}", round.roundId, round.phase, round.roundVersion)
-        val closed = transition(round, GameRoundPhase.CLOSED, crash, crash)
+        val current = port.latestRound(round.tenantId, round.gameId) ?: round
+        val closed = transition(current, GameRoundPhase.CLOSED, crash, crash)
         logger.info("AVIATOR_CLOSED roundId={} roundVersion={}", closed.roundId, closed.roundVersion)
         return closed
     }
@@ -276,36 +310,42 @@ class AviatorRoundLifecycleOrchestrator(
         multiplier: BigDecimal,
         crashMultiplier: BigDecimal?,
     ): GameRoundRecord {
-        val persisted = port.persistRound(
-            CreateOrUpdateRoundCommand(
-                tenantId = round.tenantId,
-                gameId = round.gameId,
-                roundId = round.roundId,
-                phase = phase,
-                roundVersion = round.roundVersion + 1,
-                currentMultiplier = multiplier,
-                crashMultiplier = crashMultiplier,
-            )
-        )
-        port.publishState(persisted, if (phase == GameRoundPhase.FLYING) {
-            Duration.between(persisted.startedAt, clock.instant()).toMillis().coerceAtLeast(0) / 1000.0
-        } else 0.0)
-        return persisted
+        var currentRound = round
+        var attempts = 0
+        val maxAttempts = 3
+        while (attempts < maxAttempts) {
+            try {
+                val persisted = port.persistRound(
+                    CreateOrUpdateRoundCommand(
+                        tenantId = currentRound.tenantId,
+                        gameId = currentRound.gameId,
+                        roundId = currentRound.roundId,
+                        phase = phase,
+                        roundVersion = currentRound.roundVersion + 1,
+                        currentMultiplier = multiplier,
+                        crashMultiplier = crashMultiplier,
+                        expectedVersion = currentRound.roundVersion,
+                    )
+                )
+                port.publishState(persisted, if (phase == GameRoundPhase.FLYING) {
+                    Duration.between(persisted.startedAt, clock.instant()).toMillis().coerceAtLeast(0) / 1000.0
+                } else 0.0)
+                return persisted
+            } catch (e: RoundVersionConflictException) {
+                attempts++
+                if (attempts >= maxAttempts) throw e
+                val reRead = port.latestRound(currentRound.tenantId, currentRound.gameId)
+                if (reRead == null || reRead.roundId != currentRound.roundId) throw e
+                currentRound = reRead
+            }
+        }
+        error("Unreachable retry loop")
     }
 
     private fun createRound(tenantId: String, activeGameId: String): GameRoundRecord {
         val roundId = "aviator-${UUID.randomUUID()}"
-        // Security invariant: commitment persistence precedes the first wager-accepting phase.
-        val commitment = port.ensureCommitment(tenantId, activeGameId, roundId, properties)
+        val (round, commitment) = port.createScheduledRoundWithCommitment(tenantId, activeGameId, roundId, properties)
         logger.info("AVIATOR_COMMITMENT_PUBLISHED roundId={} commitment={}", roundId, commitment)
-        val round = port.persistRound(
-            CreateOrUpdateRoundCommand(
-                tenantId = tenantId,
-                gameId = activeGameId,
-                roundId = roundId,
-                phase = GameRoundPhase.SCHEDULED,
-            )
-        )
         port.publishState(round, 0.0)
         logger.info(
             "AVIATOR_ROUND_CREATED roundId={} phase={} roundVersion={} commitment={}",
@@ -365,7 +405,7 @@ class AviatorLifecycleConfiguration {
     prefix = "slotting.aviator.lifecycle",
     name = ["enabled"],
     havingValue = "true",
-    matchIfMissing = true,
+    matchIfMissing = false,
 )
 class AviatorLifecycleInfoContributor(
     private val orchestrator: AviatorRoundLifecycleOrchestrator,

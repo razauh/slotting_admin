@@ -105,3 +105,5 @@ data class TopHistoryItem(
     val timestampMillis: Long,
 )
 
+class SessionStoreOutageException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+

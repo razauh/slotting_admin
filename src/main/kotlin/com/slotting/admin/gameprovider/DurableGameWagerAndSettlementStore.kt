@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicLong
 interface DurableGameWagerAndSettlementStore {
     fun findRound(tenantId: String, gameId: String, roundId: String): GameRoundRecord?
     fun saveRound(round: GameRoundRecord)
+    fun insertRound(round: GameRoundRecord)
+    fun updateRound(round: GameRoundRecord, expectedVersion: Long, allowedPriorPhases: Set<GameRoundPhase> = emptySet())
     fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord?
     fun findBetsForRound(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord>
     fun saveBet(bet: GameAcceptedBetRecord)
@@ -49,8 +51,40 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
         return rounds[roundKey(tenantId, gameId, roundId)]?.copy()
     }
 
+    @Synchronized
+    override fun insertRound(round: GameRoundRecord) {
+        val key = roundKey(round.tenantId, round.gameId, round.roundId)
+        if (rounds.containsKey(key)) {
+            throw RoundVersionConflictException("Round already exists: ${round.roundId}")
+        }
+        rounds[key] = round.copy()
+    }
+
+    @Synchronized
+    override fun updateRound(round: GameRoundRecord, expectedVersion: Long, allowedPriorPhases: Set<GameRoundPhase>) {
+        val key = roundKey(round.tenantId, round.gameId, round.roundId)
+        val existing = rounds[key] ?: throw RoundVersionConflictException("Round not found: ${round.roundId}")
+        if (existing.roundVersion != expectedVersion) {
+            throw RoundVersionConflictException(
+                "Round version mismatch for ${round.roundId}: expected $expectedVersion but found ${existing.roundVersion}"
+            )
+        }
+        if (allowedPriorPhases.isNotEmpty() && existing.phase !in allowedPriorPhases) {
+            throw RoundVersionConflictException(
+                "Illegal round phase transition for ${round.roundId}: cannot transition from ${existing.phase} to ${round.phase}"
+            )
+        }
+        rounds[key] = round.copy()
+    }
+
     override fun saveRound(round: GameRoundRecord) {
-        rounds[roundKey(round.tenantId, round.gameId, round.roundId)] = round.copy()
+        val key = roundKey(round.tenantId, round.gameId, round.roundId)
+        val existing = rounds[key]
+        if (existing == null) {
+            insertRound(round)
+        } else {
+            updateRound(round, existing.roundVersion, emptySet())
+        }
     }
 
     override fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {
@@ -176,38 +210,83 @@ open class JdbcDurableGameWagerAndSettlementStore(
     }
 
     @Transactional
-    override fun saveRound(round: GameRoundRecord) {
+    override fun insertRound(round: GameRoundRecord) {
         val sql = """
             insert into game_authoritative_round (
                 tenant_id, game_id, round_id, phase, round_version, current_multiplier,
                 crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
             ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            on conflict (tenant_id, game_id, round_id) do update set
-                phase = excluded.phase,
-                round_version = excluded.round_version,
-                current_multiplier = excluded.current_multiplier,
-                crash_multiplier = excluded.crash_multiplier,
-                crashed_at = excluded.crashed_at,
-                closed_at = excluded.closed_at,
-                server_time = excluded.server_time,
-                updated_at = excluded.updated_at
         """.trimIndent()
-        jdbcTemplate.update(
+        try {
+            jdbcTemplate.update(
+                sql,
+                round.tenantId,
+                round.gameId,
+                round.roundId,
+                round.phase.name,
+                round.roundVersion,
+                round.currentMultiplier,
+                round.crashMultiplier,
+                Timestamp.from(round.startedAt),
+                round.crashedAt?.let { Timestamp.from(it) },
+                round.closedAt?.let { Timestamp.from(it) },
+                Timestamp.from(round.serverTime),
+                Timestamp.from(round.createdAt),
+                Timestamp.from(round.updatedAt),
+            )
+        } catch (e: org.springframework.dao.DuplicateKeyException) {
+            throw RoundVersionConflictException("Round already exists: ${round.roundId}")
+        }
+    }
+
+    @Transactional
+    override fun updateRound(round: GameRoundRecord, expectedVersion: Long, allowedPriorPhases: Set<GameRoundPhase>) {
+        val phaseClause = if (allowedPriorPhases.isNotEmpty()) {
+            " and phase in (${allowedPriorPhases.joinToString(",") { "'${it.name}'" }})"
+        } else ""
+        val sql = """
+            update game_authoritative_round set
+                phase = ?,
+                round_version = ?,
+                current_multiplier = ?,
+                crash_multiplier = ?,
+                crashed_at = ?,
+                closed_at = ?,
+                server_time = ?,
+                updated_at = ?
+            where tenant_id = ? and game_id = ? and round_id = ?
+              and round_version = ?$phaseClause
+        """.trimIndent()
+        val rows = jdbcTemplate.update(
             sql,
-            round.tenantId,
-            round.gameId,
-            round.roundId,
             round.phase.name,
             round.roundVersion,
             round.currentMultiplier,
             round.crashMultiplier,
-            Timestamp.from(round.startedAt),
             round.crashedAt?.let { Timestamp.from(it) },
             round.closedAt?.let { Timestamp.from(it) },
             Timestamp.from(round.serverTime),
-            Timestamp.from(round.createdAt),
-            Timestamp.from(round.updatedAt)
+            Timestamp.from(round.updatedAt),
+            round.tenantId,
+            round.gameId,
+            round.roundId,
+            expectedVersion,
         )
+        if (rows == 0) {
+            throw RoundVersionConflictException(
+                "Round update conflict for tenant=${round.tenantId} roundId=${round.roundId}: expectedVersion=$expectedVersion targetVersion=${round.roundVersion} targetPhase=${round.phase}"
+            )
+        }
+    }
+
+    @Transactional
+    override fun saveRound(round: GameRoundRecord) {
+        val existing = findRound(round.tenantId, round.gameId, round.roundId)
+        if (existing == null) {
+            insertRound(round)
+        } else {
+            updateRound(round, existing.roundVersion, emptySet())
+        }
     }
 
     override fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {

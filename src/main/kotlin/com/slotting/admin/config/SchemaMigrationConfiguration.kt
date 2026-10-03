@@ -24,7 +24,7 @@ data class SchemaMigrationStatus(
 }
 
 @ConfigurationProperties("slotting.schema")
-data class SchemaMigrationProperties(val supportedVersion: Int = 37)
+data class SchemaMigrationProperties(val supportedVersion: Int = 38)
 
 @Configuration
 @EnableConfigurationProperties(SchemaMigrationProperties::class)
@@ -38,8 +38,8 @@ class SchemaMigrationConfiguration(
     fun flywayMigrationStrategy(): FlywayMigrationStrategy = FlywayMigrationStrategy { flyway ->
         val startedAt = System.nanoTime()
         try {
-            flyway.validate()
             flyway.migrate()
+            flyway.validate()
             val version = flyway.info().current()?.version?.version
             val durationMs = (System.nanoTime() - startedAt) / 1_000_000
             if (version?.toIntOrNull() != properties.supportedVersion) {

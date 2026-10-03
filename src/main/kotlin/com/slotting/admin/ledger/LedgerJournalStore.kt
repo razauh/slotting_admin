@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import java.sql.ResultSet
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -178,7 +179,7 @@ open class JdbcLedgerJournalStore(
             result.resultId, result.tenantId, result.transactionReference, result.currencyCode,
             result.totalDebitsMinorUnits, result.totalCreditsMinorUnits, result.isBalanced, result.status.name,
             legs.size, result.idempotencyKey, audit.correlationId, audit.causationId,
-            audit.eventId.toString(), result.serverTime, result.effectiveTime, result.serverVersion,
+            audit.eventId.toString(), Timestamp.from(result.serverTime), Timestamp.from(result.effectiveTime), result.serverVersion,
             result.compensationForReference, result.evidenceReference
         )
         VersionedCasHelper.requireUpdated(txCount)
@@ -190,7 +191,7 @@ open class JdbcLedgerJournalStore(
                 values (?, ?, ?, ?, 'STANDARD', 'ACTIVE', ?)
                 on conflict (tenant_id, account_reference, currency_code) do nothing
             """.trimIndent(),
-                UUID.randomUUID(), result.tenantId, leg.accountReference, leg.currencyCode, leg.createdAt
+                UUID.randomUUID(), result.tenantId, leg.accountReference, leg.currencyCode, Timestamp.from(leg.createdAt)
             )
 
             val legCount = jdbc.update("""
@@ -200,7 +201,7 @@ open class JdbcLedgerJournalStore(
                 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
                 leg.entryId, result.resultId, result.tenantId, leg.accountReference,
-                leg.direction.name, leg.amountMinorUnits, leg.currencyCode, leg.lineOrder, leg.narration, leg.createdAt
+                leg.direction.name, leg.amountMinorUnits, leg.currencyCode, leg.lineOrder, leg.narration, Timestamp.from(leg.createdAt)
             )
             VersionedCasHelper.requireUpdated(legCount)
         }
@@ -211,7 +212,7 @@ open class JdbcLedgerJournalStore(
                 receipt_id, tenant_id, idempotency_key, payload_digest, transaction_id, transaction_reference, created_at
             ) values (?, ?, ?, ?, ?, ?, ?)
         """.trimIndent(),
-            UUID.randomUUID(), result.tenantId, result.idempotencyKey, payloadDigest, result.resultId, result.transactionReference, result.serverTime
+                UUID.randomUUID(), result.tenantId, result.idempotencyKey, payloadDigest, result.resultId, result.transactionReference, Timestamp.from(result.serverTime)
         )
         VersionedCasHelper.requireUpdated(receiptCount)
 
@@ -221,7 +222,7 @@ open class JdbcLedgerJournalStore(
             values (?, ?, 'LEDGER_TRANSACTION_POSTED', ?)
             on conflict (result_id) do nothing
         """.trimIndent(),
-            result.resultId, result.tenantId, result.serverTime
+            result.resultId, result.tenantId, Timestamp.from(result.serverTime)
         )
 
         // 5. Insert audit event
@@ -230,7 +231,7 @@ open class JdbcLedgerJournalStore(
                 event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details
             ) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))
         """.trimIndent(),
-            audit.eventId, result.resultId, result.tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, RedactedEventJson.audit(audit)
+            audit.eventId, result.resultId, result.tenantId, audit.type, Timestamp.from(audit.occurredAt), audit.correlationId, audit.causationId, RedactedEventJson.audit(audit)
         )
 
         // 6. Insert outbox event
@@ -239,7 +240,7 @@ open class JdbcLedgerJournalStore(
                 event_id, result_id, tenant_id, event_type, created_at, payload
             ) values (?, ?, ?, ?, ?, cast(? as jsonb))
         """.trimIndent(),
-            outbox.eventId, result.resultId, result.tenantId, outbox.type, outbox.createdAt, RedactedEventJson.outbox(outbox, audit)
+            outbox.eventId, result.resultId, result.tenantId, outbox.type, Timestamp.from(outbox.createdAt), RedactedEventJson.outbox(outbox, audit)
         )
     }
 

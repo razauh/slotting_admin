@@ -3,11 +3,13 @@ package com.slotting.admin.rg
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
+import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
+@Repository
 open class JdbcDurableResponsibleGamingStore(
     private val jdbcTemplate: JdbcTemplate,
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()

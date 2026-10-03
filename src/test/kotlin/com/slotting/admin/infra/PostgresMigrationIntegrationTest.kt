@@ -25,25 +25,12 @@ import org.springframework.test.context.DynamicPropertySource
  * The application never discovers or connects to an implicit/live database.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Testcontainers(disabledWithoutDocker = true)
 class PostgresMigrationIntegrationTest {
     companion object {
-        @Container
-        @JvmStatic
-        val postgres = PostgreSQLContainer<Nothing>("postgres:16-alpine")
-
-        init {
-            postgres.withDatabaseName("slotting_admin_test")
-            postgres.withUsername("tc001_test")
-            postgres.withPassword("tc001_test_password")
-        }
-
         @JvmStatic
         @DynamicPropertySource
         fun postgresProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasource.username", postgres::getUsername)
-            registry.add("spring.datasource.password", postgres::getPassword)
+            PostgresIntegrationSupport.configureProperties(registry)
         }
     }
 
@@ -55,18 +42,24 @@ class PostgresMigrationIntegrationTest {
 
     @Test
     fun `clean install creates migration history and operational tables`() {
-        assertEquals(18, jdbc.queryForObject("select max installed_rank from flyway_schema_history", Int::class.java))
-        assertEquals("18", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
+        val maxRank = jdbc.queryForObject("select max(installed_rank) from flyway_schema_history", Int::class.java)
+        assertTrue(maxRank != null && maxRank >= 38)
+        assertEquals("38", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'notification_delivery_tracking'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'operational_siem_events'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'admin_event_envelope'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'admin_inbox_consumer'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'game_authoritative_round'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'game_accepted_bet'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'ledger_transaction'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'ledger_leg'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'password_reset_token'", Int::class.java))
     }
 
     @Test
     fun `migration health is ready after successful upgrade`() {
         val health = jdbc.queryForObject(
-            "select success from flyway_schema_history where version = '18'",
+            "select success from flyway_schema_history where version = '38'",
             Boolean::class.java,
         )
         assertTrue(health == true)
@@ -104,7 +97,7 @@ class PostgresMigrationIntegrationTest {
     }
 
     private fun sampleEvent() = LeasedOutboxEventRecord(
-        eventId = UUID.randomUUID(), tenantId = "tenant-tc002", topic = "audit",
+        eventId = UUID.randomUUID(), tenantId = "tenant-tc002-${UUID.randomUUID()}", topic = "audit",
         eventType = "AUDIT_RECORDED", payload = "{\"subject\":\"subject-1\",\"secret\":\"secret-value\"}",
         correlationId = "corr-tc002", causationId = "cause-tc002", idempotencyKey = UUID.randomUUID().toString(),
         status = WorkerOutboxStatus.PENDING, createdAt = Instant.now(),
