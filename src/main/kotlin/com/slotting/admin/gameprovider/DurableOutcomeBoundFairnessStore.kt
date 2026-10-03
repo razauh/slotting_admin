@@ -76,7 +76,8 @@ open class JdbcFairnessEvidenceStore(
         val sql = """
             select commitment_id, tenant_id, game_id, round_id, authority_type, algorithm_version,
                    rules_version, commitment_hash, public_salt, encrypted_secret_seed,
-                   committed_at, first_bet_accepted_at, status, server_version, created_at, updated_at
+                   committed_at, first_bet_accepted_at, status, server_version, created_at, updated_at,
+                   client_seed1, client_seed2, client_seed3
             from game_fairness_commitment
             where tenant_id = ? and game_id = ? and round_id = ?
         """.trimIndent()
@@ -90,8 +91,9 @@ open class JdbcFairnessEvidenceStore(
             insert into game_fairness_commitment (
                 commitment_id, tenant_id, game_id, round_id, authority_type, algorithm_version,
                 rules_version, commitment_hash, public_salt, encrypted_secret_seed, committed_at,
-                first_bet_accepted_at, status, server_version, created_at, updated_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                first_bet_accepted_at, status, server_version, created_at, updated_at,
+                client_seed1, client_seed2, client_seed3
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -110,7 +112,10 @@ open class JdbcFairnessEvidenceStore(
             commitment.status.name,
             commitment.serverVersion,
             Timestamp.from(commitment.createdAt),
-            Timestamp.from(commitment.updatedAt)
+            Timestamp.from(commitment.updatedAt),
+            commitment.clientSeed1,
+            commitment.clientSeed2,
+            commitment.clientSeed3
         )
     }
 
@@ -118,7 +123,8 @@ open class JdbcFairnessEvidenceStore(
     override fun updateCommitment(commitment: RoundCommitmentRecord) {
         val sql = """
             update game_fairness_commitment
-            set first_bet_accepted_at = ?, status = ?, server_version = server_version + 1, updated_at = ?
+            set first_bet_accepted_at = ?, status = ?, server_version = server_version + 1, updated_at = ?,
+                client_seed1 = ?, client_seed2 = ?, client_seed3 = ?
             where commitment_id = ? and tenant_id = ?
         """.trimIndent()
         jdbcTemplate.update(
@@ -126,6 +132,9 @@ open class JdbcFairnessEvidenceStore(
             commitment.firstBetAcceptedAt?.let { Timestamp.from(it) },
             commitment.status.name,
             Timestamp.from(commitment.updatedAt),
+            commitment.clientSeed1,
+            commitment.clientSeed2,
+            commitment.clientSeed3,
             commitment.commitmentId,
             commitment.tenantId
         )
@@ -213,6 +222,9 @@ open class JdbcFairnessEvidenceStore(
             serverVersion = rs.getLong("server_version"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            clientSeed1 = runCatching { rs.getString("client_seed1") }.getOrNull(),
+            clientSeed2 = runCatching { rs.getString("client_seed2") }.getOrNull(),
+            clientSeed3 = runCatching { rs.getString("client_seed3") }.getOrNull(),
         )
     }
 

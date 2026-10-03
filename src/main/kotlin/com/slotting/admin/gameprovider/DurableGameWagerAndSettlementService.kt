@@ -45,8 +45,16 @@ class DurableGameWagerAndSettlementService(
     private val eligibilityStore: ServerEligibilityStore,
     private val adminPrincipal: AuthenticatedPrincipal,
     private val clock: Clock = Clock.systemUTC(),
+    private val fairnessAuthority: ProvablyFairOutcomeAuthority? = null,
+    private val houseMaxRoundExposure: Long = DEFAULT_HOUSE_MAX_ROUND_EXPOSURE,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
+
+    companion object {
+        val MAX_PAYOUT_PER_BET: BigDecimal = BigDecimal("100.00")
+        val MAX_MULTIPLIER: BigDecimal = BigDecimal("100.00")
+        const val DEFAULT_HOUSE_MAX_ROUND_EXPOSURE: Long = 100_000_000L
+    }
 
     fun createOrUpdateRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
         DurableGameWagerAndSettlementBinding.checkBound()
@@ -425,6 +433,25 @@ class DurableGameWagerAndSettlementService(
             }
         }
 
+        // Aggregate Round Liability Cap Check
+        val currentAcceptedBets = store.findBetsForRound(command.tenantId, gameId, command.roundId)
+            .filter { it.status == GameBetStatus.ACCEPTED }
+        val currentLiability = currentAcceptedBets.sumOf {
+            BigDecimal(it.wagerMinorUnits).multiply(MAX_MULTIPLIER).toLong()
+        }
+        val additionalLiability = BigDecimal(wagerMinor).multiply(MAX_MULTIPLIER).toLong()
+        if (currentLiability + additionalLiability > houseMaxRoundExposure) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.ROUND_CAPACITY_REACHED,
+                message = "Round risk capacity reached (exposure limit exceeded)",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        }
+
         // Solvency Check against Authoritative Double-Entry Ledger
         val playerBalance = ledgerService.store.findBalance(command.tenantId, "PLAYER:$playerId", command.currency)
         if (playerBalance < wagerMinor) {
@@ -488,6 +515,13 @@ class DurableGameWagerAndSettlementService(
             updatedAt = now,
         )
         store.saveBet(betRecord)
+        fairnessAuthority?.notifyBetAccepted(
+            tenantId = command.tenantId,
+            gameId = gameId,
+            roundId = command.roundId,
+            playerId = playerId,
+            clientSeed = command.clientSeed,
+        )
         store.addDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor)
 
         round.roundVersion += 1
@@ -674,6 +708,20 @@ class DurableGameWagerAndSettlementService(
             )
         }
 
+        // Server tick authority: if server already marked round crashed or current multiplier exceeds crash multiplier
+        val currentServerMultiplier = round.currentMultiplier
+        if (round.crashMultiplier != null && currentServerMultiplier > round.crashMultiplier!!) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.ROUND_CLOSED,
+                message = "Round has already crashed",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        }
+
         // Retrieve accepted bet
         val bet = store.findBet(command.tenantId, gameId, command.roundId, playerId, command.handId)
         if (bet == null || bet.status != GameBetStatus.ACCEPTED) {
@@ -701,10 +749,12 @@ class DurableGameWagerAndSettlementService(
             )
         }
 
-        // Authoritative multiplier and payout calculation (derived entirely on server)
+        // Authoritative multiplier and payout calculation (derived entirely on server, rejecting client-sent multiplier)
         val authoritativeMultiplier = round.currentMultiplier
         val wagerBd = BigDecimal(bet.wagerMinorUnits)
-        val payoutMinor = wagerBd.multiply(authoritativeMultiplier).setScale(0, RoundingMode.FLOOR).toLong()
+        val calculatedPayout = wagerBd.multiply(authoritativeMultiplier).setScale(0, RoundingMode.FLOOR).toLong()
+        val maxAllowedPayout = wagerBd.multiply(MAX_PAYOUT_PER_BET).setScale(0, RoundingMode.FLOOR).toLong()
+        val payoutMinor = minOf(calculatedPayout, maxAllowedPayout)
 
         val settlementId = UUID.randomUUID()
         val txRef = "TX-CASHOUT-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$settlementId"

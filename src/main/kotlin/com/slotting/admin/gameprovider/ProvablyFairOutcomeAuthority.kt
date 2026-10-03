@@ -2,19 +2,19 @@ package com.slotting.admin.gameprovider
 
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Clock
 import java.util.UUID
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Gate to enforce TC-022: Outcome-bound fairness evidence.
  * Protected risk: "no complete outcome-bound provably-fair system, post-commit substitution"
  * Semantic contract: "Every settled round binds to pre-bet commitment and reproducible reveal evidence."
+ *
+ * Implements Spribe Aviator 3-Client-Seed Provably Fair consensus engine.
  */
 object ProvablyFairOutcomeBinding {
     @Volatile
@@ -27,12 +27,39 @@ object ProvablyFairOutcomeBinding {
     }
 }
 
+class RoundEntropyCollector {
+    private val distinctPlayers = LinkedHashMap<String, String>() // playerId -> clientSeed
+
+    @Synchronized
+    fun addPlayerBet(playerId: String, clientSeed: String?) {
+        if (distinctPlayers.size < 3 && !distinctPlayers.containsKey(playerId)) {
+            distinctPlayers[playerId] = clientSeed?.trim().orEmpty()
+        }
+    }
+
+    @Synchronized
+    fun finalizeSeeds(serverSeedHash: String, roundId: String): Triple<String, String, String> {
+        val playerSeeds = distinctPlayers.values.toList()
+        fun resolve(slot: Int): String {
+            val idx = slot - 1
+            if (idx < playerSeeds.size && playerSeeds[idx].isNotBlank()) {
+                return playerSeeds[idx]
+            }
+            return ProvablyFairOutcomeAuthority.sha256("$serverSeedHash:fallback:$slot:$roundId")
+        }
+        return Triple(resolve(1), resolve(2), resolve(3))
+    }
+}
+
 @Service
 class ProvablyFairOutcomeAuthority(
     val store: FairnessEvidenceStore,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val secureRandom = SecureRandom()
+    private val entropyCollectors = ConcurrentHashMap<String, RoundEntropyCollector>()
+
+    private fun key(tenantId: String, gameId: String, roundId: String) = "$tenantId:$gameId:$roundId"
 
     fun publishPreBetCommitment(command: PublishCommitmentCommand): RoundCommitmentRecord {
         ProvablyFairOutcomeBinding.checkBound()
@@ -52,11 +79,11 @@ class ProvablyFairOutcomeAuthority(
             )
         }
 
-        // Generate cryptographically secure 256-bit un-guessable secret seed
+        // Generate cryptographically secure 256-bit un-guessable secret serverSeed
         val seedBytes = ByteArray(32)
         secureRandom.nextBytes(seedBytes)
-        val secretSeed = seedBytes.joinToString("") { "%02x".format(it) }
-        val commitmentHash = sha256(secretSeed)
+        val serverSeed = seedBytes.joinToString("") { "%02x".format(it) }
+        val serverSeedHash = sha256(serverSeed)
 
         val commitment = RoundCommitmentRecord(
             commitmentId = UUID.randomUUID(),
@@ -66,9 +93,9 @@ class ProvablyFairOutcomeAuthority(
             authorityType = FairnessAuthorityType.INTERNAL_HMAC_SHA256,
             algorithmVersion = command.algorithmVersion,
             rulesVersion = command.rulesVersion,
-            commitmentHash = commitmentHash,
+            commitmentHash = serverSeedHash,
             publicSalt = command.publicSalt,
-            encryptedSecretSeed = secretSeed,
+            encryptedSecretSeed = serverSeed,
             committedAt = now,
             firstBetAcceptedAt = null,
             status = RoundCommitmentStatus.COMMITTED,
@@ -77,6 +104,7 @@ class ProvablyFairOutcomeAuthority(
             updatedAt = now,
         )
 
+        entropyCollectors[key(command.tenantId, command.gameId, command.roundId)] = RoundEntropyCollector()
         store.saveCommitment(commitment)
         store.saveAuditEvent(
             FairnessAuditRecord(
@@ -85,7 +113,7 @@ class ProvablyFairOutcomeAuthority(
                 roundId = command.roundId,
                 action = "PRE_BET_COMMITMENT_PUBLISHED",
                 actor = "SYSTEM_FAIRNESS_AUTHORITY",
-                detail = "Published commitment hash $commitmentHash with salt ${command.publicSalt}",
+                detail = "Published commitment hash $serverSeedHash with salt ${command.publicSalt}",
                 occurredAt = now,
             )
         )
@@ -93,7 +121,13 @@ class ProvablyFairOutcomeAuthority(
         return commitment
     }
 
-    fun notifyBetAccepted(tenantId: String, gameId: String, roundId: String) {
+    fun notifyBetAccepted(
+        tenantId: String,
+        gameId: String,
+        roundId: String,
+        playerId: String? = null,
+        clientSeed: String? = null,
+    ) {
         ProvablyFairOutcomeBinding.checkBound()
         val commitment = store.findCommitment(tenantId, gameId, roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
@@ -104,6 +138,39 @@ class ProvablyFairOutcomeAuthority(
             commitment.updatedAt = clock.instant()
             store.updateCommitment(commitment)
         }
+
+        if (playerId != null) {
+            val collector = entropyCollectors.computeIfAbsent(key(tenantId, gameId, roundId)) {
+                RoundEntropyCollector()
+            }
+            collector.addPlayerBet(playerId, clientSeed)
+        }
+    }
+
+    fun recordClientSeed(tenantId: String, gameId: String, roundId: String, playerId: String, clientSeed: String?) {
+        notifyBetAccepted(tenantId, gameId, roundId, playerId, clientSeed)
+    }
+
+    fun resolveClientSeeds(
+        tenantId: String,
+        gameId: String,
+        roundId: String,
+        commitment: RoundCommitmentRecord
+    ): Triple<String, String, String> {
+        if (!commitment.clientSeed1.isNullOrBlank() &&
+            !commitment.clientSeed2.isNullOrBlank() &&
+            !commitment.clientSeed3.isNullOrBlank()
+        ) {
+            return Triple(commitment.clientSeed1!!, commitment.clientSeed2!!, commitment.clientSeed3!!)
+        }
+
+        val collector = entropyCollectors[key(tenantId, gameId, roundId)]
+        return collector?.finalizeSeeds(commitment.commitmentHash, roundId)
+            ?: Triple(
+                sha256("${commitment.commitmentHash}:fallback:1:$roundId"),
+                sha256("${commitment.commitmentHash}:fallback:2:$roundId"),
+                sha256("${commitment.commitmentHash}:fallback:3:$roundId"),
+            )
     }
 
     fun deriveAuthoritativeOutcome(tenantId: String, gameId: String, roundId: String): AuthoritativeOutcomeResult {
@@ -111,11 +178,20 @@ class ProvablyFairOutcomeAuthority(
         val commitment = store.findCommitment(tenantId, gameId, roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
 
+        val (cs1, cs2, cs3) = resolveClientSeeds(tenantId, gameId, roundId, commitment)
+        if (commitment.clientSeed1 == null || commitment.clientSeed2 == null || commitment.clientSeed3 == null) {
+            commitment.clientSeed1 = cs1
+            commitment.clientSeed2 = cs2
+            commitment.clientSeed3 = cs3
+            commitment.updatedAt = clock.instant()
+            store.updateCommitment(commitment)
+        }
+
         val multiplier = computeMultiplier(
-            secretSeed = commitment.encryptedSecretSeed,
-            publicSalt = commitment.publicSalt,
-            roundId = roundId,
-            rulesVersion = commitment.rulesVersion,
+            serverSeed = commitment.encryptedSecretSeed,
+            clientSeed1 = cs1,
+            clientSeed2 = cs2,
+            clientSeed3 = cs3,
         )
 
         return AuthoritativeOutcomeResult(
@@ -126,6 +202,9 @@ class ProvablyFairOutcomeAuthority(
             multiplier = multiplier,
             algorithmVersion = commitment.algorithmVersion,
             rulesVersion = commitment.rulesVersion,
+            clientSeed1 = cs1,
+            clientSeed2 = cs2,
+            clientSeed3 = cs3,
         )
     }
 
@@ -161,12 +240,19 @@ class ProvablyFairOutcomeAuthority(
             )
         }
 
+        val (cs1, cs2, cs3) = resolveClientSeeds(command.tenantId, command.gameId, command.roundId, commitment)
+        if (commitment.clientSeed1 == null) {
+            commitment.clientSeed1 = cs1
+            commitment.clientSeed2 = cs2
+            commitment.clientSeed3 = cs3
+        }
+
         // Derive authoritative multiplier
         val derivedMultiplier = computeMultiplier(
-            secretSeed = command.revealedSecretSeed,
-            publicSalt = commitment.publicSalt,
-            roundId = command.roundId,
-            rulesVersion = commitment.rulesVersion,
+            serverSeed = command.revealedSecretSeed,
+            clientSeed1 = cs1,
+            clientSeed2 = cs2,
+            clientSeed3 = cs3,
         )
 
         commitment.status = RoundCommitmentStatus.REVEALED
@@ -255,31 +341,24 @@ class ProvablyFairOutcomeAuthority(
             return bytes.joinToString("") { "%02x".format(it) }
         }
 
+        fun sha512(input: String): String {
+            val md = MessageDigest.getInstance("SHA-512")
+            val bytes = md.digest(input.toByteArray(StandardCharsets.UTF_8))
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
+
         fun computeMultiplier(
-            secretSeed: String,
-            publicSalt: String,
-            roundId: String,
-            rulesVersion: String
+            serverSeed: String,
+            clientSeed1: String,
+            clientSeed2: String,
+            clientSeed3: String,
         ): BigDecimal {
-            val message = "$publicSalt:$roundId:$rulesVersion"
-            val mac = Mac.getInstance("HmacSHA256")
-            val keySpec = SecretKeySpec(secretSeed.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")
-            mac.init(keySpec)
-            val hmac = mac.doFinal(message.toByteArray(StandardCharsets.UTF_8))
-            val hex = hmac.joinToString("") { "%02x".format(it) }
-
-            // Take first 13 hex chars (52 bits)
-            val h = hex.substring(0, 13).toLong(16)
-            val e = (1L shl 52).toDouble()
-
-            // 1 in 33 (approx 3% house edge) instant crash at 1.00x
-            val multiplierVal = if (h % 33L == 0L) {
-                1.00
-            } else {
-                val raw = Math.floor((100.0 * e - h.toDouble()) / (e - h.toDouble())) / 100.0
-                Math.max(1.00, raw)
-            }
-            return BigDecimal.valueOf(multiplierVal).setScale(4, RoundingMode.HALF_UP)
+            return IndependentFairnessVerifier.calculateCrashMultiplier(
+                serverSeed = serverSeed,
+                clientSeed1 = clientSeed1,
+                clientSeed2 = clientSeed2,
+                clientSeed3 = clientSeed3,
+            )
         }
     }
 }

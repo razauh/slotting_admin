@@ -132,7 +132,7 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
     override fun findFinishedRounds(tenantId: String, gameId: String, limit: Int): List<GameRoundRecord> {
         val prefix = "$tenantId:$gameId:"
         return rounds.filterKeys { it.startsWith(prefix) }.values
-            .filter { it.phase == GameRoundPhase.CRASHED }
+            .filter { it.phase == GameRoundPhase.CRASHED || it.phase == GameRoundPhase.CLOSED }
             .sortedWith(
                 compareByDescending<GameRoundRecord> { it.startedAt }
                     .thenByDescending { it.updatedAt }
@@ -398,7 +398,7 @@ open class JdbcDurableGameWagerAndSettlementStore(
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
                    crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
             from game_authoritative_round
-            where tenant_id = ? and game_id = ? and phase = 'CRASHED'
+            where tenant_id = ? and game_id = ? and phase in ('CRASHED', 'CLOSED')
             order by started_at desc, updated_at desc, round_id desc
             limit ?
         """.trimIndent()

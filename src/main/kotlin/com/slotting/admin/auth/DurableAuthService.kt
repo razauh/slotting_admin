@@ -25,7 +25,8 @@ class AuthenticationException(
 @Service
 class DurableAuthService(
     private val store: DurableAuthStore,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    val oidcKeyService: OidcKeyService = OidcKeyService(clock)
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val secureRandom = SecureRandom()
@@ -46,6 +47,121 @@ class DurableAuthService(
         val REFRESH_TOKEN_TTL: Duration = Duration.ofDays(30)
         val SESSION_TTL: Duration = Duration.ofDays(30)
     }
+
+    fun createAuthorizationCode(
+        clientId: String,
+        redirectUri: String,
+        scope: String,
+        state: String,
+        nonce: String?,
+        codeChallenge: String,
+        codeChallengeMethod: String,
+        tenantId: String,
+        playerId: UUID,
+        authTime: Instant = Instant.now(clock)
+    ): AuthorizationCodeSessionRecord {
+        val client = OAuthClientRegistry.findClient(clientId)
+            ?: throw AuthenticationException("UNAUTHORIZED_CLIENT", "Unknown or inactive client: $clientId")
+
+        if (!OAuthClientRegistry.validateRedirectUri(clientId, redirectUri)) {
+            throw AuthenticationException("INVALID_REQUEST", "Unregistered redirect URI: $redirectUri")
+        }
+
+        if (!OAuthClientRegistry.validateScope(clientId, scope)) {
+            throw AuthenticationException("INVALID_SCOPE", "Requested scope not allowed for client: $scope")
+        }
+
+        if (codeChallengeMethod != "S256") {
+            throw AuthenticationException("PROTOCOL_DOWNGRADE_REJECTED", "PKCE code_challenge_method must be S256")
+        }
+
+        if (codeChallenge.isBlank() || codeChallenge.length < 43 || codeChallenge.length > 128) {
+            throw AuthenticationException("INVALID_REQUEST", "Invalid PKCE code_challenge")
+        }
+
+        if (state.isBlank()) {
+            throw AuthenticationException("INVALID_REQUEST", "state parameter is required")
+        }
+
+        val code = generateSecureToken("code")
+        val now = Instant.now(clock)
+        val expiresAt = now.plus(Duration.ofMinutes(5))
+
+        val record = AuthorizationCodeSessionRecord(
+            code = code,
+            codeChallenge = codeChallenge,
+            codeChallengeMethod = codeChallengeMethod,
+            state = state,
+            nonce = nonce,
+            redirectUri = redirectUri,
+            tenantId = tenantId,
+            playerId = playerId,
+            expiresAt = expiresAt,
+            consumed = false,
+            consumedAt = null,
+            createdAt = now,
+            clientId = clientId,
+            scope = scope,
+            authTime = authTime
+        )
+
+        store.saveAuthorizationCode(record)
+        return record
+    }
+
+    fun authenticatePlayer(tenantId: String, identifier: String, password: String): PlayerCredentialRecord? {
+        val cred = store.findCredential(tenantId, identifier) ?: return null
+        if (cred.status != "ACTIVE") return null
+        val result = PasswordKdfService.verifyPassword(
+            password = password,
+            storedHash = cred.passwordHash,
+            salt = cred.passwordSalt,
+            iterations = cred.iterations,
+            algo = cred.passwordAlgo
+        )
+        if (!result.valid) return null
+        if (result.needsRehash) {
+            val newHash = PasswordKdfService.hashPassword(password)
+            store.updatePassword(
+                playerId = cred.playerId,
+                newHash = newHash.hash,
+                newSalt = newHash.salt,
+                iterations = newHash.iterations,
+                algo = newHash.algo
+            )
+        }
+        return cred
+    }
+
+    fun registerPlayer(
+        tenantId: String,
+        identifier: String,
+        password: String
+    ): PlayerCredentialRecord {
+        val existing = store.findCredential(tenantId, identifier)
+        if (existing != null) {
+            throw AuthenticationException("IDENTIFIER_EXISTS", "Identifier already registered")
+        }
+        val hashed = PasswordKdfService.hashPassword(password)
+        val now = Instant.now(clock)
+        val cred = PlayerCredentialRecord(
+            playerId = UUID.randomUUID(),
+            tenantId = tenantId,
+            identifier = identifier,
+            passwordHash = hashed.hash,
+            passwordSalt = hashed.salt,
+            iterations = hashed.iterations,
+            passwordAlgo = hashed.algo,
+            status = "ACTIVE",
+            createdAt = now,
+            updatedAt = now
+        )
+        store.saveCredential(cred)
+        return cred
+    }
+
+    fun findCredential(tenantId: String, identifier: String): PlayerCredentialRecord? =
+        store.findCredential(tenantId, identifier)
 
     fun exchangeAuthorizationCode(
         grantType: String,
@@ -78,6 +194,9 @@ class DurableAuthService(
         }
         if (authSession.redirectUri != redirectUri) {
             throw AuthenticationException("UNAUTHORIZED_CLIENT", "Redirect URI mismatch")
+        }
+        if (authSession.clientId.isNotBlank() && clientId.isNotBlank() && authSession.clientId != clientId) {
+            throw AuthenticationException("UNAUTHORIZED_CLIENT", "Client ID mismatch: expected ${authSession.clientId}")
         }
 
         // Validate PKCE S256
@@ -133,6 +252,18 @@ class DurableAuthService(
         )
         store.saveRefreshToken(refreshRecord)
 
+        // Generate OIDC ID Token if openid scope is present
+        val effectiveScope = authSession.scope.ifBlank { "openid profile" }
+        val idToken = if (effectiveScope.split(" ").contains("openid")) {
+            oidcKeyService.issueIdToken(
+                playerId = authSession.playerId,
+                clientId = if (clientId.isNotBlank()) clientId else authSession.clientId,
+                tenantId = authSession.tenantId,
+                nonce = authSession.nonce,
+                authTime = authSession.authTime
+            )
+        } else null
+
         // Cache access token
         tokenCache[accessToken] = PrincipalTokenData(
             playerId = authSession.playerId,
@@ -147,12 +278,13 @@ class DurableAuthService(
             tokenType = "Bearer",
             expiresInSeconds = ACCESS_TOKEN_TTL.seconds,
             refreshToken = refreshToken,
-            scope = "player:game player:account",
+            scope = effectiveScope,
             playerId = authSession.playerId.toString(),
             tenantId = authSession.tenantId,
             tokenFamilyId = familyId.toString(),
             sessionId = sessionId.toString(),
-            issuedAtEpochMs = now.toEpochMilli()
+            issuedAtEpochMs = now.toEpochMilli(),
+            idToken = idToken
         )
     }
 
@@ -221,17 +353,25 @@ class DurableAuthService(
             expiresAt = now.plus(ACCESS_TOKEN_TTL)
         )
 
+        val idToken = oidcKeyService.issueIdToken(
+            playerId = record.playerId,
+            clientId = if (!clientId.isNullOrBlank()) clientId else "slotting-android",
+            tenantId = record.tenantId,
+            nonce = null
+        )
+
         return TokenResponseDto(
             accessToken = newAccessToken,
             tokenType = "Bearer",
             expiresInSeconds = ACCESS_TOKEN_TTL.seconds,
             refreshToken = newRefreshToken,
-            scope = "player:game player:account",
+            scope = "openid profile wallet.read cashier.write gameplay",
             playerId = record.playerId.toString(),
             tenantId = record.tenantId,
             tokenFamilyId = record.familyId.toString(),
             sessionId = family.sessionId.toString(),
-            issuedAtEpochMs = now.toEpochMilli()
+            issuedAtEpochMs = now.toEpochMilli(),
+            idToken = idToken
         )
     }
 

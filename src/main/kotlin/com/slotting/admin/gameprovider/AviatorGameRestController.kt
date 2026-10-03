@@ -31,6 +31,7 @@ data class GameCommandRequest(
     val autoCashOutMultiplier: String? = null,
     val cashOutMultiplier: BigDecimal? = null,
     val correlationId: String? = null,
+    val clientSeed: String? = null,
 )
 
 @RestController
@@ -38,6 +39,7 @@ data class GameCommandRequest(
 class AviatorGameRestController(
     private val snapshotAndEventService: AuthoritativeGameSnapshotAndEventService,
     private val gameService: DurableGameWagerAndSettlementService,
+    private val lifecycleOrchestrator: AviatorRoundLifecycleOrchestrator? = null,
 ) {
 
     private fun resolvePrincipal(
@@ -66,6 +68,7 @@ class AviatorGameRestController(
         @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal? = null,
     ): ResponseEntity<Any> {
         return try {
+            lifecycleOrchestrator?.ensureRunning(tenantIdHeader, gameId)
             val response = snapshotAndEventService.getBootstrap(tenantIdHeader, gameId.uppercase())
             ResponseEntity.ok(response)
         } catch (e: AuthenticationFailure.Rejected) {
@@ -160,6 +163,7 @@ class AviatorGameRestController(
 
         val targetRoundId = roundId ?: roundIdSnake
         return try {
+            lifecycleOrchestrator?.ensureRunning(tenantIdHeader, gameId)
             val snapshot = snapshotAndEventService.getAuthoritativeSnapshot(
                 tenantId = tenantIdHeader,
                 principal = principal,
@@ -203,6 +207,7 @@ class AviatorGameRestController(
         val resolvedProtocolVersion = request.protocolVersion ?: "1.2.0"
         val resolvedRulesVersion = request.rulesVersion ?: "1.0.0"
 
+        lifecycleOrchestrator?.ensureRunning(tenantIdHeader, request.gameId)
         val command = AviatorRestCommand(
             tenantId = tenantIdHeader,
             principal = principal,
@@ -219,6 +224,7 @@ class AviatorGameRestController(
             protocolVersion = resolvedProtocolVersion,
             rulesVersion = resolvedRulesVersion,
             expectedRoundVersion = request.expectedRoundVersion,
+            clientSeed = request.clientSeed,
         )
 
         return try {

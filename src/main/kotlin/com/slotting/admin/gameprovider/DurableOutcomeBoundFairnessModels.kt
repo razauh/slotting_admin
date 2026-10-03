@@ -61,6 +61,9 @@ data class RoundCommitmentRecord(
     var serverVersion: Long = 1L,
     val createdAt: Instant,
     var updatedAt: Instant,
+    var clientSeed1: String? = null,
+    var clientSeed2: String? = null,
+    var clientSeed3: String? = null,
 )
 
 data class RoundRevealRecord(
@@ -111,6 +114,9 @@ data class AuthoritativeOutcomeResult(
     val multiplier: BigDecimal,
     val algorithmVersion: String,
     val rulesVersion: String,
+    val clientSeed1: String? = null,
+    val clientSeed2: String? = null,
+    val clientSeed3: String? = null,
 )
 
 data class VerifyHistoricalRoundQuery(

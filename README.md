@@ -130,6 +130,18 @@ flowchart TD
 | **Identity & Sessions** | PKCE OAuth2, refresh token rotation, step-up MFA | `IMPLEMENTED` | PostgreSQL 16 (`V19__durable_auth_sessions.sql`) |
 | **Double-Entry Ledger** | Immutable debits/credits, multi-currency balance assertions | `IMPLEMENTED` | PostgreSQL 16 (`V21__persistent_double_entry_ledger.sql`) |
 | **Aviator Game Engine** | Provably fair seeds, multiplier curve, authoritative cashout | `IMPLEMENTED` | In-process Spring service + WebSocket controllers |
+
+### Aviator round lifecycle
+
+`AviatorRoundLifecycleOrchestrator` is the single in-process owner that connects the existing round store, fairness authority, crash settlement, and authoritative event journal. It advances `SCHEDULED -> BET_COUNTDOWN -> FLYING -> CRASHED -> CLOSED`, recovers the latest persisted round, and never uses a connected client to drive domain state.
+
+The scheduler is controlled by `slotting.aviator.lifecycle.*`. Its checked-in timing fallbacks (`scheduled-ms`, `betting-ms`, `closed-ms`, `tick-ms`, and `multiplier-step`) are development defaults, not approved production game rules. `tenants` defaults to `default`; set `enabled=false` to disable the lifecycle owner. Current ownership is intentionally single-application-instance only; clustered leader election remains future work.
+
+Run its deterministic fake-clock tests with:
+
+```bash
+./gradlew test --tests com.slotting.admin.gameprovider.AviatorRoundLifecycleOrchestratorTest
+```
 | **Admin RBAC** | Least privilege, separation of duties, break-glass auto-expiry | `IMPLEMENTED` | PostgreSQL 16 (`V2__admin_rbac.sql`) |
 | **Dual-Control Gate** | Two-person rule for financial, release, and security changes | `IMPLEMENTED` | PostgreSQL 16 (`V20__dual_control_approvals.sql`) |
 | **Secret Encryption** | AES-256-GCM envelope encryption with AAD context binding | `IMPLEMENTED` | OpenBao Transit or external KMS master key |

@@ -44,12 +44,18 @@ class AuthController(
                         redirectUri = req.redirectUri,
                         clientId = req.clientId
                     )
-                    ResponseEntity.ok(resp)
+                    ResponseEntity.ok()
+                        .header("Cache-Control", "no-store")
+                        .header("Pragma", "no-cache")
+                        .body(resp)
                 }
                 "refresh_token" -> {
                     val req = AuthContractCodec.parseTokenRefreshRequest(body)
                     val resp = authService.rotateRefreshToken(req.refreshToken, req.clientId)
-                    ResponseEntity.ok(resp)
+                    ResponseEntity.ok()
+                        .header("Cache-Control", "no-store")
+                        .header("Pragma", "no-cache")
+                        .body(resp)
                 }
                 else -> {
                     error(HttpStatus.BAD_REQUEST, "unsupported_grant_type", "UNSUPPORTED_GRANT_TYPE", "Unsupported grant_type: $grantType", false)

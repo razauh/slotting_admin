@@ -43,26 +43,28 @@ data class TokenExchangeRequestDto(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class TokenResponseDto(
-    @JsonProperty("access_token")
+    @param:JsonProperty("access_token") @get:JsonProperty("access_token")
     val accessToken: String,
-    @JsonProperty("token_type")
+    @param:JsonProperty("token_type") @get:JsonProperty("token_type")
     val tokenType: String = "Bearer",
-    @JsonProperty("expires_in")
+    @param:JsonProperty("expires_in") @get:JsonProperty("expires_in")
     val expiresInSeconds: Long,
-    @JsonProperty("refresh_token")
+    @param:JsonProperty("refresh_token") @get:JsonProperty("refresh_token")
     val refreshToken: String,
-    @JsonProperty("scope")
+    @param:JsonProperty("scope") @get:JsonProperty("scope")
     val scope: String,
-    @JsonProperty("player_id")
+    @param:JsonProperty("player_id") @get:JsonProperty("player_id")
     val playerId: String,
-    @JsonProperty("tenant_id")
+    @param:JsonProperty("tenant_id") @get:JsonProperty("tenant_id")
     val tenantId: String,
-    @JsonProperty("token_family_id")
+    @param:JsonProperty("token_family_id") @get:JsonProperty("token_family_id")
     val tokenFamilyId: String,
-    @JsonProperty("session_id")
+    @param:JsonProperty("session_id") @get:JsonProperty("session_id")
     val sessionId: String,
-    @JsonProperty("issued_at_epoch_ms")
-    val issuedAtEpochMs: Long
+    @param:JsonProperty("issued_at_epoch_ms") @get:JsonProperty("issued_at_epoch_ms")
+    val issuedAtEpochMs: Long,
+    @param:JsonProperty("id_token") @get:JsonProperty("id_token")
+    val idToken: String? = null
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -243,7 +245,7 @@ data class AuthErrorResponseDto(
 
 object AuthContractCodec {
 
-    val mapper: ObjectMapper = ObjectMapper().apply {
+    val mapper: ObjectMapper = ObjectMapper().findAndRegisterModules().apply {
         configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
 

@@ -41,7 +41,7 @@ enum class AviatorAuthoritativeHandStatus { ACCEPTED, CANCELLED, CASHED_OUT }
 
 enum class AviatorCommandRejectionCode {
     INVALID_PHASE, INVALID_HAND_STATE, OUT_OF_LIMITS, INSUFFICIENT_BALANCE,
-    INELIGIBLE, AUTHENTICATION_REQUIRED, ROUND_CLOSED, RATE_LIMITED, UNKNOWN
+    INELIGIBLE, AUTHENTICATION_REQUIRED, ROUND_CLOSED, RATE_LIMITED, ROUND_CAPACITY_REACHED, UNKNOWN
 }
 
 data class AviatorAuthoritativeResult(
@@ -75,6 +75,7 @@ data class AviatorRestCommand(
     val protocolVersion: String = "1.2.0",
     val rulesVersion: String = "1.0.0",
     val expectedRoundVersion: Long? = null,
+    val clientSeed: String? = null,
 )
 
 data class AviatorCommandAckResult(

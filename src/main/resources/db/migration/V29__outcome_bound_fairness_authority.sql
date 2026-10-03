@@ -17,6 +17,9 @@ create table if not exists game_fairness_commitment (
     server_version bigint not null default 1 check (server_version >= 1),
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
+    client_seed1 varchar(128) null,
+    client_seed2 varchar(128) null,
+    client_seed3 varchar(128) null,
     unique (tenant_id, game_id, round_id),
     foreign key (tenant_id, game_id, round_id) references game_authoritative_round(tenant_id, game_id, round_id)
 );

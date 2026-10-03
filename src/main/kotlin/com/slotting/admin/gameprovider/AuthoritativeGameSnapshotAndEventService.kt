@@ -257,6 +257,9 @@ class AuthoritativeGameSnapshotAndEventService(
             "phase" to phase.name,
             "multiplier" to multiplier.toDouble(),
             "currentMultiplier" to multiplier.toDouble(),
+            "crashMultiplier" to if (phase == GameRoundPhase.CRASHED || phase == GameRoundPhase.CLOSED) {
+                multiplier.toDouble()
+            } else null,
             "serverTimeMillis" to now.toEpochMilli(),
             "elapsedFlightSeconds" to elapsedFlightSeconds,
             "sequenceId" to sequenceId,
@@ -317,11 +320,7 @@ class AuthoritativeGameSnapshotAndEventService(
     fun getGameRoom(tenantId: String, gameId: String): String = "tenant:$tenantId:game:$gameId"
 
     private fun findActiveRound(tenantId: String, gameId: String): GameRoundRecord? {
-        val latest = gameStore.findLatestRound(tenantId, gameId)
-        if (latest != null && latest.phase in listOf(GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN, GameRoundPhase.FLYING)) {
-            return latest
-        }
-        return null
+        return gameStore.findLatestRound(tenantId, gameId)
     }
 
     private fun buildHandSnapshot(

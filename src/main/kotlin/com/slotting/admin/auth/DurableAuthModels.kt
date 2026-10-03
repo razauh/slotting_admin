@@ -102,5 +102,8 @@ data class AuthorizationCodeSessionRecord(
     val expiresAt: Instant,
     var consumed: Boolean = false,
     var consumedAt: Instant? = null,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Instant = Instant.now(),
+    val clientId: String = "slotting-android",
+    val scope: String = "openid profile",
+    val authTime: Instant = Instant.now()
 )
