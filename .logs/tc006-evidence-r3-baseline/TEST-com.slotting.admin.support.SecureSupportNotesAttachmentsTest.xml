@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.support.SecureSupportNotesAttachmentsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:16" hostname="pc" time="0.129">
+  <properties/>
+  <testcase name="SUPPORT-001-03-T002 Secure support notes and attachments rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.support.SecureSupportNotesAttachmentsTest" time="0.076"/>
+  <testcase name="SUPPORT-001-03-T003 Secure support notes and attachments handles concurrency replay conflict and dependency failure()" classname="com.slotting.admin.support.SecureSupportNotesAttachmentsTest" time="0.02"/>
+  <testcase name="SUPPORT-001-03-T004 Secure support notes and attachments enforces lifecycle invariants audit immutability and fails closed()" classname="com.slotting.admin.support.SecureSupportNotesAttachmentsTest" time="0.028"/>
+  <testcase name="SUPPORT-001-03-T001 Secure support notes and attachments produces the required authoritative outcome()" classname="com.slotting.admin.support.SecureSupportNotesAttachmentsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

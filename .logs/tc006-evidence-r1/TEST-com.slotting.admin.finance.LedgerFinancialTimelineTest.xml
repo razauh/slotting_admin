@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.finance.LedgerFinancialTimelineTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:08:38" hostname="pc" time="0.054">
+  <properties/>
+  <testcase name="ADMIN-002-02-T001 Provide ledger-linked financial timeline produces authoritative outcome()" classname="com.slotting.admin.finance.LedgerFinancialTimelineTest" time="0.017"/>
+  <testcase name="ADMIN-002-02-T004 Provide ledger-linked financial timeline remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.finance.LedgerFinancialTimelineTest" time="0.007"/>
+  <testcase name="ADMIN-002-02-T002 Provide ledger-linked financial timeline rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.finance.LedgerFinancialTimelineTest" time="0.004"/>
+  <testcase name="ADMIN-002-02-T003 Provide ledger-linked financial timeline survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.finance.LedgerFinancialTimelineTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

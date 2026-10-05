@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="2. Fraud and Security Flag Matrix" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:15" hostname="pc" time="0.009">
+  <properties/>
+  <testcase name="Gaming and Wagering and Deposits are DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.001"/>
+  <testcase name="Withdrawal access is DENIED and disposition is HOLD()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.001"/>
+  <testcase name="Pending Operations disposition is HOLD()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.0"/>
+  <testcase name="Account Data Access requires STEP_UP for sensitive export, otherwise ALLOWED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.0"/>
+  <testcase name="Authentication is DENIED by default, STEP_UP on remediation flow()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.002"/>
+  <testcase name="Support and KYC remediation are ALLOWED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$FraudSecurityTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

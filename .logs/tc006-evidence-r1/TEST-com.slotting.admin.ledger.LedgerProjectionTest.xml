@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.LedgerProjectionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:54" hostname="pc" time="0.038">
+  <properties/>
+  <testcase name="LEDGER-003-T002 Atomic projection rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.019"/>
+  <testcase name="LEDGER-003-T001 Atomic projection produces the required authoritative outcome()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.011"/>
+  <testcase name="LEDGER-003-T004 Atomic projection remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.004"/>
+  <testcase name="LEDGER-003-T003 Atomic projection survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

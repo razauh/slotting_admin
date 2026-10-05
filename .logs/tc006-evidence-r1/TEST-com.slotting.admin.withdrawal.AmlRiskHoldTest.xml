@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.AmlRiskHoldTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:10:00" hostname="pc" time="0.022">
+  <properties/>
+  <testcase name="WITHDRAW-002-02-T003 Apply AML risk hold survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.AmlRiskHoldTest" time="0.012"/>
+  <testcase name="WITHDRAW-002-02-T004 Apply AML risk hold remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.AmlRiskHoldTest" time="0.001"/>
+  <testcase name="WITHDRAW-002-02-T001 Apply AML risk hold produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.AmlRiskHoldTest" time="0.005"/>
+  <testcase name="WITHDRAW-002-02-T002 Apply AML risk hold rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.AmlRiskHoldTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

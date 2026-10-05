@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:12" hostname="pc" time="0.034">
+  <properties/>
+  <testcase name="GATE-CASINO-001-T003 — Duplicate and reordered wager, win, refund, and rollback events create one lawful effect()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.025"/>
+  <testcase name="GATE-CASINO-001-T002 — Disabled jurisdiction, restricted account, stale eligibility, and forged callback are denied()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.002"/>
+  <testcase name="GATE-CASINO-001-T006 — Aviator REST, socket, command journal, ledger, and provider history agree()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-CASINO-001-T001 — Eligible play maps one launch, round, provider transaction, reservation, and settlement()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-CASINO-001-T004 — Provider timeout, socket gap, and stuck round converge through snapshot reconciliation()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-CASINO-001-T005 — Degraded provider state blocks new activity while safe completion continues()" classname="com.slotting.admin.gate.casino.AuthoritativeCasinoIntegrationGateTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:50:12.074+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

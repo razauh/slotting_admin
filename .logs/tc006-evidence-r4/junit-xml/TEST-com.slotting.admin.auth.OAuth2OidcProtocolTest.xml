@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.OAuth2OidcProtocolTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:30" hostname="pc" time="3.222">
+  <properties/>
+  <testcase name="OAUTH-007 — Metadata Discovery, JWKS, and Digital Asset Links conform to RFC 8414 and RFC 7517" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.657"/>
+  <testcase name="OAUTH-002 — Reject unknown client and invalid redirect URI without redirecting (RFC 6749 4.1.2.1)" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.239"/>
+  <testcase name="OAUTH-003 — Reject plain PKCE and enforce S256 requirement (RFC 7636 &amp; RFC 9700)" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.085"/>
+  <testcase name="OAUTH-004 — Reject scopes without 'openid'" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.047"/>
+  <testcase name="OAUTH-006 — Refresh token rotation and reuse detection compromise revocation" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.807"/>
+  <testcase name="OAUTH-005 — Interactive Server-Hosted Registration and Login creates authorization code and redirects" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="1.088"/>
+  <testcase name="OAUTH-001 — Reject authorization request with duplicate query parameters (RFC 9700 4.13)" classname="com.slotting.admin.auth.OAuth2OidcProtocolTest" time="0.292"/>
+  <system-out><![CDATA[20:56:31.574 [Test worker] WARN com.slotting.admin.auth.OAuth2Controller -- Rejected unapproved redirect URI 'https://attacker.slotting.internal/auth/callback' for client 'slotting-android'
+20:56:31.575 [Test worker] WARN com.slotting.admin.auth.OAuth2Controller -- Rejected unapproved redirect URI 'http://app.slotting.internal/auth/callback' for client 'slotting-android'
+20:56:32.518 [Test worker] ERROR com.slotting.admin.auth.DurableAuthService -- SECURITY_ALERT: Refresh token reuse detected! Revoking token family 7e577b08-277b-4a57-a342-3df24d06a72c
+20:56:32.518 [Test worker] WARN com.slotting.admin.auth.AuthController -- Authentication rejected: code=TOKEN_REUSE_REVOKED, message=Refresh token reuse detected; family revoked
+20:56:32.519 [Test worker] WARN com.slotting.admin.auth.AuthController -- Authentication rejected: code=TOKEN_REVOKED, message=Token family is revoked
+20:56:33.588 [Test worker] WARN com.slotting.admin.auth.OAuth2Controller -- Failed login attempt for identifier 'alice@example.com'
+20:56:33.900 [Test worker] WARN com.slotting.admin.auth.OAuth2Controller -- Rejected authorization request due to duplicate parameter: client_id
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:15" hostname="pc" time="0.07">
+  <properties/>
+  <testcase name="GATE-RESILIENCE-001-T008 — KYC, GEO, Integrity, and AML outages apply approved fail-closed or hold policy()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.026"/>
+  <testcase name="GATE-RESILIENCE-001-T005 — Duplicate, late, and reordered events never regress canonical state()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-RESILIENCE-001-T002 — Outbox worker crash expires its lease, creates one effect, and bounds retry or dead-letter()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-RESILIENCE-001-T001 — Database abort and restart leave no partial posting and idempotent retry converges()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.007"/>
+  <testcase name="GATE-RESILIENCE-001-T006 — Android network loss, termination, and recreation requery authority without duplicate mutation()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-RESILIENCE-001-T007 — Socket drop, reorder, and gap converge through command journal and snapshot()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.007"/>
+  <testcase name="GATE-RESILIENCE-001-T003 — Redis loss cannot remove authority or restrictions and degradation is safe()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-RESILIENCE-001-T009 — Migration failure leaves writers unavailable or compatible and exposes integrity evidence()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-RESILIENCE-001-T010 — Region or provider disable stops new activity while completion and reconciliation continue()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.017"/>
+  <testcase name="GATE-RESILIENCE-001-T004 — Provider timeout and 5xx remain pending or unknown until authoritative status query()" classname="com.slotting.admin.gate.resilience.AuthoritativeResilienceIntegrationGateTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

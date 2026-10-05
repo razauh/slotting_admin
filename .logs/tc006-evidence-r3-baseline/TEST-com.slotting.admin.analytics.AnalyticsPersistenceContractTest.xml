@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.analytics.AnalyticsPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:33" hostname="pc" time="0.011">
+  <properties/>
+  <testcase name="V37 migration script defines all required schema objects, indexes, and idempotency constraints()" classname="com.slotting.admin.analytics.AnalyticsPersistenceContractTest" time="0.007"/>
+  <testcase name="InMemoryAnalyticsStore satisfies fact saving, deduplication, projection update, and unique user tracking()" classname="com.slotting.admin.analytics.AnalyticsPersistenceContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

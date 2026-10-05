@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:08" hostname="pc" time="0.057">
+  <properties/>
+  <testcase name="GET bet-limits returns 200 with crash bet limits()" classname="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" time="0.006"/>
+  <testcase name="GET snapshot returns full snapshot with balance and limits()" classname="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" time="0.006"/>
+  <testcase name="POST command and GET command-result execute and recover ack()" classname="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" time="0.023"/>
+  <testcase name="GET my-info returns 401 when unauthenticated and 200 with balance when authenticated()" classname="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" time="0.01"/>
+  <testcase name="GET bootstrap returns 200 with limits and game metadata()" classname="com.slotting.admin.gameprovider.AviatorGameRestControllerTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

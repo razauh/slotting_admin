@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.governance.TaxRegulatoryReportingTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:12" hostname="pc" time="0.035">
+  <properties/>
+  <testcase name="GOV-001-03-T004 Authority boundary, concurrent updates, and idempotency guarantees are enforced()" classname="com.slotting.admin.governance.TaxRegulatoryReportingTest" time="0.027"/>
+  <testcase name="GOV-001-03-T002 Missing approval, stale approval, or missing prerequisite results in NO-GO()" classname="com.slotting.admin.governance.TaxRegulatoryReportingTest" time="0.004"/>
+  <testcase name="GOV-001-03-T001 Approve tax and regulatory reporting rules produces the required authoritative outcome()" classname="com.slotting.admin.governance.TaxRegulatoryReportingTest" time="0.001"/>
+  <testcase name="GOV-001-03-T003 Rollback revokes market tax rules and publishes audit and outbox events()" classname="com.slotting.admin.governance.TaxRegulatoryReportingTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

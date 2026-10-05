@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.EncryptedFinancialBackupTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:54" hostname="pc" time="0.044">
+  <properties/>
+  <testcase name="LEDGER-006-01-T003 — Create encrypted financial backups survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.023"/>
+  <testcase name="LEDGER-006-01-T002 — Create encrypted financial backups rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.004"/>
+  <testcase name="LEDGER-006-01-T004 — Create encrypted financial backups remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.011"/>
+  <testcase name="LEDGER-006-01-T001 — Create encrypted financial backups produces the required authoritative outcome" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

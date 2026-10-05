@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.worker.BoundedRetryDlqTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:10:01" hostname="pc" time="0.043">
+  <properties/>
+  <testcase name="WORKER-001-02-T003 — Operate bounded retry and dead-letter queues survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.worker.BoundedRetryDlqTest" time="0.017"/>
+  <testcase name="WORKER-001-02-T001 — Operate bounded retry and dead-letter queues produces the required authoritative outcome()" classname="com.slotting.admin.worker.BoundedRetryDlqTest" time="0.012"/>
+  <testcase name="WORKER-001-02-T002 — Operate bounded retry and dead-letter queues rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.worker.BoundedRetryDlqTest" time="0.008"/>
+  <testcase name="WORKER-001-02-T004 — Operate bounded retry and dead-letter queues remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.worker.BoundedRetryDlqTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:10:01.181+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

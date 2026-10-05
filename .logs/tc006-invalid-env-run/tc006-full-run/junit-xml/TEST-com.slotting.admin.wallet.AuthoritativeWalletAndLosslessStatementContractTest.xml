@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:47" hostname="pc" time="0.262">
+  <properties/>
+  <testcase name="test04 cursor statement read preserves stable ordering running balance and pagination()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.007"/>
+  <testcase name="test07 service restart preserves exact statement history and rebuilds projections()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.002"/>
+  <testcase name="test08 projection lag reports STALE or rejects when allowStale is false()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.0"/>
+  <testcase name="test10 V22 migration script exists and defines required tables and constraints()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.0"/>
+  <testcase name="test02 wallet projection derives nonzero balances and isolates multiple currencies()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.0"/>
+  <testcase name="test05 statement read rejects tampered or invalid cursor with INVALID()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.0"/>
+  <testcase name="test03 wallet snapshot rejects wrong owner IDOR and foreign tenant()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.0"/>
+  <testcase name="test01 JdbcLedgerTimelineStore preserves and reconstructs non-empty entries on idempotent replay()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.245"/>
+  <testcase name="test06 idempotent statement query returns identical result and changed query conflicts()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.001"/>
+  <testcase name="test09 concurrent queries yield consistent versioned snapshots()" classname="com.slotting.admin.wallet.AuthoritativeWalletAndLosslessStatementContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

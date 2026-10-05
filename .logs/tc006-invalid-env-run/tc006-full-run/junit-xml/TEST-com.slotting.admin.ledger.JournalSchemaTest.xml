@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.JournalSchemaTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:45" hostname="pc" time="0.014">
+  <properties/>
+  <testcase name="LEDGER-001-T003 Journal schema survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.ledger.JournalSchemaTest" time="0.007"/>
+  <testcase name="LEDGER-001-T002 Journal schema rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.ledger.JournalSchemaTest" time="0.005"/>
+  <testcase name="LEDGER-001-T001 Journal schema produces the required authoritative outcome()" classname="com.slotting.admin.ledger.JournalSchemaTest" time="0.001"/>
+  <testcase name="LEDGER-001-T004 Journal schema remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.ledger.JournalSchemaTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

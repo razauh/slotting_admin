@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.payment.DepositWebhookAuthenticationTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:49:31" hostname="pc" time="0.059">
+  <properties/>
+  <testcase name="PAYMENT-003-01-T003 — Authenticate deposit webhook raw bodies survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.payment.DepositWebhookAuthenticationTest" time="0.022"/>
+  <testcase name="PAYMENT-003-01-T002 — Authenticate deposit webhook raw bodies rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.payment.DepositWebhookAuthenticationTest" time="0.016"/>
+  <testcase name="PAYMENT-003-01-T004 — Authenticate deposit webhook raw bodies remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.payment.DepositWebhookAuthenticationTest" time="0.005">
+    <failure message="org.opentest4j.AssertionFailedError: V17 must not be created prematurely" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: V17 must not be created prematurely
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse(Assertions.kt:58)
+	at app//kotlin.test.AssertionsKt.assertFalse(Unknown Source)
+	at app//com.slotting.admin.payment.DepositWebhookAuthenticationTest.PAYMENT-003-01-T004 — Authenticate deposit webhook raw bodies remains compatible, recoverable, observable, and lifecycle-safe(DepositWebhookAuthenticationTest.kt:390)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="PAYMENT-003-01-T001 — Authenticate deposit webhook raw bodies produces the required authoritative outcome()" classname="com.slotting.admin.payment.DepositWebhookAuthenticationTest" time="0.005"/>
+  <system-out><![CDATA[2026-10-05T20:49:31.643+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

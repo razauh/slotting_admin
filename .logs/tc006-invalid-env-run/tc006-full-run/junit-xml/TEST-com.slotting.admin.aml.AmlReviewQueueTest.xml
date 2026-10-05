@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.aml.AmlReviewQueueTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:04" hostname="pc" time="0.042">
+  <properties/>
+  <testcase name="ADMIN-003-03-T001 Operate AML review queue produces authoritative outcome()" classname="com.slotting.admin.aml.AmlReviewQueueTest" time="0.008"/>
+  <testcase name="ADMIN-003-03-T004 Operate AML review queue remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.aml.AmlReviewQueueTest" time="0.001"/>
+  <testcase name="ADMIN-003-03-T003 Operate AML review queue survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.aml.AmlReviewQueueTest" time="0.012"/>
+  <testcase name="ADMIN-003-03-T002 Operate AML review queue rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.aml.AmlReviewQueueTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

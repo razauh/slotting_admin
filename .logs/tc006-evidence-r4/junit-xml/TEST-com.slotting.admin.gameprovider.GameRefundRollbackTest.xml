@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.GameRefundRollbackTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:14" hostname="pc" time="0.181">
+  <properties/>
+  <testcase name="GAME-007-02-T002 Post game refund and rollback compensation rejects invalid and quarantines unsupported sequences()" classname="com.slotting.admin.gameprovider.GameRefundRollbackTest" time="0.131"/>
+  <testcase name="GAME-007-02-T003 Post game refund and rollback compensation survives concurrency and duplicate delivery()" classname="com.slotting.admin.gameprovider.GameRefundRollbackTest" time="0.031"/>
+  <testcase name="GAME-007-02-T004 Post game refund and rollback compensation preserves posted history and supports reconciliation()" classname="com.slotting.admin.gameprovider.GameRefundRollbackTest" time="0.009"/>
+  <testcase name="GAME-007-02-T001 Post game refund and rollback compensation produces the required authoritative outcome()" classname="com.slotting.admin.gameprovider.GameRefundRollbackTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.ApprovedEmailSmsAdapterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.059">
+  <properties/>
+  <testcase name="NOTIFY-001-03-T003: Integrate approved email and SMS adapters survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.notification.ApprovedEmailSmsAdapterTest" time="0.043"/>
+  <testcase name="NOTIFY-001-03-T002: Integrate approved email and SMS adapters rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.notification.ApprovedEmailSmsAdapterTest" time="0.011"/>
+  <testcase name="NOTIFY-001-03-T004: Integrate approved email and SMS adapters remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.notification.ApprovedEmailSmsAdapterTest" time="0.001"/>
+  <testcase name="NOTIFY-001-03-T001: Integrate approved email and SMS adapters produces the required authoritative outcome" classname="com.slotting.admin.notification.ApprovedEmailSmsAdapterTest" time="0.003"/>
+  <system-out><![CDATA[2026-10-05T20:50:14.036+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -6,6 +6,7 @@
 # ---------------------------------------------------------------------------
 graphify-out/
 .graphify/
+.verification_reports/
 
 # ---------------------------------------------------------------------------
 # Python: local environments, bytecode, builds, packages, caches, and reports

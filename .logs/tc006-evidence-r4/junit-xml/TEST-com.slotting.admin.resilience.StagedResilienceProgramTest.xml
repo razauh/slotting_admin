@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.resilience.StagedResilienceProgramTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:28" hostname="pc" time="0.071">
+  <properties/>
+  <testcase name="RES-001-02-T001 — Execute staged resilience program produces the required authoritative outcome()" classname="com.slotting.admin.resilience.StagedResilienceProgramTest" time="0.04"/>
+  <testcase name="RES-001-02-T004 — Execute staged resilience program remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.resilience.StagedResilienceProgramTest" time="0.011"/>
+  <testcase name="RES-001-02-T003 — Execute staged resilience program survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.resilience.StagedResilienceProgramTest" time="0.018"/>
+  <testcase name="RES-001-02-T002 — Execute staged resilience program rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.resilience.StagedResilienceProgramTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

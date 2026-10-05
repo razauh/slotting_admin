@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:47" hostname="pc" time="0.058">
+  <properties/>
+  <testcase name="GATE-FINANCIAL-001-T006 — Android and return URLs cannot credit, settle, adjust, or release funds()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.016"/>
+  <testcase name="GATE-FINANCIAL-001-T010 — Provider and ledger reports surface every mismatch and stuck item()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-FINANCIAL-001-T001 — Debits equal credits per batch and currency, and posted entries are immutable()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-FINANCIAL-001-T011 — Restore and replay preserve counts, hashes, balances, and event lineage()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-FINANCIAL-001-T005 — Cash, bonus, pending, locked, and withdrawable buckets never cross illegally()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.004"/>
+  <testcase name="GATE-FINANCIAL-001-T012 — Currency, minor-unit, range, and null constraints reject malformed values()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.016"/>
+  <testcase name="GATE-FINANCIAL-001-T009 — Journal rebuild equals projections and cursor statements()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-FINANCIAL-001-T003 — Equivalent idempotent replay is stable and changed-payload key reuse conflicts()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.004"/>
+  <testcase name="GATE-FINANCIAL-001-T008 — Refunds, rollbacks, and chargebacks use immutable compensating entries()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.004"/>
+  <testcase name="GATE-FINANCIAL-001-T004 — Concurrent postings and reservations cannot overspend or lose updates()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-FINANCIAL-001-T007 — Duplicate, late, and reordered provider events produce one lawful financial effect()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-FINANCIAL-001-T002 — Journal, projection, reservation, inbox, and outbox commit atomically under injected faults()" classname="com.slotting.admin.gate.financial.AuthoritativeFinancialIntegrationGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

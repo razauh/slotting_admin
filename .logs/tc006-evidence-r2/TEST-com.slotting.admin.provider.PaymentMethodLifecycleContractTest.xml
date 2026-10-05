@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:38" hostname="pc" time="0.108">
+  <properties/>
+  <testcase name="test06 idempotency replay returns cached result or CONFLICT on altered fingerprint()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.016"/>
+  <testcase name="test13 JdbcPaymentMethodStore enforces CAS row count on insert and update()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.011"/>
+  <testcase name="test01 mutation requires dedicated PAYMENT_CONFIGURATION permission()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.0"/>
+  <testcase name="test02 mutation rejects foreign tenant admin()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.0"/>
+  <testcase name="test03 mutation rejects unauthenticated, inactive, expired, or unverified MFA session()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.001"/>
+  <testcase name="test10 stale expectedVersion rejected with STALE()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.003"/>
+  <testcase name="test07 update config advances version and records history()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.008"/>
+  <testcase name="test09 deactivation retains method in list and preserves full history()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.002"/>
+  <testcase name="test04 register validates fields, bounds, currencies, and rejects secret keys()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.008"/>
+  <testcase name="test11 concurrent CAS updates allow exactly one winner and reject others()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.036"/>
+  <testcase name="test12 CAS row count verification in JdbcPaymentProviderConfigStore()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.006"/>
+  <testcase name="test08 activate, deactivate, and set maintenance with maintenance reason()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.006"/>
+  <testcase name="test05 register Pakistani payment methods successfully()" classname="com.slotting.admin.provider.PaymentMethodLifecycleContractTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

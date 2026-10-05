@@ -92,6 +92,33 @@ data class GameCommandReceiptRecord(
     val createdAt: Instant,
 )
 
+data class GameCommandReceiptClaim(
+    val receiptId: UUID,
+    val tenantId: String,
+    val ownerId: String,
+    val gameId: String,
+    val commandId: String,
+    val roundId: String,
+    val handId: String,
+    val action: String,
+    val fingerprint: String,
+    val causationId: String,
+    val correlationId: String,
+    val roundVersion: Long,
+    val createdAt: Instant,
+)
+
+sealed class CommandReceiptClaimResult {
+    data object Claimed : CommandReceiptClaimResult()
+    data class AlreadyClaimed(val receipt: GameCommandReceiptRecord) : CommandReceiptClaimResult()
+}
+
+class CommandClaimConflictException(message: String) : RuntimeException(message)
+
+class CommandAlreadyClaimedException(message: String) : RuntimeException(message)
+
+class CommandReceiptCompletionException(message: String) : RuntimeException(message)
+
 data class CreateOrUpdateRoundCommand(
     val tenantId: String,
     val gameId: String,

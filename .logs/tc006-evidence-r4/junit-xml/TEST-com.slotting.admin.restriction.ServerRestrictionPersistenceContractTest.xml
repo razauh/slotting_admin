@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.restriction.ServerRestrictionPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:28" hostname="pc" time="0.004">
+  <properties/>
+  <testcase name="InMemory and Durable store implementations satisfy basic store contracts()" classname="com.slotting.admin.restriction.ServerRestrictionPersistenceContractTest" time="0.003"/>
+  <testcase name="V31 migration script exists and defines required restriction tables()" classname="com.slotting.admin.restriction.ServerRestrictionPersistenceContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

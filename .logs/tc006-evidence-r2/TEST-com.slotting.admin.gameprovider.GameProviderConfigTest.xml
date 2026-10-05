@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.GameProviderConfigTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:26" hostname="pc" time="0.067">
+  <properties/>
+  <testcase name="ADMIN-005-02-T004 Manage approved game-provider configuration remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.gameprovider.GameProviderConfigTest" time="0.004"/>
+  <testcase name="ADMIN-005-02-T002 Manage approved game-provider configuration rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.gameprovider.GameProviderConfigTest" time="0.038"/>
+  <testcase name="ADMIN-005-02-T003 Manage approved game-provider configuration survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.gameprovider.GameProviderConfigTest" time="0.014"/>
+  <testcase name="ADMIN-005-02-T001 Manage approved game-provider configuration produces the required authoritative outcome()" classname="com.slotting.admin.gameprovider.GameProviderConfigTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

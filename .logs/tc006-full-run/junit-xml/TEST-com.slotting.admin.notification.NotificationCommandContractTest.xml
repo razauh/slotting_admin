@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.NotificationCommandContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:33" hostname="pc" time="0.021">
+  <properties/>
+  <testcase name="NOTIFY-001-01-T003 — Define notification command contract survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.notification.NotificationCommandContractTest" time="0.01"/>
+  <testcase name="NOTIFY-001-01-T002 — Define notification command contract rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.notification.NotificationCommandContractTest" time="0.008"/>
+  <testcase name="NOTIFY-001-01-T004 — Define notification command contract remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.notification.NotificationCommandContractTest" time="0.001"/>
+  <testcase name="NOTIFY-001-01-T001 — Define notification command contract produces the required authoritative outcome" classname="com.slotting.admin.notification.NotificationCommandContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

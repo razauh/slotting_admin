@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.RgReviewQueueTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.015">
+  <properties/>
+  <testcase name="ADMIN-003-04-T003 Operate responsible-gaming review queue survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.rg.RgReviewQueueTest" time="0.008"/>
+  <testcase name="ADMIN-003-04-T001 Operate responsible-gaming review queue produces authoritative outcome()" classname="com.slotting.admin.rg.RgReviewQueueTest" time="0.001"/>
+  <testcase name="ADMIN-003-04-T004 Operate responsible-gaming review queue remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.rg.RgReviewQueueTest" time="0.0"/>
+  <testcase name="ADMIN-003-04-T002 Operate responsible-gaming review queue rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.rg.RgReviewQueueTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.DelayedLimitIncreaseTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:58" hostname="pc" time="0.04">
+  <properties/>
+  <testcase name="RG-003-01-T002 — Delay responsible-gaming limit increases rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.rg.DelayedLimitIncreaseTest" time="0.007"/>
+  <testcase name="RG-003-01-T001 — Delay responsible-gaming limit increases produces the required authoritative outcome()" classname="com.slotting.admin.rg.DelayedLimitIncreaseTest" time="0.008"/>
+  <testcase name="RG-003-01-T004 — Delay responsible-gaming limit increases remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.rg.DelayedLimitIncreaseTest" time="0.01"/>
+  <testcase name="RG-003-01-T003 — Delay responsible-gaming limit increases survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.rg.DelayedLimitIncreaseTest" time="0.012"/>
+  <system-out><![CDATA[2026-10-05T20:09:58.349+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:09:58.350+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.identity.PlayerAccountRecoveryTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:44:28" hostname="pc" time="0.045">
+  <properties/>
+  <testcase name="AUTH-001-03-T001 Implement account recovery produces the required authoritative outcome()" classname="com.slotting.admin.identity.PlayerAccountRecoveryTest" time="0.029"/>
+  <testcase name="AUTH-001-03-T002 Implement account recovery rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.identity.PlayerAccountRecoveryTest" time="0.003"/>
+  <testcase name="AUTH-001-03-T004 Implement account recovery remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.identity.PlayerAccountRecoveryTest" time="0.002">
+    <failure message="org.opentest4j.AssertionFailedError: No unapproved V17 migration should be introduced" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: No unapproved V17 migration should be introduced
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//com.slotting.admin.identity.PlayerAccountRecoveryTest.AUTH-001-03-T004 Implement account recovery remains compatible recoverable observable and lifecycle-safe(PlayerAccountRecoveryTest.kt:469)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="AUTH-001-03-T003 Implement account recovery survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.identity.PlayerAccountRecoveryTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

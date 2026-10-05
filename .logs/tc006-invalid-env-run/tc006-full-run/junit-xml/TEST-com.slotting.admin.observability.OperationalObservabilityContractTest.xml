@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.observability.OperationalObservabilityContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:45" hostname="pc" time="0.15">
+  <properties/>
+  <testcase name="test07_siemDlq_exceededRetriesTransitionsToDlqWithAuditedReplay()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.015"/>
+  <testcase name="test05_structuredRedaction_sanitizesNestedMapsListsHeadersAndQueryStrings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.002"/>
+  <testcase name="test02_writeOnlySecrets_neverReturnedInViewAndCanBePreservedOrReplaced()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.11"/>
+  <testcase name="test01_rbacAuthorization_viewAndEditObservabilitySettings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.001"/>
+  <testcase name="test04_productionSafety_rejectsSyntheticAdaptersInProduction()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.003"/>
+  <testcase name="test09_alertDeduplicationAndStormProtection_repeatedEventsDoNotTriggerDuplicatePaging()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.01"/>
+  <testcase name="test10_highValueScenarios_ledgerPayoutWorkerAuthAttackMappings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.0"/>
+  <testcase name="test03_ssrfProtection_rejectsCloudMetadataAndProhibitedProtocols()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.002"/>
+  <testcase name="test06_siemTruthfulDelivery_timeoutOrConnectionErrorRemainsPendingOrRetryable()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.001"/>
+  <testcase name="test08_pagingTruthfulDispatch_deliversToEndpointWithoutFakingHumanAck()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

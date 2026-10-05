@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.PayoutCallbackReductionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:18" hostname="pc" time="0.047">
+  <properties/>
+  <testcase name="WITHDRAW-003-02-T003 — Authenticate and reduce payout callbacks survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.PayoutCallbackReductionTest" time="0.026"/>
+  <testcase name="WITHDRAW-003-02-T001 — Authenticate and reduce payout callbacks produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.PayoutCallbackReductionTest" time="0.007"/>
+  <testcase name="WITHDRAW-003-02-T004 — Authenticate and reduce payout callbacks remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.PayoutCallbackReductionTest" time="0.002"/>
+  <testcase name="WITHDRAW-003-02-T002 — Authenticate and reduce payout callbacks rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.PayoutCallbackReductionTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

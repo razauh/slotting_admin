@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:59" hostname="pc" time="0.065">
+  <properties/>
+  <testcase name="SYS-001-T004 — Critical-journey E2E remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.016"/>
+  <testcase name="SYS-001-T003 — Critical-journey E2E survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.027"/>
+  <testcase name="SYS-001-T002 — Critical-journey E2E rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.017"/>
+  <testcase name="SYS-001-T001 — Critical-journey E2E produces the required authoritative outcome" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:09:59.361+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:09:59.362+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

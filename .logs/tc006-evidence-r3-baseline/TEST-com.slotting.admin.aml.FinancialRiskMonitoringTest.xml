@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.aml.FinancialRiskMonitoringTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:33" hostname="pc" time="0.041">
+  <properties/>
+  <testcase name="AML-001-02-T002 Monitor configurable financial risk rules rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.aml.FinancialRiskMonitoringTest" time="0.011"/>
+  <testcase name="AML-001-02-T001 Monitor configurable financial risk rules produces the required authoritative outcome()" classname="com.slotting.admin.aml.FinancialRiskMonitoringTest" time="0.002"/>
+  <testcase name="AML-001-02-T003 Monitor configurable financial risk rules survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.aml.FinancialRiskMonitoringTest" time="0.004"/>
+  <testcase name="TC-031 - Financial risk monitoring computes counts and volume from durable event store, ignoring caller claims()" classname="com.slotting.admin.aml.FinancialRiskMonitoringTest" time="0.016"/>
+  <testcase name="AML-001-02-T004 Monitor configurable financial risk rules remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.aml.FinancialRiskMonitoringTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

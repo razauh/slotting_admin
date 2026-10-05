@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.LedgerProjectionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:23" hostname="pc" time="0.029">
+  <properties/>
+  <testcase name="LEDGER-003-T002 Atomic projection rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.014"/>
+  <testcase name="LEDGER-003-T001 Atomic projection produces the required authoritative outcome()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.011"/>
+  <testcase name="LEDGER-003-T004 Atomic projection remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.001"/>
+  <testcase name="LEDGER-003-T003 Atomic projection survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.ledger.LedgerProjectionTest" time="0.0"/>
+  <system-out><![CDATA[2026-10-05T20:58:23.978+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

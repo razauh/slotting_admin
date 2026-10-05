@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:01" hostname="pc" time="0.917">
+  <properties/>
+  <testcase name="transaction boundary with configurable failpoint decorator rolls back ledger and bet atomically()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.247"/>
+  <testcase name="database schema contains all operational aviator and ledger tables()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.099"/>
+  <testcase name="round trips through fairness jdbc adapter verify commitment and reveal lifecycle()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.076"/>
+  <testcase name="round trips through round lifecycle jdbc adapter verify round progression and state persistence()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.06"/>
+  <testcase name="commitment foreign key constraint rejects commitments for non existent rounds in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.049"/>
+  <testcase name="end to end aviator wager placement cashout and round settlement against real postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.204"/>
+  <testcase name="round crash settles uncashed bets as lost and sweeps escrow in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.158"/>
+  <system-out><![CDATA[2026-10-05T20:57:58.136+05:00  INFO 113922 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest]: AviatorPostgresIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T20:57:58.140+05:00  INFO 113922 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-05T20:57:58.247+05:00  INFO 113922 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Starting AviatorPostgresIntegrationTest using Java 17.0.20 with PID 113922 (started by pc in /home/pc/Downloads/slot_app/slotting_admin)
+2026-10-05T20:57:58.247+05:00  INFO 113922 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T20:57:59.653+05:00  INFO 113922 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-05T20:57:59.801+05:00  INFO 113922 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-10-05T20:57:59.825+05:00  INFO 113922 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@4812d5
+2026-10-05T20:57:59.825+05:00  INFO 113922 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-10-05T20:57:59.830+05:00  INFO 113922 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_ci (PostgreSQL 16.8)
+2026-10-05T20:57:59.890+05:00  INFO 113922 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.041s)
+2026-10-05T20:57:59.929+05:00  INFO 113922 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 40
+2026-10-05T20:57:59.930+05:00  INFO 113922 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-10-05T20:58:00.009+05:00  INFO 113922 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.052s)
+2026-10-05T20:58:00.105+05:00  INFO 113922 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=40 durationMs=306
+2026-10-05T20:58:00.923+05:00  INFO 113922 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:58:00.923+05:00  INFO 113922 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:58:01.380+05:00  INFO 113922 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Started AviatorPostgresIntegrationTest in 3.231 seconds (process running for 143.7)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

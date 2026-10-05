@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:17" hostname="pc" time="0.117">
+  <properties/>
+  <testcase name="Scenario 2 - late provider event updates historical date bucket deterministically()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.016"/>
+  <testcase name="Scenario 4 - pending financial operation does not count towards completed financial volume()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.001"/>
+  <testcase name="Scenario 3 - rejected withdrawal increments rejected count without adding to completed withdrawal volume()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.004"/>
+  <testcase name="Scenario 6 - financial metrics strictly partition by currency and never silently sum()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.007"/>
+  <testcase name="Metric dictionary defines formulas, status inclusion, and currency requirements()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.001"/>
+  <testcase name="Scenario 9 - chargeback metric is explicitly marked unsupported rather than fabricating zero()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.0"/>
+  <testcase name="Scenario 5 - multiple actions by same player on same date count as exactly 1 DAU()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.011"/>
+  <testcase name="Scenario 10 - ledger reconciliation detects and reports imbalance between analytics facts and authoritative ledger()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.008"/>
+  <testcase name="Scenario 8 - full projection rebuild yields identical aggregates to incremental updates()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.021"/>
+  <testcase name="Scenario 1 - duplicate settlement event is deduplicated and does not double-count wagers or GGR()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.005"/>
+  <testcase name="Scenario 7 - events across UTC midnight boundary consistently partition into separate UTC date buckets()" classname="com.slotting.admin.analytics.AuthoritativeAnalyticsContractTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

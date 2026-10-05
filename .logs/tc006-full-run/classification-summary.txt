@@ -1,0 +1,7 @@
+full_exit=1
+current_failing_identities=57
+baseline_r3_failing_identities=57
+only_current=0
+only_baseline=0
+v40_messages_current=9
+v40_messages_baseline_r3=0

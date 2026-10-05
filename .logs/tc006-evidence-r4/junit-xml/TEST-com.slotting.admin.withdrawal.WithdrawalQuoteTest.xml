@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.WithdrawalQuoteTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:32" hostname="pc" time="0.051">
+  <properties/>
+  <testcase name="WITHDRAW-001-01-T001 Quote withdrawal fees and expiry produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.WithdrawalQuoteTest" time="0.017"/>
+  <testcase name="WITHDRAW-001-01-T003 Quote withdrawal fees and expiry survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.WithdrawalQuoteTest" time="0.017"/>
+  <testcase name="WITHDRAW-001-01-T002 Quote withdrawal fees and expiry rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.WithdrawalQuoteTest" time="0.002"/>
+  <testcase name="WITHDRAW-001-01-T004 Quote withdrawal fees and expiry remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.WithdrawalQuoteTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

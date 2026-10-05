@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.CoolingOffSelfExclusionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:15" hostname="pc" time="0.049">
+  <properties/>
+  <testcase name="RG-002-T002 — Cooling-off self-exclusion rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.rg.CoolingOffSelfExclusionTest" time="0.02"/>
+  <testcase name="RG-002-T003 — Cooling-off self-exclusion survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.rg.CoolingOffSelfExclusionTest" time="0.016"/>
+  <testcase name="RG-002-T004 — Cooling-off self-exclusion remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.rg.CoolingOffSelfExclusionTest" time="0.003"/>
+  <testcase name="RG-002-T001 — Cooling-off self-exclusion produces the required authoritative outcome()" classname="com.slotting.admin.rg.CoolingOffSelfExclusionTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

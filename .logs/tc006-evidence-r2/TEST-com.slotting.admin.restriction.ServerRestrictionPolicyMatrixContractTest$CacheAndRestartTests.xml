@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="9. Cache Invariants and Process Restart" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.007">
+  <properties/>
+  <testcase name="Cache loss or flush NEVER unlocks restricted operations()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$CacheAndRestartTests" time="0.001"/>
+  <testcase name="Cache miss queries durable store and populates cache (cache hit on subsequent query)()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$CacheAndRestartTests" time="0.004"/>
+  <testcase name="Process restart with cold cache converges on identical authoritative decisions()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$CacheAndRestartTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

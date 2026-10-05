@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="2. Ban Types and Expiry Boundaries" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:40" hostname="pc" time="0.053">
+  <properties/>
+  <testcase name="Temporary ban is active before expiry and inactive exactly at expiry()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$BanTypesAndExpiryTests" time="0.018"/>
+  <testcase name="Temporary ban requires future expiry timestamp()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$BanTypesAndExpiryTests" time="0.009"/>
+  <testcase name="Permanent ban rejecting non-null expiry()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$BanTypesAndExpiryTests" time="0.001"/>
+  <testcase name="Permanent ban has no expiry and remains active indefinitely()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$BanTypesAndExpiryTests" time="0.001"/>
+  <testcase name="Future effective ban is not active before effectiveFrom()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$BanTypesAndExpiryTests" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

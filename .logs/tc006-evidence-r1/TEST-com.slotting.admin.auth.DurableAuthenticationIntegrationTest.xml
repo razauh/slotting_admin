@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:07:55" hostname="pc" time="10.986">
+  <properties/>
+  <testcase name="Token Family - Refresh rotation, reuse detection revoking family, and session termination" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="4.098"/>
+  <testcase name="BE-017: Maximum-identity fingerprint produces a bounded 64-char digest fitting in varchar(128)" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.733"/>
+  <testcase name="HTTP Routes - Token exchange, eligibility bearer derivation, and unauthorized rejection" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="1.885"/>
+  <testcase name="Unpredictable challenges - Purpose and subject binding, replay prevention, attempt limits" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.926"/>
+  <testcase name="Concurrency: Simultaneous refresh requests with identical token results in exactly one success" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.467"/>
+  <testcase name="Password KDF - Adaptive PBKDF2 with salt, reject default pass, and legacy migration" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="1.985"/>
+  <testcase name="Restart: Valid sessions and token family revocation status survive service recreation" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.881"/>
+  <system-out><![CDATA[20:07:59.091 [Test worker] ERROR com.slotting.admin.auth.DurableAuthService -- SECURITY_ALERT: Refresh token reuse detected! Revoking token family 64a0adc7-e895-49a4-a18a-f69000047a79
+20:08:03.114 [pool-18-thread-4] ERROR com.slotting.admin.auth.DurableAuthService -- SECURITY_ALERT: Refresh token reuse detected! Revoking token family fbeef3e9-a830-468a-93d1-c59ee65fc56b
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.crm.SupportTimelineIntegrationTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:08:38" hostname="pc" time="0.089">
+  <properties/>
+  <testcase name="CRM-003-T004 Support timeline integration remains compatible recoverable observable and lifecycle safe()" classname="com.slotting.admin.crm.SupportTimelineIntegrationTest" time="0.016">
+    <failure message="org.opentest4j.AssertionFailedError: Unapproved migration V17 must not exist" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Unapproved migration V17 must not exist
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse(Assertions.kt:58)
+	at app//kotlin.test.AssertionsKt.assertFalse(Unknown Source)
+	at app//com.slotting.admin.crm.SupportTimelineIntegrationTest.CRM-003-T004 Support timeline integration remains compatible recoverable observable and lifecycle safe(SupportTimelineIntegrationTest.kt:344)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="CRM-003-T003 Support timeline integration survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.crm.SupportTimelineIntegrationTest" time="0.031"/>
+  <testcase name="CRM-003-T001 Support timeline integration produces the required authoritative outcome()" classname="com.slotting.admin.crm.SupportTimelineIntegrationTest" time="0.011"/>
+  <testcase name="CRM-003-T002 Support timeline integration rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.crm.SupportTimelineIntegrationTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

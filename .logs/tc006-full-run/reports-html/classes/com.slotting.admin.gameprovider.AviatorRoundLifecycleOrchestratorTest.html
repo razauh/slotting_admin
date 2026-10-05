@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - AviatorRoundLifecycleOrchestratorTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>AviatorRoundLifecycleOrchestratorTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.slotting.admin.gameprovider.html">com.slotting.admin.gameprovider</a> &gt; AviatorRoundLifecycleOrchestratorTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">3</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">0.172s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">closed is terminal and transition table rejects illegal jumps()</td>
+<td class="success">0.001s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">restart recovery retains persisted outcome and closes without deriving another result()</td>
+<td class="success">0.149s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">round progresses commitment before betting then flying crash reveal close and next round()</td>
+<td class="success">0.022s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>2026-10-06T00:16:27.377+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a commitment=commitment-aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a
+2026-10-06T00:16:27.377+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a
+2026-10-06T00:16:27.378+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-06T00:16:27.378+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a roundVersion=2 crashMultiplier=1.1000
+2026-10-06T00:16:27.380+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-06T00:16:27.517+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a previousPhase=FLYING nextPhase=CRASHED roundVersion=4 currentMultiplier=1.1000
+2026-10-06T00:16:27.517+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a roundVersion=3 crashMultiplier=1.1000
+2026-10-06T00:16:27.517+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a phase=CRASHED roundVersion=4
+2026-10-06T00:16:27.518+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a previousPhase=CRASHED nextPhase=CLOSED roundVersion=5 currentMultiplier=1.1000
+2026-10-06T00:16:27.518+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-68ad37b7-5cb1-4693-8a88-f66d334d313a roundVersion=5
+2026-10-06T00:16:27.521+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 commitment=commitment-aviator-e29655d8-9ec6-4976-b379-471f57ec6985
+2026-10-06T00:16:27.521+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-e29655d8-9ec6-4976-b379-471f57ec6985
+2026-10-06T00:16:27.537+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-06T00:16:27.537+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 roundVersion=2 crashMultiplier=1.1000
+2026-10-06T00:16:27.537+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-06T00:16:27.537+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 previousPhase=FLYING nextPhase=CRASHED roundVersion=5 currentMultiplier=1.1000
+2026-10-06T00:16:27.537+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 roundVersion=4 crashMultiplier=1.1000
+2026-10-06T00:16:27.538+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 phase=CRASHED roundVersion=5
+2026-10-06T00:16:27.538+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 previousPhase=CRASHED nextPhase=CLOSED roundVersion=6 currentMultiplier=1.1000
+2026-10-06T00:16:27.538+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-e29655d8-9ec6-4976-b379-471f57ec6985 roundVersion=6
+2026-10-06T00:16:27.538+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-e823423a-9709-4efa-a315-1aafe51476e5 commitment=commitment-aviator-e823423a-9709-4efa-a315-1aafe51476e5
+2026-10-06T00:16:27.538+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-e823423a-9709-4efa-a315-1aafe51476e5 phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-e823423a-9709-4efa-a315-1aafe51476e5
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.7</a> at Oct 6, 2026, 12:16:37 AM</p>
+</div>
+</div>
+</body>
+</html>

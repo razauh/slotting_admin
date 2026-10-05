@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.worker.LeasedOutboxWorkerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:36" hostname="pc" time="0.018">
+  <properties/>
+  <testcase name="WORKER-001-01-T002 — Run leased transactional-outbox workers rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.worker.LeasedOutboxWorkerTest" time="0.007"/>
+  <testcase name="WORKER-001-01-T001 — Run leased transactional-outbox workers produces the required authoritative outcome()" classname="com.slotting.admin.worker.LeasedOutboxWorkerTest" time="0.004"/>
+  <testcase name="WORKER-001-01-T003 — Run leased transactional-outbox workers survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.worker.LeasedOutboxWorkerTest" time="0.005"/>
+  <testcase name="WORKER-001-01-T004 — Run leased transactional-outbox workers remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.worker.LeasedOutboxWorkerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

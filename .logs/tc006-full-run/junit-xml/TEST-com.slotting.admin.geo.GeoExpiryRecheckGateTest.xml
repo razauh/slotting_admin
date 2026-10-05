@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.geo.GeoExpiryRecheckGateTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:28" hostname="pc" time="0.016">
+  <properties/>
+  <testcase name="GEO-002-T003 Expiry-recheck-fail-closed gate survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.geo.GeoExpiryRecheckGateTest" time="0.011"/>
+  <testcase name="GEO-002-T002 Expiry-recheck-fail-closed gate rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.geo.GeoExpiryRecheckGateTest" time="0.002"/>
+  <testcase name="GEO-002-T004 Expiry-recheck-fail-closed gate remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.geo.GeoExpiryRecheckGateTest" time="0.001"/>
+  <testcase name="GEO-002-T001 Expiry-recheck-fail-closed gate produces the required authoritative outcome()" classname="com.slotting.admin.geo.GeoExpiryRecheckGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

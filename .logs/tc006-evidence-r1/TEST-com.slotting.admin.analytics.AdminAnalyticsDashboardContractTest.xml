@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:07:54" hostname="pc" time="0.152">
+  <properties/>
+  <testcase name="Scenario 6 - wrong tenant query is rejected and leaks no data()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.023"/>
+  <testcase name="Scenario 2 - custom range query aggregates arbitrary bounded date range()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.058"/>
+  <testcase name="Scenario 4 - no data in range returns zeroed structure with metric definitions without error()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.002"/>
+  <testcase name="Scenario 5 - projection lag computes freshness and stale indicator correctly()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.002"/>
+  <testcase name="Scenario 8 - large range exceeding maximum allowed window is bounded or rejected()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.002"/>
+  <testcase name="Scenario 9 - provider filter isolates metrics to requested provider()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.006"/>
+  <testcase name="Scenario 7 - unauthenticated expired session or role without ANALYTICS_READ is rejected()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.003"/>
+  <testcase name="Scenario 1 - daily weekly monthly queries aggregate period correctly()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.01"/>
+  <testcase name="Scenario 10 - case queue and operational health summary aggregates operational backlog()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.016"/>
+  <testcase name="Scenario 3 - multi-currency preserves strict separation without cross-currency summation()" classname="com.slotting.admin.analytics.AdminAnalyticsDashboardContractTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

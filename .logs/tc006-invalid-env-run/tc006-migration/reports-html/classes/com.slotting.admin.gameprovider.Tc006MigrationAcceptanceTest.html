@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - Tc006MigrationAcceptanceTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>Tc006MigrationAcceptanceTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.slotting.admin.gameprovider.html">com.slotting.admin.gameprovider</a> &gt; Tc006MigrationAcceptanceTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">3</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">3</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">0.213s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox failures" id="successRate">
+<div class="percent">0%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Failed tests</a>
+</li>
+<li>
+<a href="#tab1">Tests</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Failed tests</h2>
+<div class="test">
+<a name="empty installation migrates through V40 and validates with the supported schema version()"></a>
+<h3 class="failures">empty installation migrates through V40 and validates with the supported schema version()</h3>
+<span class="code">
+<pre>org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.empty installation migrates through V40 and validates with the supported schema version(Tc006MigrationAcceptanceTest.kt:61)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</pre>
+</span>
+</div>
+<div class="test">
+<a name="representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle()"></a>
+<h3 class="failures">representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle()</h3>
+<span class="code">
+<pre>org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle(Tc006MigrationAcceptanceTest.kt:83)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</pre>
+</span>
+</div>
+<div class="test">
+<a name="upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state()"></a>
+<h3 class="failures">upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state()</h3>
+<span class="code">
+<pre>org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state(Tc006MigrationAcceptanceTest.kt:282)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</pre>
+</span>
+</div>
+</div>
+<div id="tab1" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="failures">empty installation migrates through V40 and validates with the supported schema version()</td>
+<td class="failures">0.005s</td>
+<td class="failures">failed</td>
+</tr>
+<tr>
+<td class="failures">representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle()</td>
+<td class="failures">0.203s</td>
+<td class="failures">failed</td>
+</tr>
+<tr>
+<td class="failures">upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state()</td>
+<td class="failures">0.005s</td>
+<td class="failures">failed</td>
+</tr>
+</table>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.7</a> at Oct 5, 2026, 9:54:56 PM</p>
+</div>
+</div>
+</body>
+</html>

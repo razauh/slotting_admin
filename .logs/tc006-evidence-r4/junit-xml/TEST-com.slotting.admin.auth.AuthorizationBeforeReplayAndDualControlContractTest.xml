@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:18" hostname="pc" time="0.131">
+  <properties/>
+  <testcase name="test05 expired or terminated session cannot replay existing cached result()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.008"/>
+  <testcase name="test12 checker lacking required permission is rejected()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.034"/>
+  <testcase name="test02 wrong tenant caller cannot replay existing cached result()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.001"/>
+  <testcase name="test09 stale target version is rejected()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.005"/>
+  <testcase name="test01 unauthenticated caller cannot replay existing cached result()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.001"/>
+  <testcase name="test04 role revoked after first call cannot replay existing cached result()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.009"/>
+  <testcase name="test06 maker proposes and checker approves producing immutable receipt and audit()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.009"/>
+  <testcase name="test13 caller-supplied ID without authenticated decision record is rejected in protected commands()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.001"/>
+  <testcase name="test03 expired MFA cannot replay existing cached result()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.002"/>
+  <testcase name="test15 restart node recovery preserves valid decisions and rejects unapproved in-flight proposals()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.003"/>
+  <testcase name="test07 same actor twice is rejected as self-approval()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.002"/>
+  <testcase name="test11 concurrent approvers race and exactly one succeeds()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.007"/>
+  <testcase name="test10 duplicate decision on already finalized proposal is rejected()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.004"/>
+  <testcase name="test14 least privilege permissions defined and segregated across roles()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.0"/>
+  <testcase name="test08 proposal changed payload digest mismatch is rejected()" classname="com.slotting.admin.auth.AuthorizationBeforeReplayAndDualControlContractTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

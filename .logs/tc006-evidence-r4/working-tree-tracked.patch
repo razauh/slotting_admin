@@ -1,0 +1,345 @@
+diff --git a/.gitignore b/.gitignore
+index 917de02..097eace 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -25,6 +25,7 @@ reports/
+ test-results/
+ evidence/private/
+ graphify-out/
++.verification_reports/
+ 
+ # OS/editor files
+ .DS_Store
+diff --git a/.graphifyignore b/.graphifyignore
+index 05a97fe..226c7bd 100644
+--- a/.graphifyignore
++++ b/.graphifyignore
+@@ -6,6 +6,7 @@
+ # ---------------------------------------------------------------------------
+ graphify-out/
+ .graphify/
++.verification_reports/
+ 
+ # ---------------------------------------------------------------------------
+ # Python: local environments, bytecode, builds, packages, caches, and reports
+diff --git a/src/main/kotlin/com/slotting/admin/config/SchemaMigrationConfiguration.kt b/src/main/kotlin/com/slotting/admin/config/SchemaMigrationConfiguration.kt
+index 8d849e8..40c931b 100644
+--- a/src/main/kotlin/com/slotting/admin/config/SchemaMigrationConfiguration.kt
++++ b/src/main/kotlin/com/slotting/admin/config/SchemaMigrationConfiguration.kt
+@@ -24,7 +24,7 @@ data class SchemaMigrationStatus(
+ }
+ 
+ @ConfigurationProperties("slotting.schema")
+-data class SchemaMigrationProperties(val supportedVersion: Int = 38)
++data class SchemaMigrationProperties(val supportedVersion: Int = 40)
+ 
+ @Configuration
+ @EnableConfigurationProperties(SchemaMigrationProperties::class)
+diff --git a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementModels.kt b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementModels.kt
+index cee68af..cf01f2f 100644
+--- a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementModels.kt
++++ b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementModels.kt
+@@ -92,6 +92,33 @@ data class GameCommandReceiptRecord(
+     val createdAt: Instant,
+ )
+ 
++data class GameCommandReceiptClaim(
++    val receiptId: UUID,
++    val tenantId: String,
++    val ownerId: String,
++    val gameId: String,
++    val commandId: String,
++    val roundId: String,
++    val handId: String,
++    val action: String,
++    val fingerprint: String,
++    val causationId: String,
++    val correlationId: String,
++    val roundVersion: Long,
++    val createdAt: Instant,
++)
++
++sealed class CommandReceiptClaimResult {
++    data object Claimed : CommandReceiptClaimResult()
++    data class AlreadyClaimed(val receipt: GameCommandReceiptRecord) : CommandReceiptClaimResult()
++}
++
++class CommandClaimConflictException(message: String) : RuntimeException(message)
++
++class CommandAlreadyClaimedException(message: String) : RuntimeException(message)
++
++class CommandReceiptCompletionException(message: String) : RuntimeException(message)
++
+ data class CreateOrUpdateRoundCommand(
+     val tenantId: String,
+     val gameId: String,
+diff --git a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementService.kt b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementService.kt
+index d692620..3448d63 100644
+--- a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementService.kt
++++ b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementService.kt
+@@ -150,7 +150,8 @@ class DurableGameWagerAndSettlementService(
+             }
+ 
+             val settlementId = UUID.randomUUID()
+-            val txRef = "TX-CRASH-SWEEP-${command.tenantId}-${command.gameId}-${command.roundId}-${bet.handId}-$settlementId"
++            val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
++            val txRef = AviatorCommandKeys.ledgerTransactionReference("CRASH", settlementKey)
+ 
+             // Sweep escrow to house revenue via double-entry ledger
+             ledgerService.postTransaction(
+@@ -163,7 +164,7 @@ class DurableGameWagerAndSettlementService(
+                         JournalEntryDraft("ESCROW:GAME:${command.gameId}", JournalEntryDirection.DEBIT, bet.wagerMinorUnits, bet.currencyCode),
+                         JournalEntryDraft("HOUSE:GAME:${command.gameId}", JournalEntryDirection.CREDIT, bet.wagerMinorUnits, bet.currencyCode),
+                     ),
+-                    idempotencyKey = "IDEM-CRASH-SWEEP-$settlementId",
++                    idempotencyKey = settlementKey,
+                     correlationId = "corr-crash-${command.roundId}",
+                     causationId = "caus-crash-${command.roundId}",
+                 )
+@@ -493,7 +494,8 @@ class DurableGameWagerAndSettlementService(
+         }
+ 
+         val reservationId = UUID.randomUUID()
+-        val txRef = "TX-WAGER-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$reservationId"
++        val placeBetKey = AviatorCommandKeys.placeBetKey(command.tenantId, gameId, command.roundId, playerId, command.handId)
++        val txRef = AviatorCommandKeys.ledgerTransactionReference("WAGER", placeBetKey)
+ 
+         // Double-entry ledger reservation: Debit Player, Credit Escrow
+         try {
+@@ -507,7 +509,7 @@ class DurableGameWagerAndSettlementService(
+                         JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.DEBIT, wagerMinor, command.currency),
+                         JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, wagerMinor, command.currency),
+                     ),
+-                    idempotencyKey = "IDEM-WAGER-$reservationId",
++                    idempotencyKey = placeBetKey,
+                     correlationId = command.correlationId,
+                     causationId = command.causationId,
+                 )
+@@ -630,7 +632,8 @@ class DurableGameWagerAndSettlementService(
+         // Authoritative refund amount is derived strictly from stored wager
+         val refundMinor = bet.wagerMinorUnits
+         val settlementId = UUID.randomUUID()
+-        val txRef = "TX-CANCEL-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$settlementId"
++        val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
++        val txRef = AviatorCommandKeys.ledgerTransactionReference("CANCEL", settlementKey)
+ 
+         // Ledger reversal: Debit Escrow, Credit Player
+         ledgerService.postTransaction(
+@@ -643,7 +646,7 @@ class DurableGameWagerAndSettlementService(
+                     JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.DEBIT, refundMinor, bet.currencyCode),
+                     JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, refundMinor, bet.currencyCode),
+                 ),
+-                idempotencyKey = "IDEM-CANCEL-$settlementId",
++                idempotencyKey = settlementKey,
+                 correlationId = command.correlationId,
+                 causationId = command.causationId,
+             )
+@@ -775,7 +778,8 @@ class DurableGameWagerAndSettlementService(
+         val payoutMinor = minOf(calculatedPayout, maxAllowedPayout)
+ 
+         val settlementId = UUID.randomUUID()
+-        val txRef = "TX-CASHOUT-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$settlementId"
++        val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
++        val txRef = AviatorCommandKeys.ledgerTransactionReference("CASHOUT", settlementKey)
+ 
+         // Authoritative double-entry ledger settlement
+         val entries = mutableListOf<JournalEntryDraft>()
+@@ -800,7 +804,7 @@ class DurableGameWagerAndSettlementService(
+                 transactionReference = txRef,
+                 currencyCode = bet.currencyCode,
+                 entries = entries,
+-                idempotencyKey = "IDEM-CASHOUT-$settlementId",
++                idempotencyKey = settlementKey,
+                 correlationId = command.correlationId,
+                 causationId = command.causationId,
+             )
+diff --git a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementStore.kt b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementStore.kt
+index 9f10f19..733449d 100644
+--- a/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementStore.kt
++++ b/src/main/kotlin/com/slotting/admin/gameprovider/DurableGameWagerAndSettlementStore.kt
+@@ -26,6 +26,8 @@ interface DurableGameWagerAndSettlementStore {
+     fun saveSettlement(settlement: GameBetSettlementRecord)
+     fun findReceipt(tenantId: String, commandId: String): GameCommandReceiptRecord?
+     fun saveReceipt(receipt: GameCommandReceiptRecord)
++    fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult
++    fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long)
+     fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long
+     fun addDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long)
+     fun nextSequenceId(tenantId: String): Long
+@@ -147,6 +149,60 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
+         receipts[key] = receipt.copy()
+     }
+ 
++    private val pendingClaims = ConcurrentHashMap<String, GameCommandReceiptClaim>()
++
++    @Synchronized
++    override fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult {
++        val key = receiptKey(claim.tenantId, claim.commandId)
++        val existing = receipts[key]
++        if (existing != null) {
++            if (existing.fingerprint != claim.fingerprint) {
++                throw CommandClaimConflictException(
++                    "Command ${claim.commandId} already recorded with a different payload fingerprint"
++                )
++            }
++            return CommandReceiptClaimResult.AlreadyClaimed(existing)
++        }
++        val pending = pendingClaims[key]
++        if (pending != null) {
++            if (pending.fingerprint != claim.fingerprint) {
++                throw CommandClaimConflictException(
++                    "Command ${claim.commandId} already claimed with a different payload fingerprint"
++                )
++            }
++            throw CommandAlreadyClaimedException(
++                "Command ${claim.commandId} is already claimed and has no completed result yet"
++            )
++        }
++        pendingClaims[key] = claim
++        return CommandReceiptClaimResult.Claimed
++    }
++
++    @Synchronized
++    override fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long) {
++        val key = receiptKey(tenantId, commandId)
++        val claim = pendingClaims.remove(key)
++            ?: throw CommandReceiptCompletionException("No pending claim to complete for command $commandId")
++        receipts[key] = GameCommandReceiptRecord(
++            receiptId = claim.receiptId,
++            tenantId = claim.tenantId,
++            ownerId = claim.ownerId,
++            gameId = claim.gameId,
++            commandId = claim.commandId,
++            roundId = claim.roundId,
++            handId = claim.handId,
++            action = claim.action,
++            status = status,
++            fingerprint = claim.fingerprint,
++            responseJson = responseJson,
++            causationId = claim.causationId,
++            correlationId = claim.correlationId,
++            serverSequenceId = serverSequenceId,
++            roundVersion = roundVersion,
++            createdAt = claim.createdAt,
++        )
++    }
++
+     override fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long {
+         return dailyWagers[dailyKey(tenantId, playerId, currencyCode, dailyDate)] ?: 0L
+     }
+@@ -465,6 +521,70 @@ open class JdbcDurableGameWagerAndSettlementStore(
+         )
+     }
+ 
++    @Transactional
++    override fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult {
++        val sql = """
++            insert into game_command_receipt (
++                receipt_id, tenant_id, owner_id, game_id, command_id, round_id, hand_id,
++                action, status, fingerprint, response_json, causation_id, correlation_id,
++                server_sequence_id, round_version, created_at
++            ) values (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, null, ?, ?, null, ?, ?)
++            on conflict (tenant_id, command_id) do nothing
++        """.trimIndent()
++        val rows = jdbcTemplate.update(
++            sql,
++            claim.receiptId,
++            claim.tenantId,
++            claim.ownerId,
++            claim.gameId,
++            claim.commandId,
++            claim.roundId,
++            claim.handId,
++            claim.action,
++            claim.fingerprint,
++            claim.causationId,
++            claim.correlationId,
++            claim.roundVersion,
++            Timestamp.from(claim.createdAt),
++        )
++        if (rows == 0) {
++            val existing = findReceipt(claim.tenantId, claim.commandId)
++                ?: throw CommandReceiptCompletionException(
++                    "Command ${claim.commandId} conflicted but no stored receipt was found"
++                )
++            if (existing.fingerprint != claim.fingerprint) {
++                throw CommandClaimConflictException(
++                    "Command ${claim.commandId} already stored with a different payload fingerprint"
++                )
++            }
++            return CommandReceiptClaimResult.AlreadyClaimed(existing)
++        }
++        return CommandReceiptClaimResult.Claimed
++    }
++
++    @Transactional
++    override fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long) {
++        val sql = """
++            update game_command_receipt
++            set status = ?, response_json = ?, server_sequence_id = ?, round_version = ?
++            where tenant_id = ? and command_id = ? and status = 'PENDING'
++        """.trimIndent()
++        val rows = jdbcTemplate.update(
++            sql,
++            status,
++            responseJson,
++            serverSequenceId,
++            roundVersion,
++            tenantId,
++            commandId,
++        )
++        if (rows == 0) {
++            throw CommandReceiptCompletionException(
++                "No pending claim to complete for command $commandId in tenant $tenantId"
++            )
++        }
++    }
++
+     override fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long {
+         val sql = """
+             select accumulated_wager_minor
+@@ -488,9 +608,16 @@ open class JdbcDurableGameWagerAndSettlementStore(
+         jdbcTemplate.update(sql, tenantId, playerId, currencyCode, dailyDate, amountMinor)
+     }
+ 
++    @Transactional
+     override fun nextSequenceId(tenantId: String): Long {
+-        val sql = "select coalesce(max(server_sequence_id), 0) + 1 from game_command_receipt where tenant_id = ?"
+-        return jdbcTemplate.queryForObject(sql, Long::class.java, tenantId) ?: 1L
++        val upsertSql = """
++            insert into game_command_sequence (tenant_id, last_sequence_id, updated_at)
++            values (?, 1, now())
++            on conflict (tenant_id) do update
++            set last_sequence_id = game_command_sequence.last_sequence_id + 1, updated_at = now()
++            returning last_sequence_id
++        """.trimIndent()
++        return jdbcTemplate.queryForObject(upsertSql, Long::class.java, tenantId) ?: 1L
+     }
+ 
+     override fun findLatestRound(tenantId: String, gameId: String): GameRoundRecord? {
+diff --git a/src/main/resources/application.yml b/src/main/resources/application.yml
+index f9add37..e58d689 100644
+--- a/src/main/resources/application.yml
++++ b/src/main/resources/application.yml
+@@ -30,7 +30,7 @@ management:
+ 
+ slotting:
+   schema:
+-    supported-version: 38
++    supported-version: 40
+   outbox:
+     worker:
+       enabled: true
+diff --git a/src/test/kotlin/com/slotting/admin/infra/PostgresMigrationIntegrationTest.kt b/src/test/kotlin/com/slotting/admin/infra/PostgresMigrationIntegrationTest.kt
+index c5cd32c..2440fb0 100644
+--- a/src/test/kotlin/com/slotting/admin/infra/PostgresMigrationIntegrationTest.kt
++++ b/src/test/kotlin/com/slotting/admin/infra/PostgresMigrationIntegrationTest.kt
+@@ -44,7 +44,7 @@ class PostgresMigrationIntegrationTest {
+     fun `clean install creates migration history and operational tables`() {
+         val maxRank = jdbc.queryForObject("select max(installed_rank) from flyway_schema_history", Int::class.java)
+         assertTrue(maxRank != null && maxRank >= 38)
+-        assertEquals("38", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
++        assertEquals("40", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
+         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'notification_delivery_tracking'", Int::class.java))
+         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'operational_siem_events'", Int::class.java))
+         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'admin_event_envelope'", Int::class.java))

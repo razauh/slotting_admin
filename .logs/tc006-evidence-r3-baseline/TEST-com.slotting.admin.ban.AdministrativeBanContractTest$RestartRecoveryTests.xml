@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="9. Process Restart and Recovery" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:48" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="Ban survives service restart and continues authoritative enforcement()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$RestartRecoveryTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

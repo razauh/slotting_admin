@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:56" hostname="pc" time="0.097">
+  <properties/>
+  <testcase name="Scenario 6 - Frame sequence gap triggers authoritative snapshot reconciliation()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.021"/>
+  <testcase name="Scenario 5 - Rules version mismatch or missing rules agreement is rejected()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.001"/>
+  <testcase name="Scenario 2 - Round advance causes expectedRoundVersion mismatch and rejects with STALE()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.012"/>
+  <testcase name="Scenario 8 - Non-integral fractional minor units are rejected()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.002"/>
+  <testcase name="Scenario 3 - Lost ACK can be recovered via exact result lookup without duplicate charge()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.004"/>
+  <testcase name="TC-020 Golden fixtures are valid and conform to contract specifications()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.027"/>
+  <testcase name="Scenario 10 - Wrong currency or invalid currency code is rejected()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.003"/>
+  <testcase name="Scenario 1 - Duplicate command returns cached ack with DUPLICATE status without mutating balance twice()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.004"/>
+  <testcase name="Server authority on CANCEL_BET - calculates refund from stored placed bet without trusting client()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.002"/>
+  <testcase name="Scenario 7 - Malformed action enum is rejected without mutating state()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.001"/>
+  <testcase name="Scenario 4 - Incompatible future protocol version is rejected()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.001"/>
+  <testcase name="Scenario 9 - Numeric overflow beyond Long MAX_VALUE is rejected()" classname="com.slotting.admin.gameprovider.AviatorAuthoritativeContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

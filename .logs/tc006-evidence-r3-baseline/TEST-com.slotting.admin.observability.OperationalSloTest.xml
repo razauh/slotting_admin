@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.observability.OperationalSloTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.03">
+  <properties/>
+  <testcase name="OBS-001-02-T002 — Define production SLOs rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.observability.OperationalSloTest" time="0.017"/>
+  <testcase name="OBS-001-02-T004 — Define production SLOs remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.observability.OperationalSloTest" time="0.004"/>
+  <testcase name="OBS-001-02-T003 — Define production SLOs survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.observability.OperationalSloTest" time="0.005"/>
+  <testcase name="OBS-001-02-T001 — Define production SLOs produces the required authoritative outcome" classname="com.slotting.admin.observability.OperationalSloTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

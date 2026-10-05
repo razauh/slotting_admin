@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.outbox.DurableDeliveryContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="event envelope is forensic but redacts sensitive payload fields()" classname="com.slotting.admin.outbox.DurableDeliveryContractTest" time="0.001"/>
+  <testcase name="production outbox store is JDBC backed()" classname="com.slotting.admin.outbox.DurableDeliveryContractTest" time="0.001"/>
+  <testcase name="durable delivery migration is versioned after TC-001()" classname="com.slotting.admin.outbox.DurableDeliveryContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

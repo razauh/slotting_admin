@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:25" hostname="pc" time="1.579">
+  <properties/>
+  <testcase name="GivenRoundInsert_WhenCommitmentWriteFails_ThenAllThreeTablesRollBack()" classname="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" time="0.049"/>
+  <testcase name="GivenMixedOperations_WhenLocksAreObserved_ThenGlobalOrderIsPreserved()" classname="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" time="0.914"/>
+  <testcase name="GivenHistoricalMoneyAndOutcomeVectors_WhenRefactoredPathRuns_ThenSemanticsStayUnchanged()" classname="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" time="0.319"/>
+  <testcase name="GivenProductionLifecycle_WhenThreeRoundsComplete_ThenNoOrphansExist()" classname="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" time="0.232"/>
+  <testcase name="GivenFreshDatabase_WhenLifecycleCreatesRound_ThenParentCommitmentAndAuditCommit()" classname="com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest" time="0.055"/>
+  <system-out><![CDATA[2026-10-06T00:16:23.844+05:00  INFO 29909 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest]: AviatorRoundCreationPostgresTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-06T00:16:23.847+05:00  INFO 29909 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorRoundCreationPostgresTest
+2026-10-06T00:16:23.894+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-06T00:16:23.899+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=ae18c781-c21f-4feb-a91b-668cbfc20aa4 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.899+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCreationPostgresTest : Starting AviatorRoundCreationPostgresTest using Java 17.0.20 with PID 29909 (started by pc in /home/pc/Downloads/slot_app/slotting_admin)
+2026-10-06T00:16:23.902+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCreationPostgresTest : No active profile set, falling back to 1 default profile: "default"
+2026-10-06T00:16:23.904+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=ae18c781-c21f-4feb-a91b-668cbfc20aa4 outcome=PUBLISHED correlationId=corr-crash-rnd-gld2-cb9f92 causationId=caus-crash-rnd-gld2-cb9f92
+2026-10-06T00:16:25.105+05:00  INFO 29909 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-06T00:16:25.195+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Starting...
+2026-10-06T00:16:25.205+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-5 - Added connection org.postgresql.jdbc.PgConnection@1d760c33
+2026-10-06T00:16:25.205+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Start completed.
+2026-10-06T00:16:25.207+05:00  INFO 29909 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_tc006_full (PostgreSQL 16.15)
+2026-10-06T00:16:25.234+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.021s)
+2026-10-06T00:16:25.246+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 40
+2026-10-06T00:16:25.246+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-10-06T00:16:25.268+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.015s)
+2026-10-06T00:16:25.296+05:00  INFO 29909 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=40 durationMs=103
+2026-10-06T00:16:25.432+05:00  INFO 29909 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-06T00:16:25.432+05:00  INFO 29909 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-06T00:16:25.786+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCreationPostgresTest : Started AviatorRoundCreationPostgresTest in 1.936 seconds (process running for 66.335)
+2026-10-06T00:16:26.944+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-round eventId=null outcome=LEASED_3 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:26.945+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=68c7bfe7-f262-404b-bd74-602bf796df79 tenantId=tenant-tc002-round topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:26.947+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-round eventId=68c7bfe7-f262-404b-bd74-602bf796df79 outcome=PUBLISHED correlationId=corr-golden causationId=caus-golden
+2026-10-06T00:16:26.948+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=abf1f445-8145-4ea4-9dbe-db0405648e1a tenantId=tenant-tc002-round topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:26.951+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-round eventId=abf1f445-8145-4ea4-9dbe-db0405648e1a outcome=PUBLISHED correlationId=corr-bet-golden-1 causationId=cmd-bet-golden-1
+2026-10-06T00:16:26.951+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d545fe7b-8b80-438a-a0f7-df0bad7167e3 tenantId=tenant-tc002-round topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:26.956+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-round eventId=d545fe7b-8b80-438a-a0f7-df0bad7167e3 outcome=PUBLISHED correlationId=corr-cancel-golden-1 causationId=cmd-cancel-golden-1
+2026-10-06T00:16:27.115+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 commitment=15432415081fbcf40881625286867775377b8d8cebb2fdb8c8570cca5ee2718b
+2026-10-06T00:16:27.122+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 phase=SCHEDULED roundVersion=1 commitment=15432415081fbcf40881625286867775377b8d8cebb2fdb8c8570cca5ee2718b
+2026-10-06T00:16:27.130+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-06T00:16:27.141+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 roundVersion=2 crashMultiplier=115.63
+2026-10-06T00:16:27.151+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-06T00:16:27.190+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 previousPhase=FLYING nextPhase=CRASHED roundVersion=11 currentMultiplier=115.6300
+2026-10-06T00:16:27.193+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 roundVersion=10 crashMultiplier=115.6300
+2026-10-06T00:16:27.202+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 phase=CRASHED roundVersion=11
+2026-10-06T00:16:27.207+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 previousPhase=CRASHED nextPhase=CLOSED roundVersion=12 currentMultiplier=115.6300
+2026-10-06T00:16:27.207+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-c7404f99-eed2-4f6d-9474-6540ad9ba130 roundVersion=12
+2026-10-06T00:16:27.211+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 commitment=ec065ea42a996e5d88c3166d1c90cd9b18d02d6004ffede697706f54d8e0d98e
+2026-10-06T00:16:27.212+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 phase=SCHEDULED roundVersion=1 commitment=ec065ea42a996e5d88c3166d1c90cd9b18d02d6004ffede697706f54d8e0d98e
+2026-10-06T00:16:27.216+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-06T00:16:27.220+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 roundVersion=2 crashMultiplier=1.96
+2026-10-06T00:16:27.224+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-06T00:16:27.232+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 previousPhase=FLYING nextPhase=CRASHED roundVersion=5 currentMultiplier=1.9600
+2026-10-06T00:16:27.234+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 roundVersion=4 crashMultiplier=1.9600
+2026-10-06T00:16:27.246+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 phase=CRASHED roundVersion=5
+2026-10-06T00:16:27.250+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 previousPhase=CRASHED nextPhase=CLOSED roundVersion=6 currentMultiplier=1.9600
+2026-10-06T00:16:27.251+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-c10817cb-0414-46ac-9f16-b6df0500b663 roundVersion=6
+2026-10-06T00:16:27.256+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f commitment=8d11d1d13acd23466ccdcf30937b0a23c7666b0d411d96ffdc64688eae622691
+2026-10-06T00:16:27.256+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f phase=SCHEDULED roundVersion=1 commitment=8d11d1d13acd23466ccdcf30937b0a23c7666b0d411d96ffdc64688eae622691
+2026-10-06T00:16:27.261+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-06T00:16:27.264+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f roundVersion=2 crashMultiplier=3.02
+2026-10-06T00:16:27.268+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-06T00:16:27.279+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f previousPhase=FLYING nextPhase=CRASHED roundVersion=5 currentMultiplier=3.0200
+2026-10-06T00:16:27.280+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f roundVersion=4 crashMultiplier=3.0200
+2026-10-06T00:16:27.297+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f phase=CRASHED roundVersion=5
+2026-10-06T00:16:27.303+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f previousPhase=CRASHED nextPhase=CLOSED roundVersion=6 currentMultiplier=3.0200
+2026-10-06T00:16:27.303+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-80889e31-9621-46b3-9a37-c49f127fef7f roundVersion=6
+2026-10-06T00:16:27.354+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-54d0c6ca-e88c-413b-905a-56d9447b930a commitment=72dfc86705b8b84aa8a4199f045a623faf0a952cffc1247426982848ab63df19
+2026-10-06T00:16:27.355+05:00  INFO 29909 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-54d0c6ca-e88c-413b-905a-56d9447b930a phase=SCHEDULED roundVersion=1 commitment=72dfc86705b8b84aa8a4199f045a623faf0a952cffc1247426982848ab63df19
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

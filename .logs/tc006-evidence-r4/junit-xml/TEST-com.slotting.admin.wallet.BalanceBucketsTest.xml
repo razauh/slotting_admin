@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.wallet.BalanceBucketsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:31" hostname="pc" time="0.144">
+  <properties/>
+  <testcase name="WALLET-002-T004 Balance buckets remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.079"/>
+  <testcase name="WALLET-002-T001 Balance buckets produces the required authoritative outcome()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.026"/>
+  <testcase name="WALLET-002-T003 Balance buckets survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.031"/>
+  <testcase name="WALLET-002-T002 Balance buckets rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.provider.PaymentMethodQueryContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:27" hostname="pc" time="0.106">
+  <properties/>
+  <testcase name="test11 controller handles valid and error requests with correct HTTP statuses()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.001"/>
+  <testcase name="test08 stale cached list detection and deactivation rejection with typed refreshable error()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.004"/>
+  <testcase name="test06 provider outage filters method and reports provider unavailable()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.002"/>
+  <testcase name="test10 query records metrics with eligible, filtered counts, and reason codes()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.003"/>
+  <testcase name="test03 query filters by transaction type deposit versus withdrawal()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.002"/>
+  <testcase name="test05 query validates amount bounds, calculates fees, and handles negative or overflow amounts()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.002"/>
+  <testcase name="test01 query rejects unauthenticated, expired, or foreign tenant sessions()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.001"/>
+  <testcase name="test12 restart durability preserves active, inactive state, and history()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.002"/>
+  <testcase name="test04 query filters by currency and rejects malformed currency format()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.003"/>
+  <testcase name="test02 query returns only active permitted methods and excludes inactive or maintenance methods by default()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.002"/>
+  <testcase name="test09 response contains no credentials or secret reference material()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.069"/>
+  <testcase name="test07 policy hook denies method when player has server-known restrictions()" classname="com.slotting.admin.provider.PaymentMethodQueryContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

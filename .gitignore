@@ -25,6 +25,7 @@ reports/
 test-results/
 evidence/private/
 graphify-out/
+.verification_reports/
 
 # OS/editor files
 .DS_Store

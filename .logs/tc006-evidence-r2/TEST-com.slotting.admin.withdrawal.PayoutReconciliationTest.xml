@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.PayoutReconciliationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:42" hostname="pc" time="0.033">
+  <properties/>
+  <testcase name="WITHDRAW-003-03-T003 — Reconcile ambiguous payout and release failures survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.PayoutReconciliationTest" time="0.02"/>
+  <testcase name="WITHDRAW-003-03-T001 — Reconcile ambiguous payout and release failures produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.PayoutReconciliationTest" time="0.001"/>
+  <testcase name="WITHDRAW-003-03-T002 — Reconcile ambiguous payout and release failures rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.PayoutReconciliationTest" time="0.01"/>
+  <testcase name="WITHDRAW-003-03-T004 — Reconcile ambiguous payout and release failures remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.PayoutReconciliationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

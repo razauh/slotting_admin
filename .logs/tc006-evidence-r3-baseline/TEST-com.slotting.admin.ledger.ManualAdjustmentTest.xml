@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.ManualAdjustmentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:13" hostname="pc" time="0.032">
+  <properties/>
+  <testcase name="LEDGER-004-T002 Manual adjustments rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.ledger.ManualAdjustmentTest" time="0.016"/>
+  <testcase name="LEDGER-004-T004 Manual adjustments remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.ledger.ManualAdjustmentTest" time="0.007"/>
+  <testcase name="LEDGER-004-T003 Manual adjustments survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.ledger.ManualAdjustmentTest" time="0.005"/>
+  <testcase name="LEDGER-004-T001 Manual adjustments produces the required authoritative outcome()" classname="com.slotting.admin.ledger.ManualAdjustmentTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:53" hostname="pc" time="0.123">
+  <properties/>
+  <testcase name="test03 aml store zero-row CAS update throws typed conflict()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.004"/>
+  <testcase name="test08 stale expected version throws STALE error without mutating store()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.006"/>
+  <testcase name="test09 duplicate command returns exact idempotent replay without re-executing transition()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.009"/>
+  <testcase name="test07 two service instances racing on same withdrawal only one commits success()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.015"/>
+  <testcase name="test11 expired claim lease allows another admin to claim and transition queue item()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.002"/>
+  <testcase name="test10 changed payload reusing idempotency key is rejected with CONFLICT()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.005"/>
+  <testcase name="test05 manual adjustment store zero-row CAS update throws typed conflict()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.009"/>
+  <testcase name="test02 withdrawal store zero-row CAS update throws typed conflict()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.005"/>
+  <testcase name="test01 withdrawal transition approve and reject clears claimedBy ensuring V6 check constraint compliance()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.006"/>
+  <testcase name="test13 service restart preserves committed transitions and returns exact replay()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.001"/>
+  <testcase name="test04 rg store zero-row CAS update throws typed conflict()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.006"/>
+  <testcase name="test06 adjustment fingerprint is strictly bounded under schema varchar 512 for max inputs()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.007"/>
+  <testcase name="test12 CAS failure prevents subsequent result audit and outbox writes ensuring complete rollback()" classname="com.slotting.admin.infra.PostgresTransitionsAndBoundedFingerprintContractTest" time="0.036"/>
+  <system-out><![CDATA[2026-10-05T20:09:53.275+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:09:53.287+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-b93bb5bc-b1ae-4974-86d0-43ff0e9e740a eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:09:53.287+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=fc6b5af3-bb18-44cb-ae3d-395e00d27bed tenantId=tenant-tc002-b93bb5bc-b1ae-4974-86d0-43ff0e9e740a topic=audit
+2026-10-05T20:09:53.290+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-b93bb5bc-b1ae-4974-86d0-43ff0e9e740a eventId=fc6b5af3-bb18-44cb-ae3d-395e00d27bed outcome=PUBLISHED correlationId=corr-tc002 causationId=cause-tc002
+2026-10-05T20:09:53.292+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-2d1dedbb-0c04-4d64-b135-91e856d6fa72 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:09:53.296+05:00  INFO 94973 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-b93bb5bc-b1ae-4974-86d0-43ff0e9e740a eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

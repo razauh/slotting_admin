@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:02:21" hostname="pc" time="0.02">
+  <properties/>
+  <testcase name="GATE-SECURITY-001-T009 — Secrets, tokens, PII, and documents never enter artifacts, telemetry, crashes, or SBOM()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.006"/>
+  <testcase name="GATE-SECURITY-001-T003 — Lock, suspension, closure, and self-exclusion immediately deny protected commands()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T007 — Owned HTTPS App Links enforce PKCE, state, nonce, and one-time replay protection()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T004 — IDOR, role bypass, maker-checker collision, and player-admin token confusion fail()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T010 — Pin, certificate, and key rotation plus KMS, WAF, rate-limit, and break-glass failures alert safely()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T001 — Expired, malformed, wrong-audience, and revoked tokens fail, concurrent refresh has one winner()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.0"/>
+  <testcase name="Expired manifest throws InvalidSecurityGateManifestException and emits alert()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-SECURITY-001-T005 — Spoofed, replayed, stale, and reordered payment or game callbacks make no mutation()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-SECURITY-001-T008 — WebView, exported components, intents, clipboard, screenshots, notifications, and logs meet policy()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="Unauthenticated or player principal is rejected with UnauthorizedSecurityGateException()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T002 — Refresh-token reuse and logout reuse revoke the family and alert()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="Injected failure in security scenario produces deterministic NO-GO and emits alert()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.002"/>
+  <testcase name="Comprehensive Security Gate Evaluation with all 10 scenarios produces authoritative GO()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-SECURITY-001-T006 — Manipulated Android eligibility, balance, location, time, and integrity input grants nothing()" classname="com.slotting.admin.gate.security.AuthoritativeSecurityIntegrationGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

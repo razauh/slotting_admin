@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:15:24" hostname="pc" time="3.523">
+  <properties/>
+  <testcase name="Scenario 8: Account closure under active legal hold remains held without remote deletion" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="2.809"/>
+  <testcase name="Scenario 11: Backend / session failure returns 503 without local fabrication" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.06"/>
+  <testcase name="Scenario 7: Positive balance without settlement acknowledgment returns 422" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.037"/>
+  <testcase name="Scenario 9: Clean account closure marks CLOSED, produces server receipt, survives restart" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.092"/>
+  <testcase name="Scenario 6: Account closure with in-flight pending operations enters PENDING_SETTLEMENT" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.081"/>
+  <testcase name="Scenario 5: Support case list and single read with cross-owner IDOR protection" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.078"/>
+  <testcase name="Scenario 1: Authenticated player queries own profile with masked PII and KYC summary" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.03"/>
+  <testcase name="Scenario 2: Unauthenticated returns 401; Foreign player requesting other profile returns 403" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.039"/>
+  <testcase name="Scenario 3: Account statement returns double-entry ledger entries and running balances" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.103"/>
+  <testcase name="Scenario 10: Consolidated RG summary truthfully reflects restrictions and limits" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.081"/>
+  <testcase name="Scenario 4: Durable support case creation; replay idempotent; conflict on altered payload" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.08"/>
+  <system-out><![CDATA[00:15:26.287 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:26.295 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:26.301 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 4 ms
+00:15:27.527 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.528 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.529 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.583 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.584 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.584 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.635 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.635 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.635 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.741 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.743 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.744 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.811 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.815 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.815 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.880 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.880 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.880 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.908 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.908 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.908 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:27.958 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:27.959 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:27.959 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:28.091 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:28.092 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:28.095 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+00:15:28.162 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+00:15:28.164 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+00:15:28.165 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

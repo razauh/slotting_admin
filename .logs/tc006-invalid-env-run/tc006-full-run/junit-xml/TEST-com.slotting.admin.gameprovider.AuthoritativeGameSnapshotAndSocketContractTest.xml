@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:20" hostname="pc" time="0.161">
+  <properties/>
+  <testcase name="scenario03 lost ACK recovery returns exact cached result from durable receipt()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.068"/>
+  <testcase name="scenario05 event gap returns missed frames or forces resnapshot if gap exceeds retention()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.015"/>
+  <testcase name="scenario06 expired or invalid session token fails closed()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.01"/>
+  <testcase name="scenario08 bootstrap and snapshot without active round return null and never synthesize fake state()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.011"/>
+  <testcase name="scenario02 round advance emits ordered socket events with monotonic sequences and updates snapshot()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.009"/>
+  <testcase name="scenario11 V30 migration script exists and specifies event checkpoint constraints()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.005"/>
+  <testcase name="scenario01 initial connect returns authoritative snapshot matching durable state and 0 for unfunded user()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.007"/>
+  <testcase name="scenario07 cross-owner access is denied and private events are partitioned()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.005"/>
+  <testcase name="scenario04 persistent state survives service restart with consistent sequence checkpoints()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.011"/>
+  <testcase name="scenario09 round history returns bounded results from durable crashed rounds in reverse chronological order()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.006"/>
+  <testcase name="scenario10 round without fairness commitment returns empty serverSeedHash and never synthesizes a hash()" classname="com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndSocketContractTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

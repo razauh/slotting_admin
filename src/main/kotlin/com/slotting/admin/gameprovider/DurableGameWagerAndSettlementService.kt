@@ -150,7 +150,8 @@ class DurableGameWagerAndSettlementService(
             }
 
             val settlementId = UUID.randomUUID()
-            val txRef = "TX-CRASH-SWEEP-${command.tenantId}-${command.gameId}-${command.roundId}-${bet.handId}-$settlementId"
+            val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
+            val txRef = AviatorCommandKeys.ledgerTransactionReference("CRASH", settlementKey)
 
             // Sweep escrow to house revenue via double-entry ledger
             ledgerService.postTransaction(
@@ -163,7 +164,7 @@ class DurableGameWagerAndSettlementService(
                         JournalEntryDraft("ESCROW:GAME:${command.gameId}", JournalEntryDirection.DEBIT, bet.wagerMinorUnits, bet.currencyCode),
                         JournalEntryDraft("HOUSE:GAME:${command.gameId}", JournalEntryDirection.CREDIT, bet.wagerMinorUnits, bet.currencyCode),
                     ),
-                    idempotencyKey = "IDEM-CRASH-SWEEP-$settlementId",
+                    idempotencyKey = settlementKey,
                     correlationId = "corr-crash-${command.roundId}",
                     causationId = "caus-crash-${command.roundId}",
                 )
@@ -493,7 +494,8 @@ class DurableGameWagerAndSettlementService(
         }
 
         val reservationId = UUID.randomUUID()
-        val txRef = "TX-WAGER-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$reservationId"
+        val placeBetKey = AviatorCommandKeys.placeBetKey(command.tenantId, gameId, command.roundId, playerId, command.handId)
+        val txRef = AviatorCommandKeys.ledgerTransactionReference("WAGER", placeBetKey)
 
         // Double-entry ledger reservation: Debit Player, Credit Escrow
         try {
@@ -507,7 +509,7 @@ class DurableGameWagerAndSettlementService(
                         JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.DEBIT, wagerMinor, command.currency),
                         JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, wagerMinor, command.currency),
                     ),
-                    idempotencyKey = "IDEM-WAGER-$reservationId",
+                    idempotencyKey = placeBetKey,
                     correlationId = command.correlationId,
                     causationId = command.causationId,
                 )
@@ -630,7 +632,8 @@ class DurableGameWagerAndSettlementService(
         // Authoritative refund amount is derived strictly from stored wager
         val refundMinor = bet.wagerMinorUnits
         val settlementId = UUID.randomUUID()
-        val txRef = "TX-CANCEL-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$settlementId"
+        val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
+        val txRef = AviatorCommandKeys.ledgerTransactionReference("CANCEL", settlementKey)
 
         // Ledger reversal: Debit Escrow, Credit Player
         ledgerService.postTransaction(
@@ -643,7 +646,7 @@ class DurableGameWagerAndSettlementService(
                     JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.DEBIT, refundMinor, bet.currencyCode),
                     JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, refundMinor, bet.currencyCode),
                 ),
-                idempotencyKey = "IDEM-CANCEL-$settlementId",
+                idempotencyKey = settlementKey,
                 correlationId = command.correlationId,
                 causationId = command.causationId,
             )
@@ -775,7 +778,8 @@ class DurableGameWagerAndSettlementService(
         val payoutMinor = minOf(calculatedPayout, maxAllowedPayout)
 
         val settlementId = UUID.randomUUID()
-        val txRef = "TX-CASHOUT-${command.tenantId}-$gameId-${command.roundId}-${command.handId}-$settlementId"
+        val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
+        val txRef = AviatorCommandKeys.ledgerTransactionReference("CASHOUT", settlementKey)
 
         // Authoritative double-entry ledger settlement
         val entries = mutableListOf<JournalEntryDraft>()
@@ -800,7 +804,7 @@ class DurableGameWagerAndSettlementService(
                 transactionReference = txRef,
                 currencyCode = bet.currencyCode,
                 entries = entries,
-                idempotencyKey = "IDEM-CASHOUT-$settlementId",
+                idempotencyKey = settlementKey,
                 correlationId = command.correlationId,
                 causationId = command.causationId,
             )

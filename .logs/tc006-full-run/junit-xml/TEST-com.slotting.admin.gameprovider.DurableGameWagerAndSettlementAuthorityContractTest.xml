@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:27" hostname="pc" time="0.076">
+  <properties/>
+  <testcase name="scenario08 missing or restricted compliance evidence denies wager and enforces cumulative limits()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.006"/>
+  <testcase name="scenario07 wager fails if ledger balance is below requested amount and creates no bet record()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.006"/>
+  <testcase name="scenario05 round crash settles remaining accepted bets as LOST with escrow sweep to house()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.005"/>
+  <testcase name="scenario01 cancel or cash-out without accepted bet fails closed with no ledger credit()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.005"/>
+  <testcase name="scenario03 cancel on already cashed-out or settled bet is rejected()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.006"/>
+  <testcase name="scenario10 ledger posting failure rolls back wager reservation transactionally()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.007"/>
+  <testcase name="scenario04 cash-out after round has ended or crashed is rejected()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.005"/>
+  <testcase name="scenario11 V28 migration script exists and specifies all authoritative constraints()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario06 parallel hands can be independently placed and settled concurrently()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.006"/>
+  <testcase name="scenario09 persistent state and command results survive service restart()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.013"/>
+  <testcase name="scenario02 duplicate bet command returns cached ACK and new command ID conflicts()" classname="com.slotting.admin.gameprovider.DurableGameWagerAndSettlementAuthorityContractTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

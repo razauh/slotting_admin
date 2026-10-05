@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="8. Distinction from Other Restriction Sources" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:43:14" hostname="pc" time="0.002">
+  <properties/>
+  <testcase name="Administrative ban records remain strictly distinct from RG, fraud, KYC, and closure records()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$DistinctionTests" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

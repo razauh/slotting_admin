@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.kyc.KycVendorCallbackIntegrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:23" hostname="pc" time="0.046">
+  <properties/>
+  <testcase name="KYC-001-02-T003 Integrate KYC vendor and verified callback survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.kyc.KycVendorCallbackIntegrationTest" time="0.033"/>
+  <testcase name="KYC-001-02-T004 Integrate KYC vendor and verified callback remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.kyc.KycVendorCallbackIntegrationTest" time="0.001"/>
+  <testcase name="KYC-001-02-T002 Integrate KYC vendor and verified callback rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.kyc.KycVendorCallbackIntegrationTest" time="0.005"/>
+  <testcase name="KYC-001-02-T001 Integrate KYC vendor and verified callback produces the required authoritative outcome()" classname="com.slotting.admin.kyc.KycVendorCallbackIntegrationTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

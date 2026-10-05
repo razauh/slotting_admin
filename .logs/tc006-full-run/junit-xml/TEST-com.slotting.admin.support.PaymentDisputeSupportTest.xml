@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.support.PaymentDisputeSupportTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:35" hostname="pc" time="0.031">
+  <properties/>
+  <testcase name="SUPPORT-001-02-T004 Manage payment disputes remains compatible recoverable observable and lifecycle safe()" classname="com.slotting.admin.support.PaymentDisputeSupportTest" time="0.017"/>
+  <testcase name="SUPPORT-001-02-T001 Manage payment disputes produces the required authoritative outcome()" classname="com.slotting.admin.support.PaymentDisputeSupportTest" time="0.008"/>
+  <testcase name="SUPPORT-001-02-T002 Manage payment disputes rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.support.PaymentDisputeSupportTest" time="0.001"/>
+  <testcase name="SUPPORT-001-02-T003 Manage payment disputes survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.support.PaymentDisputeSupportTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

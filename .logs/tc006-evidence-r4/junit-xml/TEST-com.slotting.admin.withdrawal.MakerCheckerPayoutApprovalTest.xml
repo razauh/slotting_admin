@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:31" hostname="pc" time="0.062">
+  <properties/>
+  <testcase name="WITHDRAW-002-03-T004 Apply maker-checker payout approval remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.025"/>
+  <testcase name="WITHDRAW-002-03-T003 Apply maker-checker payout approval survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.021"/>
+  <testcase name="WITHDRAW-002-03-T002 Apply maker-checker payout approval rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.007"/>
+  <testcase name="WITHDRAW-002-03-T001 Apply maker-checker payout approval produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:58:31.896+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

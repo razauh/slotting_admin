@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:32" hostname="pc" time="1.294">
+  <properties/>
+  <testcase name="Scenario 8: Account closure under active legal hold remains held without remote deletion" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.802"/>
+  <testcase name="Scenario 11: Backend / session failure returns 503 without local fabrication" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.027"/>
+  <testcase name="Scenario 7: Positive balance without settlement acknowledgment returns 422" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.034"/>
+  <testcase name="Scenario 9: Clean account closure marks CLOSED, produces server receipt, survives restart" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.044"/>
+  <testcase name="Scenario 6: Account closure with in-flight pending operations enters PENDING_SETTLEMENT" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.042"/>
+  <testcase name="Scenario 5: Support case list and single read with cross-owner IDOR protection" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.039"/>
+  <testcase name="Scenario 1: Authenticated player queries own profile with masked PII and KYC summary" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.034"/>
+  <testcase name="Scenario 2: Unauthenticated returns 401; Foreign player requesting other profile returns 403" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.083"/>
+  <testcase name="Scenario 3: Account statement returns double-entry ledger entries and running balances" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.095"/>
+  <testcase name="Scenario 10: Consolidated RG summary truthfully reflects restrictions and limits" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.036"/>
+  <testcase name="Scenario 4: Durable support case creation; replay idempotent; conflict on altered payload" classname="com.slotting.admin.account.AuthoritativeAccountAndSupportContractTest" time="0.04"/>
+  <system-out><![CDATA[2026-10-05T20:49:32.045+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:32.451+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:32.452+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:32.458+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 5 ms
+2026-10-05T20:49:32.652+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:32.851+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:32.851+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:32.851+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:32.885+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:32.885+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:32.885+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:32.916+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:32.916+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:32.916+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:32.967+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:32.967+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:32.968+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:33.002+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.003+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.005+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-10-05T20:49:33.044+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.044+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.045+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:33.055+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:33.077+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.079+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.079+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:33.171+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.172+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.182+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:33.266+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.267+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.268+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:33.302+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:33.302+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:33.303+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.053">
+  <properties/>
+  <testcase name="scenario 6 - deposit during exclusion is strictly denied()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.007"/>
+  <testcase name="scenario 1 - missing profile fails safely()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 5 - parallel wagers enforce atomic cumulative limit without split transaction breach()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.027"/>
+  <testcase name="scenario 2 - expired evidence does not restrict once past server expiry()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 4 - cooling period immediate decrease and delayed increase()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 10 - restart and state survival()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 7 - promotion suppression active when self-excluded or in cool-off()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 9 - new device access reflects durable server state()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <testcase name="scenario 8 - policy version change rejects stale expectations()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.002"/>
+  <testcase name="scenario 3 - self-exclusion enforcement blocks gaming and deposit but allows withdrawal()" classname="com.slotting.admin.rg.DurableResponsibleGamingAuthorityContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

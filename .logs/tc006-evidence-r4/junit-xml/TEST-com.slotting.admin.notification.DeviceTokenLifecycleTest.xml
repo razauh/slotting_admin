@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.DeviceTokenLifecycleTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:24" hostname="pc" time="0.068">
+  <properties/>
+  <testcase name="NOTIFY-002-02-T003: Manage device-token lifecycle survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.notification.DeviceTokenLifecycleTest" time="0.033"/>
+  <testcase name="NOTIFY-002-02-T002: Manage device-token lifecycle rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.notification.DeviceTokenLifecycleTest" time="0.024"/>
+  <testcase name="NOTIFY-002-02-T004: Manage device-token lifecycle remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.notification.DeviceTokenLifecycleTest" time="0.008"/>
+  <testcase name="NOTIFY-002-02-T001: Manage device-token lifecycle produces the required authoritative outcome" classname="com.slotting.admin.notification.DeviceTokenLifecycleTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

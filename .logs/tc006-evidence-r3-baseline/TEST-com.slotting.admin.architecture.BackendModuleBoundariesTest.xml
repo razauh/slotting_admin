@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.architecture.BackendModuleBoundariesTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:33" hostname="pc" time="0.031">
+  <properties/>
+  <testcase name="ARCH-001-02-T002 Enforce backend module boundaries rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.architecture.BackendModuleBoundariesTest" time="0.012"/>
+  <testcase name="ARCH-001-02-T001 Enforce backend module boundaries produces the required authoritative outcome()" classname="com.slotting.admin.architecture.BackendModuleBoundariesTest" time="0.004"/>
+  <testcase name="ARCH-001-02-T004 Enforce backend module boundaries remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.architecture.BackendModuleBoundariesTest" time="0.001"/>
+  <testcase name="ARCH-001-02-T003 Enforce backend module boundaries survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.architecture.BackendModuleBoundariesTest" time="0.009"/>
+  <system-out><![CDATA[2026-10-05T20:49:33.659+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

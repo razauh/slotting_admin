@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.fraud.FraudRiskPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:20" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="Durable fraud store handles event, decision, and rule set CRUD()" classname="com.slotting.admin.fraud.FraudRiskPersistenceContractTest" time="0.001"/>
+  <testcase name="V34 migration script defines all required schema objects and idempotency constraints()" classname="com.slotting.admin.fraud.FraudRiskPersistenceContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

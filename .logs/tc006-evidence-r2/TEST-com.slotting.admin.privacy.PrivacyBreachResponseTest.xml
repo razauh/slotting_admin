@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.PrivacyBreachResponseTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:38" hostname="pc" time="0.052">
+  <properties/>
+  <testcase name="PRIV-001-05-T001 — Exercise privacy-breach response produces the required authoritative outcome()" classname="com.slotting.admin.privacy.PrivacyBreachResponseTest" time="0.029"/>
+  <testcase name="PRIV-001-05-T003 — Exercise privacy-breach response survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.PrivacyBreachResponseTest" time="0.009"/>
+  <testcase name="PRIV-001-05-T002 — Exercise privacy-breach response rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.PrivacyBreachResponseTest" time="0.003"/>
+  <testcase name="PRIV-001-05-T004 — Exercise privacy-breach response remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.PrivacyBreachResponseTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

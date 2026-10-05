@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:34" hostname="pc" time="3.739">
+  <properties/>
+  <testcase name="Token Family - Refresh rotation, reuse detection revoking family, and session termination" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.95"/>
+  <testcase name="BE-017: Maximum-identity fingerprint produces a bounded 64-char digest fitting in varchar(128)" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.354"/>
+  <testcase name="HTTP Routes - Token exchange, eligibility bearer derivation, and unauthorized rejection" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.327"/>
+  <testcase name="Unpredictable challenges - Purpose and subject binding, replay prevention, attempt limits" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.297"/>
+  <testcase name="Concurrency: Simultaneous refresh requests with identical token results in exactly one success" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.578"/>
+  <testcase name="Password KDF - Adaptive PBKDF2 with salt, reject default pass, and legacy migration" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.895"/>
+  <testcase name="Restart: Valid sessions and token family revocation status survive service recreation" classname="com.slotting.admin.auth.DurableAuthenticationIntegrationTest" time="0.33"/>
+  <system-out><![CDATA[2026-10-05T20:49:34.064+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:34.670+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:34.985+05:00 ERROR 110153 --- [    Test worker] c.s.admin.auth.DurableAuthService        : SECURITY_ALERT: Refresh token reuse detected! Revoking token family c3aaa894-51b8-4cd2-a1fb-0e1dc580c424
+2026-10-05T20:49:35.072+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:35.695+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:36.086+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:36.542+05:00 ERROR 110153 --- [ool-78-thread-1] c.s.admin.auth.DurableAuthService        : SECURITY_ALERT: Refresh token reuse detected! Revoking token family 41a43322-55af-4e5c-82e1-2e64b6a657dd
+2026-10-05T20:49:36.542+05:00 ERROR 110153 --- [ool-78-thread-2] c.s.admin.auth.DurableAuthService        : SECURITY_ALERT: Refresh token reuse detected! Revoking token family 41a43322-55af-4e5c-82e1-2e64b6a657dd
+2026-10-05T20:49:36.701+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:37.093+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:37.705+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

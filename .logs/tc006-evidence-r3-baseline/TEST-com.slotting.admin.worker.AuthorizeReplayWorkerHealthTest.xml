@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.worker.AuthorizeReplayWorkerHealthTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:18" hostname="pc" time="0.034">
+  <properties/>
+  <testcase name="WORKER-001-03-T003 — Authorize replay and publish worker health survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.worker.AuthorizeReplayWorkerHealthTest" time="0.02"/>
+  <testcase name="WORKER-001-03-T004 — Authorize replay and publish worker health remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.worker.AuthorizeReplayWorkerHealthTest" time="0.007"/>
+  <testcase name="WORKER-001-03-T002 — Authorize replay and publish worker health rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.worker.AuthorizeReplayWorkerHealthTest" time="0.003"/>
+  <testcase name="WORKER-001-03-T001 — Authorize replay and publish worker health produces the required authoritative outcome()" classname="com.slotting.admin.worker.AuthorizeReplayWorkerHealthTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

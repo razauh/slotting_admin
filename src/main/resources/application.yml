@@ -30,7 +30,7 @@ management:
 
 slotting:
   schema:
-    supported-version: 38
+    supported-version: 40
   outbox:
     worker:
       enabled: true

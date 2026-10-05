@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.infra.ExerciseDdosEdgeControlsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:29" hostname="pc" time="0.039">
+  <properties/>
+  <testcase name="INFRA-003-04-T004 Exercise DDoS and edge emergency controls remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.infra.ExerciseDdosEdgeControlsTest" time="0.025"/>
+  <testcase name="INFRA-003-04-T003 Exercise DDoS and edge emergency controls survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.infra.ExerciseDdosEdgeControlsTest" time="0.01"/>
+  <testcase name="INFRA-003-04-T002 Exercise DDoS and edge emergency controls rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.infra.ExerciseDdosEdgeControlsTest" time="0.002"/>
+  <testcase name="INFRA-003-04-T001 Exercise DDoS and edge emergency controls produces the required authoritative outcome()" classname="com.slotting.admin.infra.ExerciseDdosEdgeControlsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

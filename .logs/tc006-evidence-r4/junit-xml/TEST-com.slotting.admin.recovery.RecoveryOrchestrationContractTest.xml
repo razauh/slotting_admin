@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:27" hostname="pc" time="0.122">
+  <properties/>
+  <testcase name="test 8 - Patroni HA - Switchover vs Failover distinction and lag observation()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.018"/>
+  <testcase name="test 4 - KMS Outage - OpenBao Transit failure fails safely without dev key fallback in production()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.011"/>
+  <testcase name="test 2 - Isolated Restore &amp; Financial Reconciliation - Balanced ledger and projections succeed()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.029"/>
+  <testcase name="test 6 - Ambiguous Operations - Ambiguous financial operations block recovery completion()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.006"/>
+  <testcase name="test 5 - Partial Restore - Missing WAL segment or ledger imbalance yields PARTIAL_RESTORE_DETECTED()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.012"/>
+  <testcase name="test 7 - RPO and RTO Measurement &amp; Breach Alerts - Target breaches trigger alerts()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.012"/>
+  <testcase name="test 10 - Admin RBAC Isolation - Unauthorized users cannot access backup or HA commands()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.002"/>
+  <testcase name="test 3 - Corrupt Backup - Tampered artifact fails SHA-256 digest and GCM authentication()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.006"/>
+  <testcase name="test 9 - Admin Storage Settings - Write-only secrets and versioning preservation()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.004"/>
+  <testcase name="test 1 - Full Backup - Encrypted upload with OpenBao Transit, server-side digest validation, and truthful stored state()" classname="com.slotting.admin.recovery.RecoveryOrchestrationContractTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:58:27.810+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:58:27.817+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:58:27.852+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

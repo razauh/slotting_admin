@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.infra.AbuseAwareRateLimitTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:12" hostname="pc" time="0.036">
+  <properties/>
+  <testcase name="INFRA-003-03-T001 Enforce abuse-aware rate limits produces the required authoritative outcome()" classname="com.slotting.admin.infra.AbuseAwareRateLimitTest" time="0.022"/>
+  <testcase name="INFRA-003-03-T002 Enforce abuse-aware rate limits rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.infra.AbuseAwareRateLimitTest" time="0.002"/>
+  <testcase name="INFRA-003-03-T003 Enforce abuse-aware rate limits survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.infra.AbuseAwareRateLimitTest" time="0.008"/>
+  <testcase name="INFRA-003-03-T004 Enforce abuse-aware rate limits remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.infra.AbuseAwareRateLimitTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

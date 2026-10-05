@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.PersonalDataInventoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.041">
+  <properties/>
+  <testcase name="PRIV-001-01-T002 — Maintain personal-data inventory rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.015"/>
+  <testcase name="PRIV-001-01-T003 — Maintain personal-data inventory survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.01"/>
+  <testcase name="PRIV-001-01-T004 — Maintain personal-data inventory remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.004"/>
+  <testcase name="PRIV-001-01-T001 — Maintain personal-data inventory produces the required authoritative outcome()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

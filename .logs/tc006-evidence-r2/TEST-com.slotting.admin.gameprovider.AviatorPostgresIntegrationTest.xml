@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" tests="7" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:44:12" hostname="pc" time="0.982">
+  <properties/>
+  <testcase name="transaction boundary with configurable failpoint decorator rolls back ledger and bet atomically()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.275"/>
+  <testcase name="database schema contains all operational aviator and ledger tables()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.082">
+    <failure message="org.opentest4j.AssertionFailedError: Table game_authoritative_round must exist in PostgreSQL ==&gt; expected: &lt;1&gt; but was: &lt;2&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Table game_authoritative_round must exist in PostgreSQL ==&gt; expected: &lt;1&gt; but was: &lt;2&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)
+	at app//kotlin.test.AssertionsKt.assertEquals(Unknown Source)
+	at app//com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest.database schema contains all operational aviator and ledger tables(AviatorPostgresIntegrationTest.kt:218)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="round trips through fairness jdbc adapter verify commitment and reveal lifecycle()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.077"/>
+  <testcase name="round trips through round lifecycle jdbc adapter verify round progression and state persistence()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.052"/>
+  <testcase name="commitment foreign key constraint rejects commitments for non existent rounds in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.04"/>
+  <testcase name="end to end aviator wager placement cashout and round settlement against real postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.259"/>
+  <testcase name="round crash settles uncashed bets as lost and sweeps escrow in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.187"/>
+  <system-out><![CDATA[2026-10-05T20:44:08.486+05:00  INFO 104539 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest]: AviatorPostgresIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T20:44:08.493+05:00  INFO 104539 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-05T20:44:08.605+05:00  INFO 104539 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Starting AviatorPostgresIntegrationTest using Java 17.0.20 with PID 104539 (started by pc in /home/pc/Downloads/slot_app/slotting_admin)
+2026-10-05T20:44:08.605+05:00  INFO 104539 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T20:44:10.347+05:00  INFO 104539 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-05T20:44:10.637+05:00  INFO 104539 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-10-05T20:44:10.673+05:00  INFO 104539 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@3caef656
+2026-10-05T20:44:10.673+05:00  INFO 104539 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-10-05T20:44:10.678+05:00  INFO 104539 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_ci (PostgreSQL 16.8)
+2026-10-05T20:44:10.774+05:00  INFO 104539 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.061s)
+2026-10-05T20:44:10.808+05:00  INFO 104539 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 40
+2026-10-05T20:44:10.810+05:00  INFO 104539 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-10-05T20:44:10.885+05:00  INFO 104539 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.050s)
+2026-10-05T20:44:10.990+05:00  INFO 104539 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=40 durationMs=357
+2026-10-05T20:44:11.662+05:00  INFO 104539 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:44:11.663+05:00  INFO 104539 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:44:12.514+05:00  INFO 104539 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Started AviatorPostgresIntegrationTest in 4.009 seconds (process running for 85.506)
+2026-10-05T20:44:12.802+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:44:12.802+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=185e8467-a93e-4942-97a4-d527408060a8 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:44:12.811+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=185e8467-a93e-4942-97a4-d527408060a8 outcome=PUBLISHED correlationId=corr-TX-PG-FAILPOINT-INIT-c3c56431-467e-4941-a829-2edcf9bf92a6 causationId=caus-TX-PG-FAILPOINT-INIT-c3c56431-467e-4941-a829-2edcf9bf92a6
+2026-10-05T20:44:12.813+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:44:12.813+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=32c03488-1e5b-4514-8516-e61050df5010 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:44:12.817+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=32c03488-1e5b-4514-8516-e61050df5010 outcome=PUBLISHED correlationId=corr-fp-committed causationId=cmd-fp-committed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

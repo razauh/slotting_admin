@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.AndroidRgControlsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.017">
+  <properties/>
+  <testcase name="RG-004-T003 — Android controls audit UX survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.rg.AndroidRgControlsTest" time="0.011"/>
+  <testcase name="RG-004-T004 — Android controls audit UX remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.rg.AndroidRgControlsTest" time="0.002"/>
+  <testcase name="RG-004-T002 — Android controls audit UX rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.rg.AndroidRgControlsTest" time="0.001"/>
+  <testcase name="RG-004-T001 — Android controls audit UX produces the required authoritative outcome()" classname="com.slotting.admin.rg.AndroidRgControlsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

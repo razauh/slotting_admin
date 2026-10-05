@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.attestation.OperationAttestationContractTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:07:54" hostname="pc" time="0.193">
+  <properties/>
+  <testcase name="Scenario 7 - challenge issued for WAGER cannot authorize WITHDRAWAL()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.031"/>
+  <testcase name="Scenario 14 - production composition rejects test-only fake verifiers()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.005"/>
+  <testcase name="Scenario 3 - challenge is invalid after expiry TTL()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.006"/>
+  <testcase name="Scenario 10 - package mismatch rejects legacy com slotting game and requires com slotting game connected()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.008"/>
+  <testcase name="Scenario 13 - concurrent race on same challenge grants exactly one success and denies others()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.017"/>
+  <testcase name="Scenario 9 - backend restart preserves consumed nonces, consumed challenge remains unusable()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.006"/>
+  <testcase name="Scenario 11 - unknown or unapproved signer digest is rejected()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.004"/>
+  <testcase name="Scenario 5 - challenge issued for session A cannot be used in session B()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.006"/>
+  <testcase name="Scenario 1 - normal first-use flow issues challenge and successfully verifies operation()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.003"/>
+  <testcase name="Scenario 6 - challenge cannot be cross-claimed by another user or tenant()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.011"/>
+  <testcase name="Scenario 4 - client clock skew beyond tolerance is rejected()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.017"/>
+  <testcase name="Scenario 15 - absence of external provider operates under provider-independent policy without claiming fake Google verification()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.012"/>
+  <testcase name="Scenario 12 - rapid challenge generation is rate-limited()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.011"/>
+  <testcase name="Scenario 2 - challenge replay is rejected, one challenge cannot authorize two operations()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.003"/>
+  <testcase name="Scenario 8 - blank or malformed nonce is rejected()" classname="com.slotting.admin.attestation.OperationAttestationContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

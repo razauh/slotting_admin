@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.WithdrawalRequestTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:18" hostname="pc" time="0.042">
+  <properties/>
+  <testcase name="WITHDRAW-001-03-T001 Create step-up protected withdrawal request produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.WithdrawalRequestTest" time="0.014"/>
+  <testcase name="WITHDRAW-001-03-T004 Create step-up protected withdrawal request remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.WithdrawalRequestTest" time="0.0"/>
+  <testcase name="WITHDRAW-001-03-T002 Create step-up protected withdrawal request rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.WithdrawalRequestTest" time="0.005"/>
+  <testcase name="WITHDRAW-001-03-T003 Create step-up protected withdrawal request survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.WithdrawalRequestTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

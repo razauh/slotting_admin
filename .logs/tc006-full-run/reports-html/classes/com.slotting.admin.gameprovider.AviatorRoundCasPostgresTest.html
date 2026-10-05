@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - AviatorRoundCasPostgresTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>AviatorRoundCasPostgresTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.slotting.admin.gameprovider.html">com.slotting.admin.gameprovider</a> &gt; AviatorRoundCasPostgresTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">5</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">1.349s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">GivenCrashedRound_WhenStaleFlyingWritten_ThenTerminalStateRemains()</td>
+<td class="success">0.067s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">GivenHistoricalMoneyAndOutcomeVectors_WhenRefactoredPathRuns_ThenSemanticsStayUnchanged()</td>
+<td class="success">0.266s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">GivenLegalTransition_WhenVersionAdvances_ThenExactlyOneIncrement()</td>
+<td class="success">0.133s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">GivenMixedOperations_WhenLocksAreObserved_ThenGlobalOrderIsPreserved()</td>
+<td class="success">0.832s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">GivenSameExpectedVersion_WhenTwoWritersUpdate_ThenExactlyOneWins()</td>
+<td class="success">0.051s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>2026-10-06T00:16:19.305+05:00  INFO 29909 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorRoundCasPostgresTest]: AviatorRoundCasPostgresTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-06T00:16:19.308+05:00  INFO 29909 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorRoundCasPostgresTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-06T00:16:19.394+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCasPostgresTest      : Starting AviatorRoundCasPostgresTest using Java 17.0.20 with PID 29909 (started by pc in /home/pc/Downloads/slot_app/slotting_admin)
+2026-10-06T00:16:19.394+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCasPostgresTest      : No active profile set, falling back to 1 default profile: &quot;default&quot;
+2026-10-06T00:16:19.653+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:19.664+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_8 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:19.664+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=0f6506b4-b99a-4f63-8a0b-cc9db619574f tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.671+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=0f6506b4-b99a-4f63-8a0b-cc9db619574f outcome=PUBLISHED correlationId=corr-TX-PG-FAILPOINT-INIT-980b4720-478e-409d-a45a-4fb12303818c causationId=caus-TX-PG-FAILPOINT-INIT-980b4720-478e-409d-a45a-4fb12303818c
+2026-10-06T00:16:19.671+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=5411d506-dc08-4a2e-b815-f4e35a30ed46 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.676+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=5411d506-dc08-4a2e-b815-f4e35a30ed46 outcome=PUBLISHED correlationId=corr-fp-committed causationId=cmd-fp-committed
+2026-10-06T00:16:19.676+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=9db786c5-37db-4496-bac1-4ec62506f240 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.684+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=9db786c5-37db-4496-bac1-4ec62506f240 outcome=PUBLISHED correlationId=corr-bet-crash-001 causationId=cmd-bet-crash-001
+2026-10-06T00:16:19.684+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=a0d87dac-65a5-4cbd-a503-955aa40ff443 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.702+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:19.714+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=a0d87dac-65a5-4cbd-a503-955aa40ff443 outcome=PUBLISHED correlationId=corr-crash-RND-C-95dec575-409 causationId=caus-crash-RND-C-95dec575-409
+2026-10-06T00:16:19.715+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c92b4e60-e724-47b3-87bb-3086732c0745 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.738+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=c92b4e60-e724-47b3-87bb-3086732c0745 outcome=PUBLISHED correlationId=corr-TX-PG-SEED2-19efccf8-c2e6-4add-becc-13546e8a95c6 causationId=caus-TX-PG-SEED2-19efccf8-c2e6-4add-becc-13546e8a95c6
+2026-10-06T00:16:19.738+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=cd2040bc-cd9b-4620-991d-3b38b259b26b tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.763+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=cd2040bc-cd9b-4620-991d-3b38b259b26b outcome=PUBLISHED correlationId=corr-TX-PG-SEED-e15738b3-3f92-4cb6-968f-12c90270c94e causationId=caus-TX-PG-SEED-e15738b3-3f92-4cb6-968f-12c90270c94e
+2026-10-06T00:16:19.763+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=e45199e6-4179-47d8-83b2-5ab41ad14af8 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.832+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=e45199e6-4179-47d8-83b2-5ab41ad14af8 outcome=PUBLISHED correlationId=corr-cashout-pg-001 causationId=cmd-cashout-pg-001
+2026-10-06T00:16:19.832+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=f858bdac-9e54-49c7-8bff-3816ddae445f tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:19.840+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=f858bdac-9e54-49c7-8bff-3816ddae445f outcome=PUBLISHED correlationId=corr-bet-pg-001 causationId=cmd-bet-pg-001
+2026-10-06T00:16:21.347+05:00  INFO 29909 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-06T00:16:21.440+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2026-10-06T00:16:21.450+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection org.postgresql.jdbc.PgConnection@28be6382
+2026-10-06T00:16:21.451+05:00  INFO 29909 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2026-10-06T00:16:21.455+05:00  INFO 29909 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_tc006_full (PostgreSQL 16.15)
+2026-10-06T00:16:21.493+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.033s)
+2026-10-06T00:16:21.508+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema &quot;public&quot;: 40
+2026-10-06T00:16:21.508+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Schema &quot;public&quot; is up to date. No migration necessary.
+2026-10-06T00:16:21.595+05:00  INFO 29909 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.079s)
+2026-10-06T00:16:21.637+05:00  INFO 29909 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=40 durationMs=198
+2026-10-06T00:16:22.051+05:00  INFO 29909 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-06T00:16:22.052+05:00  INFO 29909 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-06T00:16:22.480+05:00  INFO 29909 --- [    Test worker] c.s.a.g.AviatorRoundCasPostgresTest      : Started AviatorRoundCasPostgresTest in 3.163 seconds (process running for 63.029)
+2026-10-06T00:16:22.668+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_2 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:22.668+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=130ca6bf-5050-4842-aa61-de350c5834e8 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:22.671+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=130ca6bf-5050-4842-aa61-de350c5834e8 outcome=PUBLISHED correlationId=corr-bet causationId=caus-bet
+2026-10-06T00:16:22.671+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=e4f8000d-c2db-4dcb-9af9-0e8424efadd9 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:22.674+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=e4f8000d-c2db-4dcb-9af9-0e8424efadd9 outcome=PUBLISHED correlationId=corr-bet-1 causationId=cmd-bet-concurrent-1
+2026-10-06T00:16:22.730+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:22.730+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c28d9a5d-b2c8-4d49-944c-573da3ab71de tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:22.735+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=c28d9a5d-b2c8-4d49-944c-573da3ab71de outcome=PUBLISHED correlationId=corr-seed causationId=caus-seed
+2026-10-06T00:16:22.865+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_2 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:22.865+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=8b2ee19a-f7d7-43d2-9f17-590e7d25b718 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:22.875+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=8b2ee19a-f7d7-43d2-9f17-590e7d25b718 outcome=PUBLISHED correlationId=corr-lock-0-2 causationId=cmd-lock-0-2-201b
+2026-10-06T00:16:22.875+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d53723ca-e21f-4ff9-9eb5-cb3b5bedc0ce tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:22.880+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=d53723ca-e21f-4ff9-9eb5-cb3b5bedc0ce outcome=PUBLISHED correlationId=corr-lock-0-4 causationId=cmd-lock-0-4-75fd
+2026-10-06T00:16:23.540+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_21 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:23.541+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=17cd3420-eaff-42bb-b3a1-496adf1dab0d tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.552+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=17cd3420-eaff-42bb-b3a1-496adf1dab0d outcome=PUBLISHED correlationId=corr-lock-2-0 causationId=cmd-lock-2-0-223b
+2026-10-06T00:16:23.552+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=17ceea42-a4d0-4687-9249-9fadddc4e9bb tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.558+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=17ceea42-a4d0-4687-9249-9fadddc4e9bb outcome=PUBLISHED correlationId=corr-pre-cashout-2-4 causationId=cmd-pre-cashout-2-4-9e5b
+2026-10-06T00:16:23.558+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=3117aa7d-ca16-48d4-986f-937cc0df898a tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.564+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=3117aa7d-ca16-48d4-986f-937cc0df898a outcome=PUBLISHED correlationId=corr-share-hold-CASH_OUT causationId=cmd-holding-share-CASH_OUT-dd78ad
+2026-10-06T00:16:23.564+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=3234f4e6-f6cc-433d-b1aa-67f905f3d25f tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.571+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=3234f4e6-f6cc-433d-b1aa-67f905f3d25f outcome=PUBLISHED correlationId=corr-pre-cancel-1-1 causationId=cmd-pre-cancel-1-1-524b
+2026-10-06T00:16:23.571+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=32b420da-c32d-4f18-8dc7-9682384d211d tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.578+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=32b420da-c32d-4f18-8dc7-9682384d211d outcome=PUBLISHED correlationId=corr-pre-hold-cashout causationId=cmd-pre-hold-cashout-41de
+2026-10-06T00:16:23.578+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=3f04e407-3ca5-4456-b38f-ee1e82fa4e1f tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.584+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=3f04e407-3ca5-4456-b38f-ee1e82fa4e1f outcome=PUBLISHED correlationId=corr-pre-cancel-1-0 causationId=cmd-pre-cancel-1-0-8cc5
+2026-10-06T00:16:23.585+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=4d94a60e-d4ad-441e-bbdf-11aae4345f2b tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.594+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=4d94a60e-d4ad-441e-bbdf-11aae4345f2b outcome=PUBLISHED correlationId=corr-pre-cashout-2-2 causationId=cmd-pre-cashout-2-2-5757
+2026-10-06T00:16:23.594+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=58aae0e6-a339-4e40-8075-95735c0d45f7 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.601+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=58aae0e6-a339-4e40-8075-95735c0d45f7 outcome=PUBLISHED correlationId=corr-lock-2-4 causationId=cmd-lock-2-4-477d
+2026-10-06T00:16:23.601+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=597d7f95-6f50-43fc-8ad4-fa76a7a19462 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.610+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=597d7f95-6f50-43fc-8ad4-fa76a7a19462 outcome=PUBLISHED correlationId=corr-lock-2-2 causationId=cmd-lock-2-2-a7f0
+2026-10-06T00:16:23.611+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=74afbf80-874c-4741-887b-7eb8410a77aa tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.614+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=74afbf80-874c-4741-887b-7eb8410a77aa outcome=PUBLISHED correlationId=corr-share-hold-PLACE_BET causationId=cmd-holding-share-PLACE_BET-e28f88
+2026-10-06T00:16:23.614+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=77864eb4-8398-49f8-b7b3-630fe27da005 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.619+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=77864eb4-8398-49f8-b7b3-630fe27da005 outcome=PUBLISHED correlationId=corr-pre-cashout-2-3 causationId=cmd-pre-cashout-2-3-978b
+2026-10-06T00:16:23.619+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=7b3f8f74-7d4f-40c3-9bc2-674907d71ad4 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.627+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=7b3f8f74-7d4f-40c3-9bc2-674907d71ad4 outcome=PUBLISHED correlationId=corr-pre-cancel-1-4 causationId=cmd-pre-cancel-1-4-70af
+2026-10-06T00:16:23.627+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=85a02849-0c2d-4bc7-9b70-7c339ba41708 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.630+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=85a02849-0c2d-4bc7-9b70-7c339ba41708 outcome=PUBLISHED correlationId=corr-pre-cashout-2-1 causationId=cmd-pre-cashout-2-1-058a
+2026-10-06T00:16:23.630+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=a32b325b-4160-442e-9aa4-eacdc139374e tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.636+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=a32b325b-4160-442e-9aa4-eacdc139374e outcome=PUBLISHED correlationId=corr-lock-2-3 causationId=cmd-lock-2-3-f689
+2026-10-06T00:16:23.636+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c0491210-5d9a-4e58-9223-7525543bb35c tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.643+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=c0491210-5d9a-4e58-9223-7525543bb35c outcome=PUBLISHED correlationId=corr-pre-cancel-1-3 causationId=cmd-pre-cancel-1-3-8c43
+2026-10-06T00:16:23.643+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c5827780-b4e9-4399-b9c1-e0aac9adb344 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.648+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=c5827780-b4e9-4399-b9c1-e0aac9adb344 outcome=PUBLISHED correlationId=corr-pre-cancel-1-2 causationId=cmd-pre-cancel-1-2-22e3
+2026-10-06T00:16:23.648+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d56b2612-ea4f-49d1-96b7-4e37a3c904ee tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.654+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=d56b2612-ea4f-49d1-96b7-4e37a3c904ee outcome=PUBLISHED correlationId=corr-lock-2-1 causationId=cmd-lock-2-1-a442
+2026-10-06T00:16:23.654+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d6750cef-8be1-4f0c-9d17-f2712f97bb32 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.661+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=d6750cef-8be1-4f0c-9d17-f2712f97bb32 outcome=PUBLISHED correlationId=corr-share-hold-CANCEL_BET causationId=cmd-holding-share-CANCEL_BET-18be13
+2026-10-06T00:16:23.661+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d7963257-6302-4592-a69f-9f110579ffe6 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.666+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=d7963257-6302-4592-a69f-9f110579ffe6 outcome=PUBLISHED correlationId=corr-pre-cashout-2-0 causationId=cmd-pre-cashout-2-0-6c69
+2026-10-06T00:16:23.667+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=e1bf8600-3b27-4245-bb3c-fbdc92d342b2 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.670+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=e1bf8600-3b27-4245-bb3c-fbdc92d342b2 outcome=PUBLISHED correlationId=corr-pre-hold-cancel causationId=cmd-pre-hold-cancel-d9cf
+2026-10-06T00:16:23.670+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=e44d153e-8171-4a69-8578-db4ca821b6c0 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.673+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=e44d153e-8171-4a69-8578-db4ca821b6c0 outcome=PUBLISHED correlationId=corr-lock-1-4 causationId=cmd-lock-1-4-2f62
+2026-10-06T00:16:23.692+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_3 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:23.692+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=1f552307-1428-4479-8c4f-28ab7d96e143 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.698+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=1f552307-1428-4479-8c4f-28ab7d96e143 outcome=PUBLISHED correlationId=corr-golden causationId=caus-golden
+2026-10-06T00:16:23.698+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=4e08ae3e-fc6e-4144-9ac7-76e0a8b86c8d tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.703+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=4e08ae3e-fc6e-4144-9ac7-76e0a8b86c8d outcome=PUBLISHED correlationId=corr-bet-golden-1 causationId=cmd-bet-golden-1
+2026-10-06T00:16:23.704+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=f1ce4d38-c2d6-403b-ab39-78a6136bc769 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.710+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=f1ce4d38-c2d6-403b-ab39-78a6136bc769 outcome=PUBLISHED correlationId=corr-cancel-golden-1 causationId=cmd-cancel-golden-1
+2026-10-06T00:16:23.748+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc004-cas eventId=null outcome=LEASED_3 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:23.748+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=9ac6d366-818c-4cb8-9160-b0dbdb4deb05 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.754+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=9ac6d366-818c-4cb8-9160-b0dbdb4deb05 outcome=PUBLISHED correlationId=corr-cashout-golden-2 causationId=cmd-cashout-golden-2
+2026-10-06T00:16:23.754+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c0214a24-4ffc-41e2-aada-3798a1e080d9 tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.766+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=c0214a24-4ffc-41e2-aada-3798a1e080d9 outcome=PUBLISHED correlationId=corr-bet-golden-3 causationId=cmd-bet-golden-3
+2026-10-06T00:16:23.766+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=ccde9a0c-6703-445a-bd42-a3986d3871bd tenantId=tenant-tc004-cas topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:16:23.773+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc004-cas eventId=ccde9a0c-6703-445a-bd42-a3986d3871bd outcome=PUBLISHED correlationId=corr-bet-golden-2 causationId=cmd-bet-golden-2
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.7</a> at Oct 6, 2026, 12:16:37 AM</p>
+</div>
+</div>
+</body>
+</html>

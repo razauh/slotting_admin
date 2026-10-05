@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:15" hostname="pc" time="0.044">
+  <properties/>
+  <testcase name="GATE-COMPLIANCE-001-T004 — Self-exclusion and restriction changes immediately stop protected activity across products()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.019"/>
+  <testcase name="GATE-COMPLIANCE-001-T003 — Stale, spoofed, replayed, ambiguous, and unavailable vendor evidence never grants eligibility()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-COMPLIANCE-001-T001 — A fully eligible player receives a versioned decision bound to current evidence()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-COMPLIANCE-001-T002 — Underage, unscreened, sanctioned, excluded, out-of-region, and restricted states deny commands()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-COMPLIANCE-001-T006 — Minimal evidence, retention, case audit, reason taxonomy, and redaction satisfy approved policy()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.019"/>
+  <testcase name="GATE-COMPLIANCE-001-T005 — Delayed limit increases and controlled reopening use approved server time and evidence()" classname="com.slotting.admin.gate.compliance.AuthoritativeComplianceIntegrationGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

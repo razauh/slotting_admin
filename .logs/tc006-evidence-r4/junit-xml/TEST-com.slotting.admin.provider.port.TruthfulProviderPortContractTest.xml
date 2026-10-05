@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:27" hostname="pc" time="0.038">
+  <properties/>
+  <testcase name="test01 timeout or lost response after dispatch resolves strictly to UNKNOWN_AMBIGUOUS()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test10 currency mismatch rejects unsupported currency with typed DECLINED outcome()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test05 retry preserves immutable operation identity and idempotency key()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test15 credential rotation preserves immutable operation identity()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test09 capability discovery accurately reflects documented capabilities and denies unestablished ones()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.01"/>
+  <testcase name="test17 cancellation returns accepted when supported and declined when unsupported()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.001"/>
+  <testcase name="test08 production profile guardrail fails closed if test or fake adapter is configured()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.002"/>
+  <testcase name="test14 rate limiting returns unavailable with retryable indication()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.003"/>
+  <testcase name="test04 successful acceptance returns truthful provider reference and never fabricates one on failure()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.001"/>
+  <testcase name="test03 malformed provider response resolves to UNKNOWN_AMBIGUOUS()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test07 production environment rejects insecure HTTP and private IP base URLs()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <testcase name="test02 connection reset or HTTP 5xx resolves strictly to UNKNOWN_AMBIGUOUS()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.001"/>
+  <testcase name="test13 duplicate or replayed callback processing preserves idempotency()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.006"/>
+  <testcase name="test12 status lookup resolves unknown ambiguous transaction to final truthful outcome()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.001"/>
+  <testcase name="test11 webhook callback verification rejects invalid signature and accepts authentic payload()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.001"/>
+  <testcase name="test16 refund duplication reuses original refund reference without creating second refund()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.005"/>
+  <testcase name="test06 missing or invalid credentials fails closed with UNAVAILABLE()" classname="com.slotting.admin.provider.port.TruthfulProviderPortContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

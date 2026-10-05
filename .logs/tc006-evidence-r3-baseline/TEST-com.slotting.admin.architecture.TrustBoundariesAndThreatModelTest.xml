@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.architecture.TrustBoundariesAndThreatModelTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:33" hostname="pc" time="0.032">
+  <properties/>
+  <testcase name="ARCH-002-T003 Trust boundaries and threat model survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.architecture.TrustBoundariesAndThreatModelTest" time="0.017"/>
+  <testcase name="ARCH-002-T001 Trust boundaries and threat model produces the required authoritative outcome()" classname="com.slotting.admin.architecture.TrustBoundariesAndThreatModelTest" time="0.006"/>
+  <testcase name="ARCH-002-T004 Trust boundaries and threat model remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.architecture.TrustBoundariesAndThreatModelTest" time="0.005"/>
+  <testcase name="ARCH-002-T002 Trust boundaries and threat model rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.architecture.TrustBoundariesAndThreatModelTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

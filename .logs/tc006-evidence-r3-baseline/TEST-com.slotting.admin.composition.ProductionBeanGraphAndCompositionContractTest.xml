@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:48" hostname="pc" time="2.522">
+  <properties/>
+  <testcase name="TC040-10 schema migration indicator fails closed if schema version does not match V37()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.001"/>
+  <testcase name="TC040-01 production bean graph validator rejects in-memory or fake authoritative beans()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.008"/>
+  <testcase name="TC040-14 normal boot and bean graph inspection with production composition()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="1.672"/>
+  <testcase name="TC040-15 readiness transition dynamically reflects dependency health()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.003"/>
+  <testcase name="TC040-02 production bean graph validator accepts durable JDBC implementations()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.025"/>
+  <testcase name="TC040-17 partial feature degradation keeps capability unavailable and marks readiness DOWN()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.003"/>
+  <testcase name="TC040-12 jdbc admin session directory returns null for non-existent session()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.177"/>
+  <testcase name="TC040-13 end to end player wallet snapshot smoke journey with verified principal()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.099"/>
+  <testcase name="TC040-04 security filter rejects unauthenticated request on protected route with 401()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.3"/>
+  <testcase name="TC040-08 readiness health indicator reports UP when all dependencies are ready()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.005"/>
+  <testcase name="TC040-03 production composition binds critical payment and game domain bindings()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.003"/>
+  <testcase name="TC040-09 readiness health indicators fail closed (DOWN) when any dependency is degraded()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.006"/>
+  <testcase name="TC040-06 security filter validates Bearer token and injects authenticated principal()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.012"/>
+  <testcase name="TC040-07 security filter rejects expired or invalid Bearer token with 401()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.006"/>
+  <testcase name="TC040-16 context restart cleanly runs without orphan state()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.143"/>
+  <testcase name="TC040-05 security filter allows public endpoint without authentication()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.004"/>
+  <testcase name="TC040-11 jdbc admin session directory resolves active sessions from durable database()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.003"/>
+  <system-out><![CDATA[2026-10-05T20:49:48.662+05:00  INFO 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : Validating production bean graph for banned fake/in-memory authoritative implementations...
+2026-10-05T20:49:48.663+05:00 ERROR 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : Authoritative singleton 'inMemoryStore' with class 'com.slotting.admin.auth.InMemoryDurableAuthStore' matches prohibited pattern '.*InMemory.*(Store|Service|Directory|Queue|Sink|Gate).*' and is prohibited in production profile! (TC-040 fail-closed invariant)
+2026-10-05T20:49:48.784+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:49.201+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:49.775+05:00  INFO 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-05T20:49:49.784+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:49:49.786+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:49:49.792+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:50.208+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:50.367+05:00  INFO 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : Validating production bean graph for banned fake/in-memory authoritative implementations...
+2026-10-05T20:49:50.375+05:00  INFO 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : Production bean graph validation passed: 0 banned fakes or memory stores detected.
+2026-10-05T20:49:50.800+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:50.967+05:00  WARN 110153 --- [    Test worker] c.s.a.s.SecurityAuthenticationFilter     : Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+2026-10-05T20:49:50.987+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:49:50.988+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:49:51.018+05:00  WARN 110153 --- [    Test worker] c.s.a.s.SecurityAuthenticationFilter     : Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+2026-10-05T20:49:51.077+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:49:51.077+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:49:51.145+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:49:51.146+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

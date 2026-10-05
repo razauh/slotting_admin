@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.payment.CanonicalPaymentProviderPortTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:09:55" hostname="pc" time="0.062">
+  <properties/>
+  <testcase name="PAYMENT-001-01-T003 — Define canonical payment provider port survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.payment.CanonicalPaymentProviderPortTest" time="0.026"/>
+  <testcase name="PAYMENT-001-01-T004 — Define canonical payment provider port remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.payment.CanonicalPaymentProviderPortTest" time="0.007">
+    <failure message="org.opentest4j.AssertionFailedError: Expected value to be false." type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Expected value to be false.
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse(Assertions.kt:58)
+	at app//kotlin.test.AssertionsKt.assertFalse(Unknown Source)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse$default(Assertions.kt:56)
+	at app//kotlin.test.AssertionsKt.assertFalse$default(Unknown Source)
+	at app//com.slotting.admin.payment.CanonicalPaymentProviderPortTest.PAYMENT-001-01-T004 — Define canonical payment provider port remains compatible, recoverable, observable, and lifecycle-safe(CanonicalPaymentProviderPortTest.kt:372)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="PAYMENT-001-01-T002 — Define canonical payment provider port rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.payment.CanonicalPaymentProviderPortTest" time="0.016"/>
+  <testcase name="PAYMENT-001-01-T001 — Define canonical payment provider port produces the required authoritative outcome()" classname="com.slotting.admin.payment.CanonicalPaymentProviderPortTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

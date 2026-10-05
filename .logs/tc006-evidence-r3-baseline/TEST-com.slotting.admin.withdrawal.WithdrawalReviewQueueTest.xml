@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.WithdrawalReviewQueueTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:18" hostname="pc" time="0.015">
+  <properties/>
+  <testcase name="ADMIN-003-01-T003 Operate withdrawal review queue survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.withdrawal.WithdrawalReviewQueueTest" time="0.007"/>
+  <testcase name="ADMIN-003-01-T001 Operate withdrawal review queue produces authoritative outcome()" classname="com.slotting.admin.withdrawal.WithdrawalReviewQueueTest" time="0.002"/>
+  <testcase name="ADMIN-003-01-T004 Operate withdrawal review queue remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.withdrawal.WithdrawalReviewQueueTest" time="0.001"/>
+  <testcase name="ADMIN-003-01-T002 Operate withdrawal review queue rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.withdrawal.WithdrawalReviewQueueTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

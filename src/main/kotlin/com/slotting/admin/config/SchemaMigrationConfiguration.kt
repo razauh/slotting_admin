@@ -24,7 +24,7 @@ data class SchemaMigrationStatus(
 }
 
 @ConfigurationProperties("slotting.schema")
-data class SchemaMigrationProperties(val supportedVersion: Int = 38)
+data class SchemaMigrationProperties(val supportedVersion: Int = 40)
 
 @Configuration
 @EnableConfigurationProperties(SchemaMigrationProperties::class)

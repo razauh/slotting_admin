@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorAuthenticationContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:20" hostname="pc" time="1.467">
+  <properties/>
+  <testcase name="GivenVerifiedSession_WhenRestAndSocketCalled_ThenSubjectAndTenantMatch()" classname="com.slotting.admin.gameprovider.AviatorAuthenticationContractTest" time="1.056"/>
+  <testcase name="GivenBadSessions_WhenRestOrSocketAuthenticates_ThenFailClosed()" classname="com.slotting.admin.gameprovider.AviatorAuthenticationContractTest" time="0.228"/>
+  <testcase name="GivenForgedUuidToken_WhenProtectedEndpointsCalled_Then401AndNoAuthorityCalls()" classname="com.slotting.admin.gameprovider.AviatorAuthenticationContractTest" time="0.181"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

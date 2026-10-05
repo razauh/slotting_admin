@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.ComplianceGovernanceContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.037">
+  <properties/>
+  <testcase name="test 8 - External Privacy Provider - Manual workflow records MANUAL_ACTION_REQUIRED until confirmed()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.014"/>
+  <testcase name="test 5 - Responsible Gaming Self-Exclusion Protection - Self-exclusion cannot be erased to evade restriction()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.001"/>
+  <testcase name="test 7 - External Privacy Provider - Transient failure causes RETRYABLE_FAILURE and successful retry()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.001"/>
+  <testcase name="test 4 - Financial Ledger Integrity - Ledger balance preserved under statutory override or pseudonymization()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.003"/>
+  <testcase name="test 3 - Legal Hold Release - Release does not auto-delete but permits subsequent erasure()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.005"/>
+  <testcase name="test 10 - RBAC Permission Enforcement - Unauthorized principals are denied()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.005"/>
+  <testcase name="test 1 - Maker-Checker Enforcement - Creator cannot approve or activate own retention policy()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.001"/>
+  <testcase name="test 6 - Notification Suppression Tombstone - Marketing suppression retained upon erasure()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.0"/>
+  <testcase name="test 9 - Idempotency - Duplicate DSAR command returns existing execution result without duplicate side-effects()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.001"/>
+  <testcase name="test 2 - Legal Hold Precedence - Scoped hold blocks destructive action while unheld categories proceed()" classname="com.slotting.admin.privacy.ComplianceGovernanceContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.circuitbreaker.ProviderCircuitBreakerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:08:27" hostname="pc" time="0.066">
+  <properties/>
+  <testcase name="ADMIN-005-03-T002 Operate provider circuit breakers rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.circuitbreaker.ProviderCircuitBreakerTest" time="0.036"/>
+  <testcase name="ADMIN-005-03-T004 Operate provider circuit breakers remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.circuitbreaker.ProviderCircuitBreakerTest" time="0.002"/>
+  <testcase name="ADMIN-005-03-T003 Operate provider circuit breakers survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.circuitbreaker.ProviderCircuitBreakerTest" time="0.004"/>
+  <testcase name="ADMIN-005-03-T001 Operate provider circuit breakers produces the required authoritative outcome()" classname="com.slotting.admin.circuitbreaker.ProviderCircuitBreakerTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

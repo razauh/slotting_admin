@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:32" hostname="pc" time="0.014">
+  <properties/>
+  <testcase name="Scenario 9 - manual review case can be claimed and evaluated with audit trail()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 6 - document malware detected throws MalwareDetectedException and quarantines()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 7 - foreign subject reference in geolocation vendor evidence is rejected()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 1 - provider outage on geolocation fails closed to SUSPENDED_OR_AMBIGUOUS()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 3 - PEP hit produces PEP_MATCH outcome and never SANCTION_HIT()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.002"/>
+  <testcase name="Scenario 4 - sanctions hit produces SANCTION_HIT and queues AML review()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 8 - geolocation reports SUSPENDED_OR_AMBIGUOUS when vendor evidence is omitted()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 10 - geo recheck action is required on expiry and cannot be bypassed()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 5 - NaN or invalid match score fails closed to INDETERMINATE and HOLD()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 2 - stale KYC blocks eligibility and requires reverification()" classname="com.slotting.admin.kyc.OperationalizedEvidenceAuthorityContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

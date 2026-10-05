@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.NotificationDlqTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:24" hostname="pc" time="0.044">
+  <properties/>
+  <testcase name="NOTIFY-003-03-T001 — Quarantine notification failures in a DLQ produces the required authoritative outcome" classname="com.slotting.admin.notification.NotificationDlqTest" time="0.013"/>
+  <testcase name="NOTIFY-003-03-T002 — Quarantine notification failures in a DLQ rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.notification.NotificationDlqTest" time="0.019"/>
+  <testcase name="NOTIFY-003-03-T004 — Quarantine notification failures in a DLQ remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.notification.NotificationDlqTest" time="0.001"/>
+  <testcase name="NOTIFY-003-03-T003 — Quarantine notification failures in a DLQ survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.notification.NotificationDlqTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

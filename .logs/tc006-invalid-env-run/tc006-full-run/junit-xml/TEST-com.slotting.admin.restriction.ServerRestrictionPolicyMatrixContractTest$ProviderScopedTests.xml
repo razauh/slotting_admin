@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="5. Provider-Only Scoped Restriction Matrix" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.004">
+  <properties/>
+  <testcase name="Provider restriction does not restrict whole account authentication or data access()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ProviderScopedTests" time="0.001"/>
+  <testcase name="Deposit and Withdrawal DENIED only when required route matches blocked provider()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ProviderScopedTests" time="0.0"/>
+  <testcase name="Game Session and Wager DENIED only for restricted game provider, ALLOWED for others()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ProviderScopedTests" time="0.0"/>
+  <testcase name="Pending Operations on affected provider are HELD, unaffected are COMPLETED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ProviderScopedTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

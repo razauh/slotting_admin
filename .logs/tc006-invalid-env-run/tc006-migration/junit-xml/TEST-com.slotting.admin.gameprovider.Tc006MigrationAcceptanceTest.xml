@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest" tests="3" skipped="0" failures="3" errors="0" timestamp="2026-10-05T16:54:56" hostname="pc" time="0.217">
+  <properties/>
+  <testcase name="representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle()" classname="com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest" time="0.203">
+    <failure message="org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections." type="org.postgresql.util.PSQLException">org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.representative upgrade to V40 preserves terminal rows and enforces the early claim lifecycle(Tc006MigrationAcceptanceTest.kt:83)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</failure>
+  </testcase>
+  <testcase name="empty installation migrates through V40 and validates with the supported schema version()" classname="com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest" time="0.005">
+    <failure message="org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections." type="org.postgresql.util.PSQLException">org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.empty installation migrates through V40 and validates with the supported schema version(Tc006MigrationAcceptanceTest.kt:61)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</failure>
+  </testcase>
+  <testcase name="upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state()" classname="com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest" time="0.005">
+    <failure message="org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections." type="org.postgresql.util.PSQLException">org.postgresql.util.PSQLException: Connection to 127.0.0.1:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+	at app//org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:352)
+	at app//org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:54)
+	at app//org.postgresql.jdbc.PgConnection.&lt;init&gt;(PgConnection.java:273)
+	at app//org.postgresql.Driver.makeConnection(Driver.java:446)
+	at app//org.postgresql.Driver.connect(Driver.java:298)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:681)
+	at platform/java.sql@17.0.20/java.sql.DriverManager.getConnection(DriverManager.java:229)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.serverConnection(Tc006MigrationAcceptanceTest.kt:27)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.recreateDatabase(Tc006MigrationAcceptanceTest.kt:34)
+	at app//com.slotting.admin.gameprovider.Tc006MigrationAcceptanceTest.upgrade rollback discards a rejected PENDING receipt without touching existing money or sequence state(Tc006MigrationAcceptanceTest.kt:282)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:684)
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:547)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:602)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:633)
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:260)
+	at org.postgresql.core.PGStream.&lt;init&gt;(PGStream.java:121)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:140)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:268)
+	... 12 more
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

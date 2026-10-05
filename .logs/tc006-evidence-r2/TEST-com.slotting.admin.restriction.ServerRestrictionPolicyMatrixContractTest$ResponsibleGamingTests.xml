@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="3. Responsible Gaming Restriction Matrix" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.005">
+  <properties/>
+  <testcase name="Authentication is ALLOWED on RG remediation surfaces()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ResponsibleGamingTests" time="0.0"/>
+  <testcase name="Support, KYC, and Account Data Access are ALLOWED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ResponsibleGamingTests" time="0.001"/>
+  <testcase name="Gambling and Deposits are strictly DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ResponsibleGamingTests" time="0.0"/>
+  <testcase name="Withdrawal of unwagered funds is ALLOWED without new wagering()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ResponsibleGamingTests" time="0.001"/>
+  <testcase name="Pending Operations - Payout completes, active bets cancel, other financial holds()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$ResponsibleGamingTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

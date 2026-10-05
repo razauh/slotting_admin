@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:10:00" hostname="pc" time="0.033">
+  <properties/>
+  <testcase name="test06 step-up replay is rejected and token cannot be reused()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.002"/>
+  <testcase name="test01 insufficient funds rejects reservation and request()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.0"/>
+  <testcase name="test05 forged prefix step-up token is rejected and never authorizes request()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.0"/>
+  <testcase name="test10 concurrent requests cannot overspend ledger-authorized available balance()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.012"/>
+  <testcase name="test02 overflow and non-positive amounts are rejected()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.001"/>
+  <testcase name="test08 stale approval or unrelated approval digest is rejected()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.004"/>
+  <testcase name="test03 fee boundary rejects gross amount less than or equal to fee()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.0"/>
+  <testcase name="test09 inactive payment method or account restriction rejects withdrawal()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.007"/>
+  <testcase name="test07 self-approval and auditor approval are strictly rejected()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.001"/>
+  <testcase name="test04 destination changed or unverified destination is rejected()" classname="com.slotting.admin.withdrawal.AuthoritativeWithdrawalContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

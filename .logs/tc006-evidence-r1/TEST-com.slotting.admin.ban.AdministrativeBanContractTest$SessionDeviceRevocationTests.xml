@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="5. Active Session and Device Revocation" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:08:25" hostname="pc" time="0.009">
+  <properties/>
+  <testcase name="Issuing ban automatically revokes all active device sessions for the player()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$SessionDeviceRevocationTests" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

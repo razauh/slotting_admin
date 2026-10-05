@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.fraud.FraudCaseManagementContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:19" hostname="pc" time="0.033">
+  <properties/>
+  <testcase name="Scenario 10 - cache flush or loss does not unlock active fraud restriction()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.004"/>
+  <testcase name="Scenario 2 - subsequent risk decisions merge into existing active case instead of creating disjoint cases()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="Scenario 1 - duplicate signal delivery is completely idempotent()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="Scenario 9 - direct API calls for deposit, withdrawal, and wager are held or denied()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="Unauthorized admin role cannot operate fraud cases()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.003"/>
+  <testcase name="Scenario 3 - temporary fraud hold is applied with bounded UTC expiry()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="Scenario 5 - escalation requires dual control for critical case disposition()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.003"/>
+  <testcase name="Scenario 7 - active player game session is immediately blocked when fraud restriction is placed()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="Scenario 4 - reviewer clears case, lifting active fraud restriction via audited disposition()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.001"/>
+  <testcase name="V35 migration script exists and defines required fraud case and action tables()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.002"/>
+  <testcase name="Scenario 6 - concurrent claim race results in exactly one winner and conflict for others()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.005"/>
+  <testcase name="Scenario 8 - multiple devices cannot bypass active fraud restriction()" classname="com.slotting.admin.fraud.FraudCaseManagementContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

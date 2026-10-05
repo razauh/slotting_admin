@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.observability.OperationalObservabilityContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:24" hostname="pc" time="0.226">
+  <properties/>
+  <testcase name="test07_siemDlq_exceededRetriesTransitionsToDlqWithAuditedReplay()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.039"/>
+  <testcase name="test05_structuredRedaction_sanitizesNestedMapsListsHeadersAndQueryStrings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.002"/>
+  <testcase name="test02_writeOnlySecrets_neverReturnedInViewAndCanBePreservedOrReplaced()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.113"/>
+  <testcase name="test01_rbacAuthorization_viewAndEditObservabilitySettings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.003"/>
+  <testcase name="test04_productionSafety_rejectsSyntheticAdaptersInProduction()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.006"/>
+  <testcase name="test09_alertDeduplicationAndStormProtection_repeatedEventsDoNotTriggerDuplicatePaging()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.031"/>
+  <testcase name="test10_highValueScenarios_ledgerPayoutWorkerAuthAttackMappings()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.003"/>
+  <testcase name="test03_ssrfProtection_rejectsCloudMetadataAndProhibitedProtocols()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.004"/>
+  <testcase name="test06_siemTruthfulDelivery_timeoutOrConnectionErrorRemainsPendingOrRetryable()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.001"/>
+  <testcase name="test08_pagingTruthfulDispatch_deliversToEndpointWithoutFakingHumanAck()" classname="com.slotting.admin.observability.OperationalObservabilityContractTest" time="0.011"/>
+  <system-out><![CDATA[2026-10-05T20:58:24.965+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:58:24.985+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:48" hostname="pc" time="0.225">
+  <properties/>
+  <testcase name="Scenario 8: Negative or invalid minor units return 422 Unprocessable Entity" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.03"/>
+  <testcase name="Scenario 5: Wallet statement route returns chronologically ordered ledger entries" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.023"/>
+  <testcase name="Scenario 9: Backend / provider unavailability returns 503 without local fabrication" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.016"/>
+  <testcase name="Scenario 3: Exact Android withdrawal quote and request bytes execute on Spring route" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.044"/>
+  <testcase name="Scenario 2: Exact Android deposit intent request bytes execute on Spring route" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.029"/>
+  <testcase name="Scenario 4: Authoritative wallet snapshot route returns multi-currency balances" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.017"/>
+  <testcase name="Scenario 10: Client and server safely tolerate unknown future fields" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.01"/>
+  <testcase name="Scenario 1: Payment methods route returns active methods and filters out inactive/outage options" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.023"/>
+  <testcase name="Scenario 6: 401 unauthenticated and 403 cross-owner IDOR rejection" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.011"/>
+  <testcase name="Scenario 7: Replay with altered payload returns 409 Conflict" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.016"/>
+  <system-out><![CDATA[2026-10-05T20:49:48.419+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.419+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.419+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.444+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.444+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.444+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.467+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.467+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.467+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.483+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.484+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.484+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.528+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.528+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.529+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.557+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.557+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.557+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.575+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.575+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.575+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.585+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.585+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.586+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:48.606+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.606+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.607+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:48.621+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:48.621+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:48.621+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

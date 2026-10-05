@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.kyc.IdentityDocumentUploadTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:53" hostname="pc" time="0.218">
+  <properties/>
+  <testcase name="KYC-002-01-T003 Implement secure identity-document upload survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.kyc.IdentityDocumentUploadTest" time="0.048"/>
+  <testcase name="KYC-002-01-T001 Implement secure identity-document upload produces the required authoritative outcome()" classname="com.slotting.admin.kyc.IdentityDocumentUploadTest" time="0.001"/>
+  <testcase name="KYC-002-01-T002 Implement secure identity-document upload rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.kyc.IdentityDocumentUploadTest" time="0.164"/>
+  <testcase name="KYC-002-01-T004 Implement secure identity-document upload remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.kyc.IdentityDocumentUploadTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

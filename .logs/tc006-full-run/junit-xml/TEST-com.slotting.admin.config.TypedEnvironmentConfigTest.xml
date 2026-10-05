@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.config.TypedEnvironmentConfigTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:15:47" hostname="pc" time="0.047">
+  <properties/>
+  <testcase name="CONFIG-001-01-T002 Define typed environment configuration rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.config.TypedEnvironmentConfigTest" time="0.012"/>
+  <testcase name="CONFIG-001-01-T004 Define typed environment configuration remains compatible recoverable observable and lifecycle safe()" classname="com.slotting.admin.config.TypedEnvironmentConfigTest" time="0.008"/>
+  <testcase name="CONFIG-001-01-T001 Define typed environment configuration produces the required authoritative outcome()" classname="com.slotting.admin.config.TypedEnvironmentConfigTest" time="0.005"/>
+  <testcase name="CONFIG-001-01-T003 Define typed environment configuration survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.config.TypedEnvironmentConfigTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

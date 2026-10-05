@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.NotificationDeliveryRetryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:36" hostname="pc" time="0.041">
+  <properties/>
+  <testcase name="NOTIFY-003-02-T001 — Retry notification delivery with bounds produces the required authoritative outcome" classname="com.slotting.admin.notification.NotificationDeliveryRetryTest" time="0.013"/>
+  <testcase name="NOTIFY-003-02-T004 — Retry notification delivery with bounds remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.notification.NotificationDeliveryRetryTest" time="0.004"/>
+  <testcase name="NOTIFY-003-02-T003 — Retry notification delivery with bounds survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.notification.NotificationDeliveryRetryTest" time="0.016"/>
+  <testcase name="NOTIFY-003-02-T002 — Retry notification delivery with bounds rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.notification.NotificationDeliveryRetryTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

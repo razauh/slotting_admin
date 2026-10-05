@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.validation.release.ConnectedReleaseCiArtifactTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:47" hostname="pc" time="0.019">
+  <properties/>
+  <testcase name="SYS-007-T002 — Connected release CI/artifact rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.validation.release.ConnectedReleaseCiArtifactTest" time="0.012"/>
+  <testcase name="SYS-007-T004 — Connected release CI/artifact remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.validation.release.ConnectedReleaseCiArtifactTest" time="0.001"/>
+  <testcase name="SYS-007-T003 — Connected release CI/artifact survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.validation.release.ConnectedReleaseCiArtifactTest" time="0.004"/>
+  <testcase name="SYS-007-T001 — Connected release CI/artifact produces the required authoritative outcome" classname="com.slotting.admin.validation.release.ConnectedReleaseCiArtifactTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

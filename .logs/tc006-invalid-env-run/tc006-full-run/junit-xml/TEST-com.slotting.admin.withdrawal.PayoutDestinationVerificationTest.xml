@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.PayoutDestinationVerificationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:47" hostname="pc" time="0.015">
+  <properties/>
+  <testcase name="WITHDRAW-001-02-T003 Verify payout destination ownership survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.PayoutDestinationVerificationTest" time="0.009"/>
+  <testcase name="WITHDRAW-001-02-T004 Verify payout destination ownership remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.PayoutDestinationVerificationTest" time="0.001"/>
+  <testcase name="WITHDRAW-001-02-T002 Verify payout destination ownership rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.PayoutDestinationVerificationTest" time="0.002"/>
+  <testcase name="WITHDRAW-001-02-T001 Verify payout destination ownership produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.PayoutDestinationVerificationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.infra.EnforceWafPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:17" hostname="pc" time="0.049">
+  <properties/>
+  <testcase name="INFRA-003-02-T004 Enforce WAF policy remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.infra.EnforceWafPolicyTest" time="0.034"/>
+  <testcase name="INFRA-003-02-T003 Enforce WAF policy survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.infra.EnforceWafPolicyTest" time="0.008"/>
+  <testcase name="INFRA-003-02-T001 Enforce WAF policy produces the required authoritative outcome()" classname="com.slotting.admin.infra.EnforceWafPolicyTest" time="0.001"/>
+  <testcase name="INFRA-003-02-T002 Enforce WAF policy rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.infra.EnforceWafPolicyTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

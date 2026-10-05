@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:49:24" hostname="pc" time="0.15">
+  <properties/>
+  <testcase name="GAME-002-02-T003 Enforce operator and jurisdiction game enablement survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest" time="0.076"/>
+  <testcase name="GAME-002-02-T001 Enforce operator and jurisdiction game enablement produces the required authoritative outcome()" classname="com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest" time="0.018"/>
+  <testcase name="GAME-002-02-T004 Enforce operator and jurisdiction game enablement remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest" time="0.009">
+    <failure message="org.opentest4j.AssertionFailedError: Expected value to be false." type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Expected value to be false.
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse(Assertions.kt:58)
+	at app//kotlin.test.AssertionsKt.assertFalse(Unknown Source)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse$default(Assertions.kt:56)
+	at app//kotlin.test.AssertionsKt.assertFalse$default(Unknown Source)
+	at app//com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest.GAME-002-02-T004 Enforce operator and jurisdiction game enablement remains compatible, recoverable, observable, and lifecycle-safe(OperatorJurisdictionEnablementTest.kt:447)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="GAME-002-02-T002 Enforce operator and jurisdiction game enablement rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.gameprovider.OperatorJurisdictionEnablementTest" time="0.044"/>
+  <system-out><![CDATA[2026-10-05T20:49:24.868+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_6 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:24.868+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=09b10969-2ce0-4076-b498-f6a675104a85 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:49:24.873+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=09b10969-2ce0-4076-b498-f6a675104a85 outcome=PUBLISHED correlationId=corr-bet-crash-001 causationId=cmd-bet-crash-001
+2026-10-05T20:49:24.874+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=2fafcaee-044f-456b-a682-4f417b5ae70d tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:49:24.883+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=2fafcaee-044f-456b-a682-4f417b5ae70d outcome=PUBLISHED correlationId=corr-bet-pg-001 causationId=cmd-bet-pg-001
+2026-10-05T20:49:24.883+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=426a7a5e-4af0-4f43-80c5-c7e0c2dc3b52 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:49:24.894+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=426a7a5e-4af0-4f43-80c5-c7e0c2dc3b52 outcome=PUBLISHED correlationId=corr-cashout-pg-001 causationId=cmd-cashout-pg-001
+2026-10-05T20:49:24.895+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=55658468-5b54-4560-808f-2e96b874279a tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

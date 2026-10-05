@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.reconciliation.ReconciliationReportTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.073">
+  <properties/>
+  <testcase name="ADMIN-006-01-T004 Publish reconciliation reports remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.reconciliation.ReconciliationReportTest" time="0.003"/>
+  <testcase name="ADMIN-006-01-T001 Publish reconciliation reports produces the required authoritative outcome()" classname="com.slotting.admin.reconciliation.ReconciliationReportTest" time="0.036"/>
+  <testcase name="ADMIN-006-01-T002 Publish reconciliation reports rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.reconciliation.ReconciliationReportTest" time="0.02"/>
+  <testcase name="ADMIN-006-01-T003 Publish reconciliation reports survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.reconciliation.ReconciliationReportTest" time="0.013"/>
+  <system-out><![CDATA[2026-10-05T20:44:39.233+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

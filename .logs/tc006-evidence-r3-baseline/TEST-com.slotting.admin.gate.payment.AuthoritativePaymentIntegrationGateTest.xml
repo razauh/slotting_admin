@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:12" hostname="pc" time="0.04">
+  <properties/>
+  <testcase name="GATE-PAYMENT-001-T003 — Duplicate, late, reordered, timeout, and provider-5xx paths remain idempotent and reconcile()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.013"/>
+  <testcase name="GATE-PAYMENT-001-T004 — Refund, reversal, and chargeback post compensation without editing history()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.007"/>
+  <testcase name="GATE-PAYMENT-001-T001 — A certified sandbox deposit reaches one canonical terminal state and one ledger credit()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.004"/>
+  <testcase name="GATE-PAYMENT-001-T005 — Android return and deep-link flows only request authoritative status refresh()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-PAYMENT-001-T006 — Provider report, payment state, ledger, statement, and exception queue reconcile()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.01"/>
+  <testcase name="GATE-PAYMENT-001-T002 — Bad-signature, replayed, malformed, and cross-tenant callbacks cause no mutation()" classname="com.slotting.admin.gate.payment.AuthoritativePaymentIntegrationGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

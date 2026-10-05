@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.LegalHoldTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:38" hostname="pc" time="0.042">
+  <properties/>
+  <testcase name="PRIV-001-04-T003 — Enforce legal holds survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.LegalHoldTest" time="0.02"/>
+  <testcase name="PRIV-001-04-T002 — Enforce legal holds rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.LegalHoldTest" time="0.004"/>
+  <testcase name="PRIV-001-04-T001 — Enforce legal holds produces the required authoritative outcome()" classname="com.slotting.admin.privacy.LegalHoldTest" time="0.016"/>
+  <testcase name="PRIV-001-04-T004 — Enforce legal holds remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.LegalHoldTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

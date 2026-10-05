@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.payment.PaymentPortTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:49:31" hostname="pc" time="0.022">
+  <properties/>
+  <testcase name="ADR-004-01-T004 Define provider-neutral payment port remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.payment.PaymentPortTest" time="0.004">
+    <failure message="org.opentest4j.AssertionFailedError: Expected value to be true." type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Expected value to be true.
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue$default(Assertions.kt:42)
+	at app//kotlin.test.AssertionsKt.assertTrue$default(Unknown Source)
+	at app//com.slotting.admin.payment.PaymentPortTest.ADR-004-01-T004 Define provider-neutral payment port remains compatible, recoverable, observable, and lifecycle-safe(PaymentPortTest.kt:201)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="ADR-004-01-T003 Define provider-neutral payment port survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.payment.PaymentPortTest" time="0.013"/>
+  <testcase name="ADR-004-01-T001 Define provider-neutral payment port produces the required authoritative outcome()" classname="com.slotting.admin.payment.PaymentPortTest" time="0.002"/>
+  <testcase name="ADR-004-01-T002 Define provider-neutral payment port rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.payment.PaymentPortTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

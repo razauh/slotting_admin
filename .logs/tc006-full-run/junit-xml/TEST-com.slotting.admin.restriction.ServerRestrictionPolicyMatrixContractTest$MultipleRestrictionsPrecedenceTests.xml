@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="7. Multiple Simultaneous Restrictions &amp; Precedence" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="Financial disposition selects safest HOLD over payout when combined with fraud()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$MultipleRestrictionsPrecedenceTests" time="0.0"/>
+  <testcase name="Simultaneous Fraud and KYC - Remediated Auth requires STEP_UP over ALLOW()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$MultipleRestrictionsPrecedenceTests" time="0.0"/>
+  <testcase name="Simultaneous RG and Administrative Ban - Strictest Access DENY wins and all provenance is retained()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$MultipleRestrictionsPrecedenceTests" time="0.0"/>
+  <testcase name="Removing one restriction does not erase remaining active restrictions()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$MultipleRestrictionsPrecedenceTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.PersonalDataInventoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:26" hostname="pc" time="0.152">
+  <properties/>
+  <testcase name="PRIV-001-01-T002 — Maintain personal-data inventory rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.023"/>
+  <testcase name="PRIV-001-01-T003 — Maintain personal-data inventory survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.025"/>
+  <testcase name="PRIV-001-01-T004 — Maintain personal-data inventory remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.009"/>
+  <testcase name="PRIV-001-01-T001 — Maintain personal-data inventory produces the required authoritative outcome()" classname="com.slotting.admin.privacy.PersonalDataInventoryTest" time="0.093"/>
+  <system-out><![CDATA[2026-10-05T20:58:26.980+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:58:26.996+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

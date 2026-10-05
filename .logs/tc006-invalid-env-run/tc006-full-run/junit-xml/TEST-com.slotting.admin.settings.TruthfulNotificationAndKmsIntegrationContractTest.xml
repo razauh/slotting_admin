@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.035">
+  <properties/>
+  <testcase name="Scenario 6 - credential rotation replaces secret at runtime and preserves omitted secret()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.006"/>
+  <testcase name="Scenario 1 - notification submit returns ACCEPTED never DELIVERED()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.002"/>
+  <testcase name="Scenario 14 - disabled provider rejects dispatch attempt()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 2 - verified delivery callback transitions state to DELIVERED()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 8 - unauthorized admin is rejected with FORBIDDEN when attempting settings changes()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 5 - stored secret credentials are write-only and never returned to UI or API()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.007"/>
+  <testcase name="Scenario 12 - synthetic adapter is rejected when environment is PRODUCTION()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 4 - marketing suppressed player is blocked across provider switch()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.002"/>
+  <testcase name="Scenario 16 - missing KMS master key fails closed()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.002"/>
+  <testcase name="Scenario 11 - IV uniqueness generates distinct ciphertexts for identical plaintext()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 10 - production environment rejects local dev master key provider()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 7 - active provider switch changes runtime routing without recompilation()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <testcase name="Scenario 13 - test integration action validates configuration completeness without fake external claim()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.002"/>
+  <testcase name="Scenario 15 - delivery failure callback transitions state to FAILED()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.0"/>
+  <testcase name="Scenario 9 - AES-GCM envelope encryption fails on wrong tenant AAD or ciphertext tampering()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.003"/>
+  <testcase name="Scenario 3 - duplicate callback is acknowledged idempotently without error()" classname="com.slotting.admin.settings.TruthfulNotificationAndKmsIntegrationContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

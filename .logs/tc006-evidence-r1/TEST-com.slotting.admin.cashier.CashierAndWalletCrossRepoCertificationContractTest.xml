@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:08:26" hostname="pc" time="0.881">
+  <properties/>
+  <testcase name="Scenario 8: Negative or invalid minor units return 422 Unprocessable Entity" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.201"/>
+  <testcase name="Scenario 5: Wallet statement route returns chronologically ordered ledger entries" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.042"/>
+  <testcase name="Scenario 9: Backend / provider unavailability returns 503 without local fabrication" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.044"/>
+  <testcase name="Scenario 3: Exact Android withdrawal quote and request bytes execute on Spring route" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.173"/>
+  <testcase name="Scenario 2: Exact Android deposit intent request bytes execute on Spring route" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.094"/>
+  <testcase name="Scenario 4: Authoritative wallet snapshot route returns multi-currency balances" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.07"/>
+  <testcase name="Scenario 10: Client and server safely tolerate unknown future fields" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.037"/>
+  <testcase name="Scenario 1: Payment methods route returns active methods and filters out inactive/outage options" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.071"/>
+  <testcase name="Scenario 6: 401 unauthenticated and 403 cross-owner IDOR rejection" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.038"/>
+  <testcase name="Scenario 7: Replay with altered payload returns 409 Conflict" classname="com.slotting.admin.cashier.CashierAndWalletCrossRepoCertificationContractTest" time="0.084"/>
+  <system-out><![CDATA[20:08:26.492 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.492 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.493 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+20:08:26.577 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.577 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.578 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+20:08:26.642 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.645 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.646 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+20:08:26.702 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.703 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.705 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+20:08:26.877 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.877 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.878 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+20:08:26.970 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:26.970 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:26.970 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+20:08:27.043 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:27.043 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:27.044 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+20:08:27.063 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:27.064 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:27.064 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+20:08:27.137 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:27.138 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:27.138 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+20:08:27.194 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+20:08:27.194 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+20:08:27.194 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

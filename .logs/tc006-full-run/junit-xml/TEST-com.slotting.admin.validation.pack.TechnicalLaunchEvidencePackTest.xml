@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.validation.pack.TechnicalLaunchEvidencePackTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:35" hostname="pc" time="0.056">
+  <properties/>
+  <testcase name="SYS-009-T004 — Technical launch evidence pack remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.validation.pack.TechnicalLaunchEvidencePackTest" time="0.012"/>
+  <testcase name="SYS-009-T003 — Technical launch evidence pack survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.validation.pack.TechnicalLaunchEvidencePackTest" time="0.024"/>
+  <testcase name="SYS-009-T002 — Technical launch evidence pack rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.validation.pack.TechnicalLaunchEvidencePackTest" time="0.019"/>
+  <testcase name="SYS-009-T001 — Technical launch evidence pack produces the required authoritative outcome" classname="com.slotting.admin.validation.pack.TechnicalLaunchEvidencePackTest" time="0.0"/>
+  <system-out><![CDATA[2026-10-06T00:16:35.754+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6a0c43e3-e399-4d2f-9590-38b5e8f7d853 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:35.760+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6a0c43e3-e399-4d2f-9590-38b5e8f7d853 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.IdentitySessionContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:09" hostname="pc" time="0.053">
+  <properties/>
+  <testcase name="Scenario 5: Eligibility evaluation fails closed on missing fields and enforces restrictions" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.016"/>
+  <testcase name="Scenario 9: Protocol downgrade to plain PKCE challenge is rejected" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.003"/>
+  <testcase name="Scenario 6: Admin MFA step-up and expiration strictly separated from player identity" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.009"/>
+  <testcase name="Scenario 3: Refresh replay - Rotated refresh token reuse revokes family with typed error" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.006"/>
+  <testcase name="Scenario 8: Unknown fields are ignored gracefully for forward compatibility" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.001"/>
+  <testcase name="Scenario 10: Foreign tenant access is denied" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.001"/>
+  <testcase name="Scenario 2: Process death mid-login - State and nonce must match persisted authorization session" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.002"/>
+  <testcase name="Scenario 4: Logout race and server-confirmed termination" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.007"/>
+  <testcase name="Scenario 1: Fresh install login - Exchange request and token response with server-derived subject" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.001"/>
+  <testcase name="Scenario 7: Clock skew validation - Accept &lt;=60s drift, reject excessive drift" classname="com.slotting.admin.auth.IdentitySessionContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

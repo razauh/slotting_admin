@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:27" hostname="pc" time="0.074">
+  <properties/>
+  <testcase name="TC041-07 production provenance verification strictly rejects test-only signing authority()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.012"/>
+  <testcase name="TC041-05 provenance verification fails closed when SBOM digest is mismatched()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.001"/>
+  <testcase name="TC041-02 CI workflow definition file exists with required pipeline gates()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.004"/>
+  <testcase name="TC041-12 canary health evaluation marks unhealthy metrics as rollback pending()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.01"/>
+  <testcase name="TC041-11 staged promotion enforces strict state machine progression()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.001"/>
+  <testcase name="TC041-04 provenance verification fails closed when artifact digest is tampered()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.001"/>
+  <testcase name="TC041-01 CI workflow dynamically discovers current migration ceiling without hardcoding V37()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.009"/>
+  <testcase name="TC041-06 provenance verification rejects dirty or foreign git repository()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.001"/>
+  <testcase name="TC041-13 rollback gate rejects destructive database rollback preserving ledger immutability()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.006"/>
+  <testcase name="TC041-03 valid release evidence manifest passes provenance verification()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.001"/>
+  <testcase name="TC041-15 registry and deployment credentials are write-only and redacted from audit logs()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.002"/>
+  <testcase name="TC041-08 provenance verifier rejects self-asserted or untrusted restore drill receipt()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.004"/>
+  <testcase name="TC041-09 production gate requires distinct dual-control approvals bound to exact artifact digest()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.002"/>
+  <testcase name="TC041-10 approvals become invalid if artifact digest changes()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.0"/>
+  <testcase name="TC041-14 rollback gate detects backward-incompatible schema migrations and requires roll-forward()" classname="com.slotting.admin.release.BackendCiAndReleaseProvenanceContractTest" time="0.004"/>
+  <system-out><![CDATA[2026-10-05T20:58:27.943+05:00  INFO 113922 --- [    Test worker] c.s.admin.release.ReleaseAuditLogger     : RELEASE_AUDIT timestamp=2026-10-05T15:58:27.943106399Z action=REGISTRY_CONFIGURATION_UPDATED actor=admin-sec-1 details={provider=HARBOR, endpoint=https://harbor.internal.slotting.com, project=slotting, username=robot-ci, secretToken=[REDACTED]}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.notification.FakeNotificationAdapterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:33" hostname="pc" time="0.024">
+  <properties/>
+  <testcase name="NOTIFY-001-02-T003: Fake adapter rejects insecure payloads containing credentials/PAN and rejects template injection attempts or unapproved templates" classname="com.slotting.admin.notification.FakeNotificationAdapterTest" time="0.007"/>
+  <testcase name="NOTIFY-001-02-T004: Fake adapter validates recipient address format and rejects unauthorized cross-tenant or mismatched user destinations" classname="com.slotting.admin.notification.FakeNotificationAdapterTest" time="0.01"/>
+  <testcase name="NOTIFY-001-02-T001: Fake adapter normal dispatch produces authoritative receipt, audit log, idempotent replay, and zero financial mutation" classname="com.slotting.admin.notification.FakeNotificationAdapterTest" time="0.003"/>
+  <testcase name="NOTIFY-001-02-T002: Fake adapter adversarial simulation modes trigger retryable timeout, transient failure, provider down, and rate limited errors" classname="com.slotting.admin.notification.FakeNotificationAdapterTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.wallet.BalanceBucketsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:41" hostname="pc" time="0.128">
+  <properties/>
+  <testcase name="WALLET-002-T004 Balance buckets remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.055"/>
+  <testcase name="WALLET-002-T001 Balance buckets produces the required authoritative outcome()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.028"/>
+  <testcase name="WALLET-002-T003 Balance buckets survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.029"/>
+  <testcase name="WALLET-002-T002 Balance buckets rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.wallet.BalanceBucketsTest" time="0.009"/>
+  <system-out><![CDATA[2026-10-05T20:44:42.088+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:44:42.105+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:44:42.107+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:44:42.111+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

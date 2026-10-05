@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="1. Administrative Ban Matrix" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.009">
+  <properties/>
+  <testcase name="Wager is DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.001"/>
+  <testcase name="Deposit is DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="Authentication is DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="New Game Session is DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="Account Data Access is ALLOWED only through dedicated legal access path()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="Withdrawal access is DENIED and pending disposition is HOLD()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.001"/>
+  <testcase name="Pending Operations disposition is HOLD()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="KYC Submission is ALLOWED for appeal remediation()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.0"/>
+  <testcase name="Support Access is ALLOWED for appeal and remediation()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AdministrativeBanTests" time="0.001"/>
+  <system-out><![CDATA[2026-10-06T00:16:34.843+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6a0c43e3-e399-4d2f-9590-38b5e8f7d853 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

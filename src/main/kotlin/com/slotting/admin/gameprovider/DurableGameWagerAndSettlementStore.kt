@@ -26,6 +26,8 @@ interface DurableGameWagerAndSettlementStore {
     fun saveSettlement(settlement: GameBetSettlementRecord)
     fun findReceipt(tenantId: String, commandId: String): GameCommandReceiptRecord?
     fun saveReceipt(receipt: GameCommandReceiptRecord)
+    fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult
+    fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long)
     fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long
     fun addDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long)
     fun nextSequenceId(tenantId: String): Long
@@ -145,6 +147,60 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
             throw IllegalStateException("Duplicate receipt for command: ${receipt.commandId}")
         }
         receipts[key] = receipt.copy()
+    }
+
+    private val pendingClaims = ConcurrentHashMap<String, GameCommandReceiptClaim>()
+
+    @Synchronized
+    override fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult {
+        val key = receiptKey(claim.tenantId, claim.commandId)
+        val existing = receipts[key]
+        if (existing != null) {
+            if (existing.fingerprint != claim.fingerprint) {
+                throw CommandClaimConflictException(
+                    "Command ${claim.commandId} already recorded with a different payload fingerprint"
+                )
+            }
+            return CommandReceiptClaimResult.AlreadyClaimed(existing)
+        }
+        val pending = pendingClaims[key]
+        if (pending != null) {
+            if (pending.fingerprint != claim.fingerprint) {
+                throw CommandClaimConflictException(
+                    "Command ${claim.commandId} already claimed with a different payload fingerprint"
+                )
+            }
+            throw CommandAlreadyClaimedException(
+                "Command ${claim.commandId} is already claimed and has no completed result yet"
+            )
+        }
+        pendingClaims[key] = claim
+        return CommandReceiptClaimResult.Claimed
+    }
+
+    @Synchronized
+    override fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long) {
+        val key = receiptKey(tenantId, commandId)
+        val claim = pendingClaims.remove(key)
+            ?: throw CommandReceiptCompletionException("No pending claim to complete for command $commandId")
+        receipts[key] = GameCommandReceiptRecord(
+            receiptId = claim.receiptId,
+            tenantId = claim.tenantId,
+            ownerId = claim.ownerId,
+            gameId = claim.gameId,
+            commandId = claim.commandId,
+            roundId = claim.roundId,
+            handId = claim.handId,
+            action = claim.action,
+            status = status,
+            fingerprint = claim.fingerprint,
+            responseJson = responseJson,
+            causationId = claim.causationId,
+            correlationId = claim.correlationId,
+            serverSequenceId = serverSequenceId,
+            roundVersion = roundVersion,
+            createdAt = claim.createdAt,
+        )
     }
 
     override fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long {
@@ -465,6 +521,70 @@ open class JdbcDurableGameWagerAndSettlementStore(
         )
     }
 
+    @Transactional
+    override fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult {
+        val sql = """
+            insert into game_command_receipt (
+                receipt_id, tenant_id, owner_id, game_id, command_id, round_id, hand_id,
+                action, status, fingerprint, response_json, causation_id, correlation_id,
+                server_sequence_id, round_version, created_at
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, null, ?, ?, null, ?, ?)
+            on conflict (tenant_id, command_id) do nothing
+        """.trimIndent()
+        val rows = jdbcTemplate.update(
+            sql,
+            claim.receiptId,
+            claim.tenantId,
+            claim.ownerId,
+            claim.gameId,
+            claim.commandId,
+            claim.roundId,
+            claim.handId,
+            claim.action,
+            claim.fingerprint,
+            claim.causationId,
+            claim.correlationId,
+            claim.roundVersion,
+            Timestamp.from(claim.createdAt),
+        )
+        if (rows == 0) {
+            val existing = findReceipt(claim.tenantId, claim.commandId)
+                ?: throw CommandReceiptCompletionException(
+                    "Command ${claim.commandId} conflicted but no stored receipt was found"
+                )
+            if (existing.fingerprint != claim.fingerprint) {
+                throw CommandClaimConflictException(
+                    "Command ${claim.commandId} already stored with a different payload fingerprint"
+                )
+            }
+            return CommandReceiptClaimResult.AlreadyClaimed(existing)
+        }
+        return CommandReceiptClaimResult.Claimed
+    }
+
+    @Transactional
+    override fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long) {
+        val sql = """
+            update game_command_receipt
+            set status = ?, response_json = ?, server_sequence_id = ?, round_version = ?
+            where tenant_id = ? and command_id = ? and status = 'PENDING'
+        """.trimIndent()
+        val rows = jdbcTemplate.update(
+            sql,
+            status,
+            responseJson,
+            serverSequenceId,
+            roundVersion,
+            tenantId,
+            commandId,
+        )
+        if (rows == 0) {
+            throw CommandReceiptCompletionException(
+                "No pending claim to complete for command $commandId in tenant $tenantId"
+            )
+        }
+    }
+
     override fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long {
         val sql = """
             select accumulated_wager_minor
@@ -488,9 +608,16 @@ open class JdbcDurableGameWagerAndSettlementStore(
         jdbcTemplate.update(sql, tenantId, playerId, currencyCode, dailyDate, amountMinor)
     }
 
+    @Transactional
     override fun nextSequenceId(tenantId: String): Long {
-        val sql = "select coalesce(max(server_sequence_id), 0) + 1 from game_command_receipt where tenant_id = ?"
-        return jdbcTemplate.queryForObject(sql, Long::class.java, tenantId) ?: 1L
+        val upsertSql = """
+            insert into game_command_sequence (tenant_id, last_sequence_id, updated_at)
+            values (?, 1, now())
+            on conflict (tenant_id) do update
+            set last_sequence_id = game_command_sequence.last_sequence_id + 1, updated_at = now()
+            returning last_sequence_id
+        """.trimIndent()
+        return jdbcTemplate.queryForObject(upsertSql, Long::class.java, tenantId) ?: 1L
     }
 
     override fun findLatestRound(tenantId: String, gameId: String): GameRoundRecord? {

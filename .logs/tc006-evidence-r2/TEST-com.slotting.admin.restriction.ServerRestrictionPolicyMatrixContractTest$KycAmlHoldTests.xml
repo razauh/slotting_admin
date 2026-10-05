@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="4. KYC and AML Hold Matrix" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.004">
+  <properties/>
+  <testcase name="Pending Operations disposition is HOLD until verification cleared()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$KycAmlHoldTests" time="0.001"/>
+  <testcase name="Gambling, Deposits, and Withdrawals are DENIED with HOLD()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$KycAmlHoldTests" time="0.001"/>
+  <testcase name="Authentication and KYC submission are ALLOWED for remediation()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$KycAmlHoldTests" time="0.0"/>
+  <system-out><![CDATA[2026-10-05T20:44:39.630+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

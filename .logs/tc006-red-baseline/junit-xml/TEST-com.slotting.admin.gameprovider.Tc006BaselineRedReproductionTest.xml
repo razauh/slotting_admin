@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest" tests="4" skipped="0" failures="3" errors="0" timestamp="2026-10-05T18:39:09" hostname="pc" time="1.281">
+  <properties/>
+  <testcase name="GREEN baseline golden money vectors remain unchanged before and after TC-006()" classname="com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest" time="1.103"/>
+  <testcase name="RED baseline place bet emits a random idempotency key instead of the deterministic command key()" classname="com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest" time="0.07">
+    <failure message="org.opentest4j.AssertionFailedError: TC-006 requires the place-bet ledger idempotency key to be the stable deterministic command key ==&gt; expected: &lt;bet:tenant-tc006-baseline-red:AVIATOR:rnd-red-deterministic-key:87a95a48-f6bb-4472-aec2-68dd859b8fdb:hand_primary&gt; but was: &lt;IDEM-WAGER-a51d44fc-09a8-4e01-9acb-8ac17372564c&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: TC-006 requires the place-bet ledger idempotency key to be the stable deterministic command key ==&gt; expected: &lt;bet:tenant-tc006-baseline-red:AVIATOR:rnd-red-deterministic-key:87a95a48-f6bb-4472-aec2-68dd859b8fdb:hand_primary&gt; but was: &lt;IDEM-WAGER-a51d44fc-09a8-4e01-9acb-8ac17372564c&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)
+	at app//kotlin.test.AssertionsKt.assertEquals(Unknown Source)
+	at app//com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest.RED baseline place bet emits a random idempotency key instead of the deterministic command key(Tc006BaselineRedReproductionTest.kt:243)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="RED baseline schema cannot represent a transaction private pending claim()" classname="com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest" time="0.035">
+    <failure message="org.springframework.dao.DataIntegrityViolationException: PreparedStatementCallback; SQL [insert into game_command_receipt (&#10;    receipt_id, tenant_id, owner_id, game_id, command_id, round_id, hand_id,&#10;    action, status, fingerprint, response_json, causation_id, correlation_id,&#10;    server_sequence_id, round_version, created_at&#10;) values (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, null, ?, ?, null, ?, ?)]; ERROR: null value in column &quot;response_json&quot; of relation &quot;game_command_receipt&quot; violates not-null constraint&#10;  Detail: Failing row contains (d6a417f5-c1e6-4e53-b313-be6c38534570, tenant-tc006-baseline-red, e2783431-8c63-4cb7-a873-e5473548784d, AVIATOR, cmd-red-pending, rnd-red-pending, hand_primary, PLACE_BET, PENDING, fp-red-pending, null, caus-red-pending, corr-red-pending, null, 1, 2026-10-05 15:00:00+05)." type="org.springframework.dao.DataIntegrityViolationException">org.springframework.dao.DataIntegrityViolationException: PreparedStatementCallback; SQL [insert into game_command_receipt (
+    receipt_id, tenant_id, owner_id, game_id, command_id, round_id, hand_id,
+    action, status, fingerprint, response_json, causation_id, correlation_id,
+    server_sequence_id, round_version, created_at
+) values (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, null, ?, ?, null, ?, ?)]; ERROR: null value in column &quot;response_json&quot; of relation &quot;game_command_receipt&quot; violates not-null constraint
+  Detail: Failing row contains (d6a417f5-c1e6-4e53-b313-be6c38534570, tenant-tc006-baseline-red, e2783431-8c63-4cb7-a873-e5473548784d, AVIATOR, cmd-red-pending, rnd-red-pending, hand_primary, PLACE_BET, PENDING, fp-red-pending, null, caus-red-pending, corr-red-pending, null, 1, 2026-10-05 15:00:00+05).
+	at app//org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:118)
+	at app//org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:107)
+	at app//org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:116)
+	at app//org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1548)
+	at app//org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:677)
+	at app//org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:970)
+	at app//org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:1014)
+	at app//org.springframework.jdbc.core.JdbcTemplate.update(JdbcTemplate.java:1024)
+	at app//com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest.RED baseline schema cannot represent a transaction private pending claim(Tc006BaselineRedReproductionTest.kt:296)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.postgresql.util.PSQLException: ERROR: null value in column &quot;response_json&quot; of relation &quot;game_command_receipt&quot; violates not-null constraint
+  Detail: Failing row contains (d6a417f5-c1e6-4e53-b313-be6c38534570, tenant-tc006-baseline-red, e2783431-8c63-4cb7-a873-e5473548784d, AVIATOR, cmd-red-pending, rnd-red-pending, hand_primary, PLACE_BET, PENDING, fp-red-pending, null, caus-red-pending, corr-red-pending, null, 1, 2026-10-05 15:00:00+05).
+	at app//org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2733)
+	at app//org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2420)
+	at app//org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+	at app//org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:517)
+	at app//org.postgresql.jdbc.PgStatement.execute(PgStatement.java:434)
+	at app//org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:194)
+	at app//org.postgresql.jdbc.PgPreparedStatement.executeUpdate(PgPreparedStatement.java:155)
+	at app//com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate(ProxyPreparedStatement.java:61)
+	at app//com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeUpdate(HikariProxyPreparedStatement.java)
+	at app//org.springframework.jdbc.core.JdbcTemplate.lambda$update$2(JdbcTemplate.java:975)
+	at app//org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:658)
+	... 7 more
+</failure>
+  </testcase>
+  <testcase name="RED baseline place bet claims the receipt after round and bet locks instead of receipt first()" classname="com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest" time="0.066">
+    <failure message="org.opentest4j.AssertionFailedError: TC-006 requires receipt -&gt; round -&gt; bet -&gt; sequence lock order; baseline claims the receipt last: [(RECEIPT_READ, 1), (ROUND_SHARED, 2), (BET, 3), (SEQUENCE_COUNTER, 5), (RECEIPT_WRITE, 1)] ==&gt; expected: &lt;RECEIPT_WRITE&gt; but was: &lt;ROUND_SHARED&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: TC-006 requires receipt -&gt; round -&gt; bet -&gt; sequence lock order; baseline claims the receipt last: [(RECEIPT_READ, 1), (ROUND_SHARED, 2), (BET, 3), (SEQUENCE_COUNTER, 5), (RECEIPT_WRITE, 1)] ==&gt; expected: &lt;RECEIPT_WRITE&gt; but was: &lt;ROUND_SHARED&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)
+	at app//kotlin.test.AssertionsKt.assertEquals(Unknown Source)
+	at app//com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest.RED baseline place bet claims the receipt after round and bet locks instead of receipt first(Tc006BaselineRedReproductionTest.kt:285)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[23:39:02.217 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest]: Tc006BaselineRedReproductionTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:39:02.681 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.Tc006BaselineRedReproductionTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-05T23:39:03.375+05:00  INFO 22623 --- [    Test worker] c.s.a.g.Tc006BaselineRedReproductionTest : Starting Tc006BaselineRedReproductionTest using Java 17.0.20 with PID 22623 (started by pc in /tmp/opencode/tc006-baseline)
+2026-10-05T23:39:03.383+05:00  INFO 22623 --- [    Test worker] c.s.a.g.Tc006BaselineRedReproductionTest : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T23:39:05.917+05:00  INFO 22623 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-05T23:39:06.280+05:00  INFO 22623 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-05T23:39:06.430+05:00  INFO 22623 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6f4029e9
+2026-10-05T23:39:06.432+05:00  INFO 22623 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-05T23:39:06.469+05:00  INFO 22623 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_tc006_baseline_red (PostgreSQL 16.15)
+2026-10-05T23:39:06.542+05:00  INFO 22623 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-05T23:39:06.548+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 38 migrations (execution time 00:00.050s)
+2026-10-05T23:39:06.564+05:00  INFO 22623 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-05T23:39:06.627+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-05T23:39:06.646+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - admin mfa"
+2026-10-05T23:39:06.712+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - admin rbac"
+2026-10-05T23:39:06.743+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - scoped player profile search"
+2026-10-05T23:39:06.773+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - shared admin operation journal"
+2026-10-05T23:39:06.802+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - ledger timeline read"
+2026-10-05T23:39:06.829+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "6 - withdrawal review queue"
+2026-10-05T23:39:06.857+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "7 - kyc review queue"
+2026-10-05T23:39:06.884+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "8 - aml review queue"
+2026-10-05T23:39:06.914+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "9 - rg review queue"
+2026-10-05T23:39:06.943+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "10 - manual adjustment"
+2026-10-05T23:39:06.972+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "11 - payment provider config"
+2026-10-05T23:39:07.001+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "12 - game provider config"
+2026-10-05T23:39:07.033+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "13 - provider circuit breaker"
+2026-10-05T23:39:07.063+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "14 - reconciliation report"
+2026-10-05T23:39:07.098+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "15 - reconciliation exception"
+2026-10-05T23:39:07.129+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "16 - admin audit retention legal hold"
+2026-10-05T23:39:07.192+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "17 - operational schemas"
+2026-10-05T23:39:07.528+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "18 - durable delivery substrate"
+2026-10-05T23:39:07.618+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "19 - durable auth sessions"
+2026-10-05T23:39:07.680+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "20 - dual control approvals"
+2026-10-05T23:39:07.721+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "21 - persistent double entry ledger"
+2026-10-05T23:39:07.781+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "22 - lossless timeline and wallet projection"
+2026-10-05T23:39:07.815+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "23 - payment method lifecycle"
+2026-10-05T23:39:07.855+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "24 - durable deposit workflow"
+2026-10-05T23:39:07.903+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "25 - authoritative withdrawal workflow"
+2026-10-05T23:39:07.974+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "26 - durable payout dispatch and reconciliation"
+2026-10-05T23:39:08.004+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "27 - authoritative account support and closure"
+2026-10-05T23:39:08.048+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "28 - durable game wager and settlement authority"
+2026-10-05T23:39:08.111+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "29 - outcome bound fairness authority"
+2026-10-05T23:39:08.160+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "30 - authoritative game snapshot and event checkpoint"
+2026-10-05T23:39:08.181+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "31 - distinct server restriction sources and policy matrix"
+2026-10-05T23:39:08.208+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "32 - durable administrative bans"
+2026-10-05T23:39:08.231+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "33 - durable responsible gaming limits and exclusions"
+2026-10-05T23:39:08.274+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "34 - durable fraud risk event and rule evaluation"
+2026-10-05T23:39:08.315+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "35 - durable fraud cases and dispositions"
+2026-10-05T23:39:08.345+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "36 - operation bound attestation challenges"
+2026-10-05T23:39:08.379+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "37 - authoritative analytics facts and projections"
+2026-10-05T23:39:08.418+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "38 - secure password reset token"
+2026-10-05T23:39:08.447+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 38 migrations to schema "public", now at version v38 (execution time 00:01.334s)
+2026-10-05T23:39:08.472+05:00  INFO 22623 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 38 migrations (execution time 00:00.015s)
+2026-10-05T23:39:08.503+05:00  INFO 22623 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=38 durationMs=2243
+2026-10-05T23:39:08.951+05:00  INFO 22623 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T23:39:08.957+05:00  INFO 22623 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T23:39:09.823+05:00  INFO 22623 --- [    Test worker] c.s.a.g.Tc006BaselineRedReproductionTest : Started Tc006BaselineRedReproductionTest in 6.954 seconds (process running for 8.876)
+2026-10-05T23:39:10.862+05:00  INFO 22623 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc006-baseline-red eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T23:39:10.863+05:00  INFO 22623 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=17f99dd6-0e91-479b-a19c-d6b58b09ffbc tenantId=tenant-tc006-baseline-red topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T23:39:10.868+05:00  INFO 22623 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc006-baseline-red eventId=17f99dd6-0e91-479b-a19c-d6b58b09ffbc outcome=PUBLISHED correlationId=corr-red-seed causationId=caus-red-seed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

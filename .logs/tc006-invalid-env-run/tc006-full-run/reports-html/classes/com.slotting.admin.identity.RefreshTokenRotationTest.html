@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - RefreshTokenRotationTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>RefreshTokenRotationTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.slotting.admin.identity.html">com.slotting.admin.identity</a> &gt; RefreshTokenRotationTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">4</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">1</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">0.015s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox failures" id="successRate">
+<div class="percent">75%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Failed tests</a>
+</li>
+<li>
+<a href="#tab1">Tests</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Failed tests</h2>
+<div class="test">
+<a name="AUTH-002-02-T004 Rotate refresh-token families with reuse detection remains compatible recoverable observable and lifecycle-safe()"></a>
+<h3 class="failures">AUTH-002-02-T004 Rotate refresh-token families with reuse detection remains compatible recoverable observable and lifecycle-safe()</h3>
+<span class="code">
+<pre>org.opentest4j.AssertionFailedError: No unapproved SQL migration beyond V16 may be introduced: [V32__durable_administrative_bans.sql, V39__atomic_command_sequence_allocation.sql, V17__operational_schemas.sql, V40__deterministic_command_keys_and_early_claim.sql, V23__payment_method_lifecycle.sql, V37__authoritative_analytics_facts_and_projections.sql, V27__authoritative_account_support_and_closure.sql, V36__operation_bound_attestation_challenges.sql, V30__authoritative_game_snapshot_and_event_checkpoint.sql, V34__durable_fraud_risk_event_and_rule_evaluation.sql, V28__durable_game_wager_and_settlement_authority.sql, V22__lossless_timeline_and_wallet_projection.sql, V19__durable_auth_sessions.sql, V26__durable_payout_dispatch_and_reconciliation.sql, V33__durable_responsible_gaming_limits_and_exclusions.sql, V21__persistent_double_entry_ledger.sql, V29__outcome_bound_fairness_authority.sql, V20__dual_control_approvals.sql, V31__distinct_server_restriction_sources_and_policy_matrix.sql, V24__durable_deposit_workflow.sql, V38__secure_password_reset_token.sql, V18__durable_delivery_substrate.sql, V25__authoritative_withdrawal_workflow.sql, V35__durable_fraud_cases_and_dispositions.sql]
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//com.slotting.admin.identity.RefreshTokenRotationTest.AUTH-002-02-T004 Rotate refresh-token families with reuse detection remains compatible recoverable observable and lifecycle-safe(RefreshTokenRotationTest.kt:546)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</pre>
+</span>
+</div>
+</div>
+<div id="tab1" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">AUTH-002-02-T001 Rotate refresh-token families with reuse detection produces the required authoritative outcome()</td>
+<td class="success">0.003s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">AUTH-002-02-T002 Rotate refresh-token families with reuse detection rejects invalid boundary unauthorized and stale input()</td>
+<td class="success">0.002s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">AUTH-002-02-T003 Rotate refresh-token families with reuse detection survives concurrency duplicate delivery and dependency failure()</td>
+<td class="success">0.007s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="failures">AUTH-002-02-T004 Rotate refresh-token families with reuse detection remains compatible recoverable observable and lifecycle-safe()</td>
+<td class="failures">0.003s</td>
+<td class="failures">failed</td>
+</tr>
+</table>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.7</a> at Oct 5, 2026, 10:03:48 PM</p>
+</div>
+</div>
+</body>
+</html>

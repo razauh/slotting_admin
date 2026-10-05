@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="10. Authoritative Enforcement Gate Contracts" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.004">
+  <properties/>
+  <testcase name="Gate succeeds and returns result when composite access is ALLOW()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$EnforcementGateTests" time="0.001"/>
+  <testcase name="Gate throws ServerRestrictionDeniedException when composite access is DENY()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$EnforcementGateTests" time="0.002"/>
+  <testcase name="Gate throws ServerRestrictionStepUpRequiredException when composite access is STEP_UP()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$EnforcementGateTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

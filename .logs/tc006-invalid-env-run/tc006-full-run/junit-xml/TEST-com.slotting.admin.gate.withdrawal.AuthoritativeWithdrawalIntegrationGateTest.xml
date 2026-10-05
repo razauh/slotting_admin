@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:02:21" hostname="pc" time="0.013">
+  <properties/>
+  <testcase name="GATE-WITHDRAWAL-001-T004 — Timeout and unknown provider outcomes stay pending until authoritative reconciliation()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.004"/>
+  <testcase name="Expired manifest throws InvalidWithdrawalGateManifestException and emits alert()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="Unauthenticated or player principal is rejected with UnauthorizedWithdrawalGateException()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-WITHDRAWAL-001-T001 — An eligible owner completes one approved payout and one balanced terminal posting()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-WITHDRAWAL-001-T005 — Failure releases or compensates reservations exactly once and preserves audit lineage()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="Injected failure in withdrawal scenario produces deterministic NO-GO and emits alert()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-WITHDRAWAL-001-T002 — Expired quote, unowned destination, failed step-up, restriction, and self-approval are denied()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="Comprehensive Withdrawal Gate Evaluation with all 6 scenarios produces authoritative GO()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.001"/>
+  <testcase name="GATE-WITHDRAWAL-001-T006 — Payout provider, withdrawal state, ledger, statement, and admin evidence reconcile()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.0"/>
+  <testcase name="GATE-WITHDRAWAL-001-T003 — Concurrent requests cannot reserve beyond withdrawable funds or duplicate payout()" classname="com.slotting.admin.gate.withdrawal.AuthoritativeWithdrawalIntegrationGateTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

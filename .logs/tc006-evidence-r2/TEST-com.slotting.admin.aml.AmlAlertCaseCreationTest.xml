@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.aml.AmlAlertCaseCreationTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T15:42:56" hostname="pc" time="0.116">
+  <properties/>
+  <testcase name="AML-002-02-T002 Create AML alerts and review cases rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.aml.AmlAlertCaseCreationTest" time="0.057"/>
+  <testcase name="AML-002-02-T001 Create AML alerts and review cases produces the required authoritative outcome()" classname="com.slotting.admin.aml.AmlAlertCaseCreationTest" time="0.013"/>
+  <testcase name="AML-002-02-T003 Create AML alerts and review cases survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.aml.AmlAlertCaseCreationTest" time="0.017"/>
+  <testcase name="AML-002-02-T004 Create AML alerts and review cases remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.aml.AmlAlertCaseCreationTest" time="0.026">
+    <failure message="org.opentest4j.AssertionFailedError: Expected value to be true." type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Expected value to be true.
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue$default(Assertions.kt:42)
+	at app//kotlin.test.AssertionsKt.assertTrue$default(Unknown Source)
+	at app//com.slotting.admin.aml.AmlAlertCaseCreationTest.AML-002-02-T004 Create AML alerts and review cases remains compatible, recoverable, observable, and lifecycle-safe(AmlAlertCaseCreationTest.kt:188)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

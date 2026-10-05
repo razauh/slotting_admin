@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.FinancialRestoreReplayTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:23" hostname="pc" time="0.046">
+  <properties/>
+  <testcase name="LEDGER-006-02-T003 — Restore and deterministically replay financial state survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.ledger.FinancialRestoreReplayTest" time="0.02"/>
+  <testcase name="LEDGER-006-02-T002 — Restore and deterministically replay financial state rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.ledger.FinancialRestoreReplayTest" time="0.006"/>
+  <testcase name="LEDGER-006-02-T004 — Restore and deterministically replay financial state remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.ledger.FinancialRestoreReplayTest" time="0.006"/>
+  <testcase name="LEDGER-006-02-T001 — Restore and deterministically replay financial state produces the required authoritative outcome" classname="com.slotting.admin.ledger.FinancialRestoreReplayTest" time="0.004"/>
+  <system-out><![CDATA[2026-10-05T20:58:23.773+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="8. Temporal Expiry and Activation Dynamics" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="Restriction activated while an operation is pending produces HOLD on re-evaluation()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$TemporalDynamicsTests" time="0.001"/>
+  <testcase name="Future restriction not yet effective is ignored()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$TemporalDynamicsTests" time="0.0"/>
+  <testcase name="Expired restriction is ignored and not evaluated()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$TemporalDynamicsTests" time="0.0"/>
+  <testcase name="Permanent restriction with null expiry remains effective indefinitely()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$TemporalDynamicsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

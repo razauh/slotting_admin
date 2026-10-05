@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.ProviderPayoutInitiationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:42" hostname="pc" time="0.069">
+  <properties/>
+  <testcase name="WITHDRAW-003-01-T001 Initiate idempotent provider payout produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.ProviderPayoutInitiationTest" time="0.029"/>
+  <testcase name="WITHDRAW-003-01-T003 Initiate idempotent provider payout survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.ProviderPayoutInitiationTest" time="0.029"/>
+  <testcase name="WITHDRAW-003-01-T004 Initiate idempotent provider payout remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.ProviderPayoutInitiationTest" time="0.005"/>
+  <testcase name="WITHDRAW-003-01-T002 Initiate idempotent provider payout rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.ProviderPayoutInitiationTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

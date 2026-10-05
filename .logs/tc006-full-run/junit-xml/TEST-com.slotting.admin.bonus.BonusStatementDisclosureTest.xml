@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.bonus.BonusStatementDisclosureTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T19:15:42" hostname="pc" time="0.022">
+  <properties/>
+  <testcase name="BONUS-002-02-T001 Disclose bonus expiry in statements produces the required authoritative outcome()" classname="com.slotting.admin.bonus.BonusStatementDisclosureTest" time="0.008"/>
+  <testcase name="BONUS-002-02-T004 Migration integrity recovery and observability verification()" classname="com.slotting.admin.bonus.BonusStatementDisclosureTest" time="0.003">
+    <failure message="org.opentest4j.AssertionFailedError: Migration version 32 exceeds V16 limit! Found: V32__durable_administrative_bans.sql" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Migration version 32 exceeds V16 limit! Found: V32__durable_administrative_bans.sql
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//com.slotting.admin.bonus.BonusStatementDisclosureTest.BONUS-002-02-T004 Migration integrity recovery and observability verification(BonusStatementDisclosureTest.kt:577)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="BONUS-002-02-T002 Negative boundary and security scenarios fail closed()" classname="com.slotting.admin.bonus.BonusStatementDisclosureTest" time="0.001"/>
+  <testcase name="BONUS-002-02-T003 Idempotency replays, conflict detection, and concurrent execution maintain balance conservation()" classname="com.slotting.admin.bonus.BonusStatementDisclosureTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

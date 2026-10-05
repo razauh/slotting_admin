@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:35" hostname="pc" time="0.035">
+  <properties/>
+  <testcase name="SYS-001-T004 — Critical-journey E2E remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.012"/>
+  <testcase name="SYS-001-T003 — Critical-journey E2E survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.01"/>
+  <testcase name="SYS-001-T002 — Critical-journey E2E rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.01"/>
+  <testcase name="SYS-001-T001 — Critical-journey E2E produces the required authoritative outcome" classname="com.slotting.admin.validation.journey.CriticalJourneyE2ETest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

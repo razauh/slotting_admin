@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="6. Account Closure Matrix" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:39" hostname="pc" time="0.009">
+  <properties/>
+  <testcase name="Normal authentication is DENIED, dedicated legal access path is ALLOWED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AccountClosureTests" time="0.003"/>
+  <testcase name="Pending Operations are HELD until closure settlement logic determines final disposition()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AccountClosureTests" time="0.0"/>
+  <testcase name="Withdrawal access DENIED with HOLD until closure settlement requirements satisfied()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AccountClosureTests" time="0.001"/>
+  <testcase name="Support is ALLOWED and Account Data Access is ALLOWED via legal path()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AccountClosureTests" time="0.0"/>
+  <testcase name="Gambling and Deposits are DENIED()" classname="com.slotting.admin.restriction.ServerRestrictionPolicyMatrixContractTest$AccountClosureTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

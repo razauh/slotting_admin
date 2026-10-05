@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorRoundLifecycleOrchestratorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:45" hostname="pc" time="0.261">
+  <properties/>
+  <testcase name="restart recovery retains persisted outcome and closes without deriving another result()" classname="com.slotting.admin.gameprovider.AviatorRoundLifecycleOrchestratorTest" time="0.21"/>
+  <testcase name="round progresses commitment before betting then flying crash reveal close and next round()" classname="com.slotting.admin.gameprovider.AviatorRoundLifecycleOrchestratorTest" time="0.048"/>
+  <testcase name="closed is terminal and transition table rejects illegal jumps()" classname="com.slotting.admin.gameprovider.AviatorRoundLifecycleOrchestratorTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:09:45.713+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 commitment=commitment-aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3
+2026-10-05T20:09:45.713+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3
+2026-10-05T20:09:45.714+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-05T20:09:45.714+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 roundVersion=2 crashMultiplier=1.1000
+2026-10-05T20:09:45.717+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-05T20:09:45.905+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 previousPhase=FLYING nextPhase=CRASHED roundVersion=4 currentMultiplier=1.1000
+2026-10-05T20:09:45.905+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 roundVersion=3 crashMultiplier=1.1000
+2026-10-05T20:09:45.905+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 phase=CRASHED roundVersion=4
+2026-10-05T20:09:45.906+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 previousPhase=CRASHED nextPhase=CLOSED roundVersion=5 currentMultiplier=1.1000
+2026-10-05T20:09:45.906+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-d1b396e9-a7f6-4f60-849c-667a3bce38d3 roundVersion=5
+2026-10-05T20:09:45.918+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 commitment=commitment-aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31
+2026-10-05T20:09:45.918+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31
+2026-10-05T20:09:45.952+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 previousPhase=SCHEDULED nextPhase=BET_COUNTDOWN roundVersion=2 currentMultiplier=1.0000
+2026-10-05T20:09:45.953+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_OUTCOME_READY roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 roundVersion=2 crashMultiplier=1.1000
+2026-10-05T20:09:45.954+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 previousPhase=BET_COUNTDOWN nextPhase=FLYING roundVersion=3 currentMultiplier=1.0000
+2026-10-05T20:09:45.956+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 previousPhase=FLYING nextPhase=CRASHED roundVersion=5 currentMultiplier=1.1000
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CRASHED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 roundVersion=4 crashMultiplier=1.1000
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_REVEALED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 phase=CRASHED roundVersion=5
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_PHASE_CHANGED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 previousPhase=CRASHED nextPhase=CLOSED roundVersion=6 currentMultiplier=1.1000
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_CLOSED roundId=aviator-1260ecf8-23f1-4df2-83bd-3819e9e13f31 roundVersion=6
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_COMMITMENT_PUBLISHED roundId=aviator-ab0da348-9929-4ed9-9637-50054d44bf55 commitment=commitment-aviator-ab0da348-9929-4ed9-9637-50054d44bf55
+2026-10-05T20:09:45.957+05:00  INFO 94973 --- [    Test worker] .s.a.g.AviatorRoundLifecycleOrchestrator : AVIATOR_ROUND_CREATED roundId=aviator-ab0da348-9929-4ed9-9637-50054d44bf55 phase=SCHEDULED roundVersion=1 commitment=commitment-aviator-ab0da348-9929-4ed9-9637-50054d44bf55
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

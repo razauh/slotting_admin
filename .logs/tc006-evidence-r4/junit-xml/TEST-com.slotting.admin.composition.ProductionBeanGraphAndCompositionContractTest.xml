@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:54" hostname="pc" time="18.715">
+  <properties/>
+  <testcase name="TC040-10 schema migration indicator fails closed if schema version does not match V37()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.024"/>
+  <testcase name="TC040-01 production bean graph validator rejects in-memory or fake authoritative beans()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.533"/>
+  <testcase name="TC040-14 normal boot and bean graph inspection with production composition()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="16.522"/>
+  <testcase name="TC040-15 readiness transition dynamically reflects dependency health()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.003"/>
+  <testcase name="TC040-02 production bean graph validator accepts durable JDBC implementations()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.038"/>
+  <testcase name="TC040-17 partial feature degradation keeps capability unavailable and marks readiness DOWN()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.002"/>
+  <testcase name="TC040-12 jdbc admin session directory returns null for non-existent session()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.232"/>
+  <testcase name="TC040-13 end to end player wallet snapshot smoke journey with verified principal()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.255"/>
+  <testcase name="TC040-04 security filter rejects unauthenticated request on protected route with 401()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.568"/>
+  <testcase name="TC040-08 readiness health indicator reports UP when all dependencies are ready()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.013"/>
+  <testcase name="TC040-03 production composition binds critical payment and game domain bindings()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.002"/>
+  <testcase name="TC040-09 readiness health indicators fail closed (DOWN) when any dependency is degraded()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.007"/>
+  <testcase name="TC040-06 security filter validates Bearer token and injects authenticated principal()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.016"/>
+  <testcase name="TC040-07 security filter rejects expired or invalid Bearer token with 401()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.02"/>
+  <testcase name="TC040-16 context restart cleanly runs without orphan state()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.357"/>
+  <testcase name="TC040-05 security filter allows public endpoint without authentication()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.01"/>
+  <testcase name="TC040-11 jdbc admin session directory resolves active sessions from durable database()" classname="com.slotting.admin.composition.ProductionBeanGraphAndCompositionContractTest" time="0.014"/>
+  <system-out><![CDATA[20:56:54.628 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Validating production bean graph for banned fake/in-memory authoritative implementations...
+20:56:54.632 [Test worker] ERROR com.slotting.admin.config.ProductionBeanGraphValidator -- Authoritative singleton 'inMemoryStore' with class 'com.slotting.admin.auth.InMemoryDurableAuthStore' matches prohibited pattern '.*InMemory.*(Store|Service|Directory|Queue|Sink|Gate).*' and is prohibited in production profile! (TC-040 fail-closed invariant)
+20:57:09.345 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- ProductionBeanGraphValidator skipped: not running in production profile
+20:57:09.399 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:09.448 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:11.216 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Validating production bean graph for banned fake/in-memory authoritative implementations...
+20:57:11.231 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Production bean graph validation passed: 0 banned fakes or memory stores detected.
+20:57:12.304 [Test worker] WARN com.slotting.admin.security.SecurityAuthenticationFilter -- Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+20:57:12.339 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.340 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:12.391 [Test worker] WARN com.slotting.admin.security.SecurityAuthenticationFilter -- Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+20:57:12.506 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.513 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:12.676 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.676 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.integrity.PlayIntegrityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:34" hostname="pc" time="0.043">
+  <properties/>
+  <testcase name="INTEGRITY-001-T002 Play Integrity rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.integrity.PlayIntegrityTest" time="0.02"/>
+  <testcase name="INTEGRITY-001-T001 Play Integrity produces the required authoritative outcome()" classname="com.slotting.admin.integrity.PlayIntegrityTest" time="0.001"/>
+  <testcase name="INTEGRITY-001-T004 Play Integrity remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.integrity.PlayIntegrityTest" time="0.009"/>
+  <testcase name="INTEGRITY-001-T003 Play Integrity survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.integrity.PlayIntegrityTest" time="0.012"/>
+  <system-out><![CDATA[2026-10-05T20:44:34.552+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-3268a075-7d6f-4dc7-ae4d-cc4616b29519 eventId=d7cd04c3-50ed-4302-9825-e60f8ce963ba outcome=PUBLISHED correlationId=corr-tc002 causationId=cause-tc002
+2026-10-05T20:44:34.556+05:00  INFO 104539 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-aaa25fdf-8b69-4b5f-b0f3-4d43509466aa eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

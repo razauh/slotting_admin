@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.DsarFulfillmentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.048">
+  <properties/>
+  <testcase name="PRIV-001-02-T003 — Fulfil data-subject access requests survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.DsarFulfillmentTest" time="0.029"/>
+  <testcase name="PRIV-001-02-T001 — Fulfil data-subject access requests produces the required authoritative outcome()" classname="com.slotting.admin.privacy.DsarFulfillmentTest" time="0.012"/>
+  <testcase name="PRIV-001-02-T004 — Fulfil data-subject access requests remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.DsarFulfillmentTest" time="0.002"/>
+  <testcase name="PRIV-001-02-T002 — Fulfil data-subject access requests rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.DsarFulfillmentTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

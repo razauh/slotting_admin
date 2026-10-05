@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:20" hostname="pc" time="3.812">
+  <properties/>
+  <testcase name="transaction boundary with configurable failpoint decorator rolls back ledger and bet atomically()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="2.904"/>
+  <testcase name="database schema contains all operational aviator and ledger tables()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.157"/>
+  <testcase name="round trips through fairness jdbc adapter verify commitment and reveal lifecycle()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.073"/>
+  <testcase name="round trips through round lifecycle jdbc adapter verify round progression and state persistence()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.098"/>
+  <testcase name="commitment foreign key constraint rejects commitments for non existent rounds in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.089"/>
+  <testcase name="end to end aviator wager placement cashout and round settlement against real postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.265"/>
+  <testcase name="round crash settles uncashed bets as lost and sweeps escrow in postgres()" classname="com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest" time="0.201"/>
+  <system-out><![CDATA[20:48:55.677 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest]: AviatorPostgresIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+20:48:56.978 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorPostgresIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-05T20:48:59.052+05:00  INFO 110153 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Starting AviatorPostgresIntegrationTest using Java 17.0.20 with PID 110153 (started by pc in /tmp/opencode/tc006-baseline)
+2026-10-05T20:48:59.066+05:00  INFO 110153 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T20:49:08.738+05:00  INFO 110153 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-05T20:49:10.186+05:00  INFO 110153 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-05T20:49:10.745+05:00  INFO 110153 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@28c75c93
+2026-10-05T20:49:10.753+05:00  INFO 110153 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-05T20:49:10.905+05:00  INFO 110153 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_tc006_baseline (PostgreSQL 16.8)
+2026-10-05T20:49:11.168+05:00  INFO 110153 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-05T20:49:11.185+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 38 migrations (execution time 00:00.165s)
+2026-10-05T20:49:11.230+05:00  INFO 110153 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-05T20:49:11.372+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-05T20:49:11.420+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - admin mfa"
+2026-10-05T20:49:11.615+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - admin rbac"
+2026-10-05T20:49:11.695+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - scoped player profile search"
+2026-10-05T20:49:11.777+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - shared admin operation journal"
+2026-10-05T20:49:11.866+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - ledger timeline read"
+2026-10-05T20:49:11.940+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "6 - withdrawal review queue"
+2026-10-05T20:49:12.022+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "7 - kyc review queue"
+2026-10-05T20:49:12.112+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "8 - aml review queue"
+2026-10-05T20:49:12.200+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "9 - rg review queue"
+2026-10-05T20:49:12.269+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "10 - manual adjustment"
+2026-10-05T20:49:12.353+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "11 - payment provider config"
+2026-10-05T20:49:12.410+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "12 - game provider config"
+2026-10-05T20:49:12.548+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "13 - provider circuit breaker"
+2026-10-05T20:49:12.641+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "14 - reconciliation report"
+2026-10-05T20:49:12.743+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "15 - reconciliation exception"
+2026-10-05T20:49:12.829+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "16 - admin audit retention legal hold"
+2026-10-05T20:49:13.035+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "17 - operational schemas"
+2026-10-05T20:49:13.638+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "18 - durable delivery substrate"
+2026-10-05T20:49:13.800+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "19 - durable auth sessions"
+2026-10-05T20:49:13.919+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "20 - dual control approvals"
+2026-10-05T20:49:14.040+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "21 - persistent double entry ledger"
+2026-10-05T20:49:14.174+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "22 - lossless timeline and wallet projection"
+2026-10-05T20:49:14.278+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "23 - payment method lifecycle"
+2026-10-05T20:49:14.386+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "24 - durable deposit workflow"
+2026-10-05T20:49:14.486+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "25 - authoritative withdrawal workflow"
+2026-10-05T20:49:14.583+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "26 - durable payout dispatch and reconciliation"
+2026-10-05T20:49:14.657+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "27 - authoritative account support and closure"
+2026-10-05T20:49:14.743+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "28 - durable game wager and settlement authority"
+2026-10-05T20:49:14.821+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "29 - outcome bound fairness authority"
+2026-10-05T20:49:14.911+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "30 - authoritative game snapshot and event checkpoint"
+2026-10-05T20:49:14.949+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "31 - distinct server restriction sources and policy matrix"
+2026-10-05T20:49:15.005+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "32 - durable administrative bans"
+2026-10-05T20:49:15.040+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "33 - durable responsible gaming limits and exclusions"
+2026-10-05T20:49:15.126+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "34 - durable fraud risk event and rule evaluation"
+2026-10-05T20:49:15.185+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "35 - durable fraud cases and dispositions"
+2026-10-05T20:49:15.232+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "36 - operation bound attestation challenges"
+2026-10-05T20:49:15.291+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "37 - authoritative analytics facts and projections"
+2026-10-05T20:49:15.356+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "38 - secure password reset token"
+2026-10-05T20:49:15.404+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 38 migrations to schema "public", now at version v38 (execution time 00:02.868s)
+2026-10-05T20:49:15.453+05:00  INFO 110153 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 38 migrations (execution time 00:00.034s)
+2026-10-05T20:49:15.539+05:00  INFO 110153 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=38 durationMs=5446
+2026-10-05T20:49:17.372+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-05T20:49:17.413+05:00  INFO 110153 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-05T20:49:20.661+05:00  INFO 110153 --- [    Test worker] c.s.a.g.AviatorPostgresIntegrationTest   : Started AviatorPostgresIntegrationTest in 23.031 seconds (process running for 38.436)
+2026-10-05T20:49:23.792+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-ci-pg eventId=null outcome=LEASED_2 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:23.792+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=4907e26b-3840-4786-8339-dd2bff6ee86c tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:49:23.804+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=4907e26b-3840-4786-8339-dd2bff6ee86c outcome=PUBLISHED correlationId=corr-TX-PG-FAILPOINT-INIT-41ae1ec2-8639-4330-9d0e-06b0a8ecaeef causationId=caus-TX-PG-FAILPOINT-INIT-41ae1ec2-8639-4330-9d0e-06b0a8ecaeef
+2026-10-05T20:49:23.806+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=a2b11b24-cad7-4079-a70f-ee1b78c29435 tenantId=tenant-ci-pg topic=LEDGER_TRANSACTION_POSTED
+2026-10-05T20:49:23.810+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-ci-pg eventId=a2b11b24-cad7-4079-a70f-ee1b78c29435 outcome=PUBLISHED correlationId=corr-fp-committed causationId=cmd-fp-committed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

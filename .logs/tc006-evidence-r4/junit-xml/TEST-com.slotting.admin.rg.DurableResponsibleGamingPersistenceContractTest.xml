@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.DurableResponsibleGamingPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:28" hostname="pc" time="0.006">
+  <properties/>
+  <testcase name="InMemoryDurableResponsibleGamingStore satisfies durable RG CRUD and idempotency contracts()" classname="com.slotting.admin.rg.DurableResponsibleGamingPersistenceContractTest" time="0.005"/>
+  <testcase name="V33 migration script exists and defines required durable RG tables()" classname="com.slotting.admin.rg.DurableResponsibleGamingPersistenceContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

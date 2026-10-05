@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:31" hostname="pc" time="0.057">
+  <properties/>
+  <testcase name="test03 reconciliation resolves ambiguous intent on late success and finalizes ledger once()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.017"/>
+  <testcase name="test05 worker crash and lease expiry allows secondary worker to safely recover intent()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.005"/>
+  <testcase name="test01 no provider call occurs until durable dispatch intent is committed()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.004"/>
+  <testcase name="test06 stuck ambiguous payout enters MANUAL_REVIEW and operator escalates without balance write()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.004"/>
+  <testcase name="test07 concurrent workers dispatch intent exactly once without double dispatch()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.017"/>
+  <testcase name="test04 reconciliation resolves ambiguous intent on late failure and releases reserved funds()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.002"/>
+  <testcase name="test02 provider timeout keeps funds reserved and transitions to AMBIGUOUS_RECONCILING()" classname="com.slotting.admin.withdrawal.DurablePayoutDispatchContractTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-05T20:58:31.844+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:58:31.852+05:00  INFO 113922 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6d03b593-e4fd-4c14-8dab-dcbb0a106ba4 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

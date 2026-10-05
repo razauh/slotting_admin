@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.fraud.FraudCasePersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T16:55:19" hostname="pc" time="0.003">
+  <properties/>
+  <testcase name="V35 migration script defines all required schema objects, indexes, and idempotency constraints()" classname="com.slotting.admin.fraud.FraudCasePersistenceContractTest" time="0.002"/>
+  <testcase name="InMemoryFraudCaseStore satisfies case lifecycle, CAS versioning, and action idempotency contracts()" classname="com.slotting.admin.fraud.FraudCasePersistenceContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

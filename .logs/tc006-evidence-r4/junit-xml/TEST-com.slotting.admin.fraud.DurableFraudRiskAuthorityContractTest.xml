@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:57:14" hostname="pc" time="0.148">
+  <properties/>
+  <testcase name="Stored events and rule version reproduce identical decision after simulated restart()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.041"/>
+  <testcase name="Scenario 6 - cross-subject payment instrument reuse triggers HOLD()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.004"/>
+  <testcase name="Scenario 1 - failed deposits burst triggers HOLD and queues fraud case()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="V34 migration script exists and defines required durable fraud risk tables()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.006"/>
+  <testcase name="Fraud restriction is enforced by ServerRestrictionEvaluator per TC-026 policy matrix()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 8 - active manual fraud flag from admin triggers DENY()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Tenant events and evaluations are strictly isolated()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Rule version activation and rollback updates evaluation deterministically()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.002"/>
+  <testcase name="Scenario 2 - failed withdrawals burst triggers HOLD()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.006"/>
+  <testcase name="Scenario 7 - provider dispute or chargeback triggers DENY()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Duplicate event delivery does not inflate velocity or duplicate cases()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Caller cannot supply historical counts or volume as authority()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.011"/>
+  <testcase name="Scenario 4 - unusual high-value withdrawal triggers HOLD()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <testcase name="Scenario 5 - auth anomalies trigger STEP_UP recommendation()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.004"/>
+  <testcase name="Concurrent delivery of duplicate event is safely deduplicated()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.019"/>
+  <testcase name="Scenario 10 - multi-currency mismatch rejects cross-currency summation and checked overflow throws()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.009"/>
+  <testcase name="Scenario 9 - late event is placed in historical order and evaluated correctly()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.002"/>
+  <testcase name="Scenario 3 - rapid deposit-withdrawal cycling without gameplay triggers HOLD()" classname="com.slotting.admin.fraud.DurableFraudRiskAuthorityContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

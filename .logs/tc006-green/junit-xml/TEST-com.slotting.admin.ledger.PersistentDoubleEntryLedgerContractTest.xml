@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:12:41" hostname="pc" time="0.092">
+  <properties/>
+  <testcase name="test04 ledger posting rejects currency mismatch()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.009"/>
+  <testcase name="test12 persistent double entry ledger schema exists and enforces constraints()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.002"/>
+  <testcase name="test08 cross-tenant same transaction reference posts independently()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.012"/>
+  <testcase name="test02 manual adjustment rejects integer overflow with INVALID rejection()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.014"/>
+  <testcase name="test05 durable store records transaction legs and receipts atomically()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.002"/>
+  <testcase name="test10 compensation creates immutable reversal transaction referencing original()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.004"/>
+  <testcase name="test06 failure before commit rolls back leaving no partial records()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.004"/>
+  <testcase name="test09 service restart preserves state and rebuilds exact account balances from journal legs()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.001"/>
+  <testcase name="test11 concurrent duplicate posting produces exactly one execution()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.015"/>
+  <testcase name="test01 ledger posting rejects integer overflow with PostingInvalidException()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.005"/>
+  <testcase name="test03 ledger posting rejects zero and negative legs()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.002"/>
+  <testcase name="test07 exact replay returns identical result and changed payload conflicts()" classname="com.slotting.admin.ledger.PersistentDoubleEntryLedgerContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

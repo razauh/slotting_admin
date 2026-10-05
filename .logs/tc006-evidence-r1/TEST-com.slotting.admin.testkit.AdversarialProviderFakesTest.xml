@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.testkit.AdversarialProviderFakesTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:09:59" hostname="pc" time="0.032">
+  <properties/>
+  <testcase name="TEST-001-02-T004 Create adversarial provider fakes remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.testkit.AdversarialProviderFakesTest" time="0.014"/>
+  <testcase name="TEST-001-02-T002 Create adversarial provider fakes rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.testkit.AdversarialProviderFakesTest" time="0.004"/>
+  <testcase name="TEST-001-02-T001 Create adversarial provider fakes produces the required authoritative outcome()" classname="com.slotting.admin.testkit.AdversarialProviderFakesTest" time="0.003"/>
+  <testcase name="TEST-001-02-T003 Create adversarial provider fakes survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.testkit.AdversarialProviderFakesTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

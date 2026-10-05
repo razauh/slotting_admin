@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:12:22" hostname="pc" time="3.694">
+  <properties/>
+  <testcase name="GivenMixedOperations_WhenLocksAreObserved_ThenGlobalOrderIsPreserved()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="2.749"/>
+  <testcase name="GivenSameClaim_WhenOneHundredTransactionsRace_ThenOneOwnerAndSameResult()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="0.273"/>
+  <testcase name="GivenSameOperation_WhenKeyBuiltTwice_ThenKeysAreStableAndDomainSeparated()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="0.231"/>
+  <testcase name="GivenHistoricalMoneyAndOutcomeVectors_WhenRefactoredPathRuns_ThenSemanticsStayUnchanged()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="0.279"/>
+  <testcase name="GivenUncompletedEarlyClaim_WhenTransactionCommits_ThenCommitIsRejected()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="0.051"/>
+  <testcase name="GivenReusedCommandOrLedgerKey_WhenPayloadDiffers_ThenConflict()" classname="com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest" time="0.091"/>
+  <system-out><![CDATA[00:12:05.862 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest]: AviatorCommandClaimPostgresTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:12:07.302 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotting.admin.AdminApplication for test class com.slotting.admin.gameprovider.AviatorCommandClaimPostgresTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-10-06T00:12:09.217+05:00  INFO 29296 --- [    Test worker] c.s.a.g.AviatorCommandClaimPostgresTest  : Starting AviatorCommandClaimPostgresTest using Java 17.0.20 with PID 29296 (started by pc in /home/pc/Downloads/slot_app/slotting_admin)
+2026-10-06T00:12:09.220+05:00  INFO 29296 --- [    Test worker] c.s.a.g.AviatorCommandClaimPostgresTest  : No active profile set, falling back to 1 default profile: "default"
+2026-10-06T00:12:16.799+05:00  INFO 29296 --- [    Test worker] c.s.a.c.ProductionBeanGraphValidator     : ProductionBeanGraphValidator skipped: not running in production profile
+2026-10-06T00:12:17.749+05:00  INFO 29296 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-06T00:12:18.035+05:00  INFO 29296 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@65b19e5c
+2026-10-06T00:12:18.074+05:00  INFO 29296 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-06T00:12:18.197+05:00  INFO 29296 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:5432/slotting_admin_tc006_green (PostgreSQL 16.15)
+2026-10-06T00:12:18.532+05:00  INFO 29296 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.275s)
+2026-10-06T00:12:18.572+05:00  INFO 29296 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 40
+2026-10-06T00:12:18.585+05:00  INFO 29296 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-10-06T00:12:18.717+05:00  INFO 29296 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 40 migrations (execution time 00:00.090s)
+2026-10-06T00:12:18.833+05:00  INFO 29296 --- [    Test worker] maMigrationConfiguration$$SpringCGLIB$$0 : schema_migration_succeeded schemaVersion=40 durationMs=1155
+2026-10-06T00:12:19.846+05:00  INFO 29296 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Initializing production domain bindings...
+2026-10-06T00:12:19.874+05:00  INFO 29296 --- [    Test worker] s.a.c.ProductionDomainBindingInitializer : Production domain bindings initialized successfully.
+2026-10-06T00:12:22.212+05:00  INFO 29296 --- [    Test worker] c.s.a.g.AviatorCommandClaimPostgresTest  : Started AviatorCommandClaimPostgresTest in 14.378 seconds (process running for 19.624)
+2026-10-06T00:12:25.334+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc006-claim eventId=null outcome=LEASED_3 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:12:25.335+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=66d426c9-a773-4d9f-9efd-1909f4bcf9b2 tenantId=tenant-tc006-claim topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:12:25.352+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc006-claim eventId=66d426c9-a773-4d9f-9efd-1909f4bcf9b2 outcome=PUBLISHED correlationId=corr-claim-seed causationId=caus-claim-seed
+2026-10-06T00:12:25.356+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=b75a8218-b2a6-487f-ae4d-d55e9c529134 tenantId=tenant-tc006-claim topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:12:25.369+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc006-claim eventId=b75a8218-b2a6-487f-ae4d-d55e9c529134 outcome=PUBLISHED correlationId=corr-claim-race causationId=caus-claim-race
+2026-10-06T00:12:25.369+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=d7ccc95c-8d60-45ed-868f-046b548e06f3 tenantId=tenant-tc006-claim topic=LEDGER_TRANSACTION_POSTED
+2026-10-06T00:12:25.378+05:00  INFO 29296 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc006-claim eventId=d7ccc95c-8d60-45ed-868f-046b548e06f3 outcome=PUBLISHED correlationId=corr-claim-seed causationId=caus-claim-seed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

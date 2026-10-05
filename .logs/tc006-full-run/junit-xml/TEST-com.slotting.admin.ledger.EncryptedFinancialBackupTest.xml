@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ledger.EncryptedFinancialBackupTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:32" hostname="pc" time="0.045">
+  <properties/>
+  <testcase name="LEDGER-006-01-T003 — Create encrypted financial backups survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.039"/>
+  <testcase name="LEDGER-006-01-T002 — Create encrypted financial backups rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.003"/>
+  <testcase name="LEDGER-006-01-T004 — Create encrypted financial backups remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.001"/>
+  <testcase name="LEDGER-006-01-T001 — Create encrypted financial backups produces the required authoritative outcome" classname="com.slotting.admin.ledger.EncryptedFinancialBackupTest" time="0.001"/>
+  <system-out><![CDATA[2026-10-06T00:16:32.729+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6a0c43e3-e399-4d2f-9590-38b5e8f7d853 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:32.733+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-6a0c43e3-e399-4d2f-9590-38b5e8f7d853 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:32.735+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-e3521042-f8d5-41f3-8c99-88b88a8aec45 eventId=null outcome=LEASED_1 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:32.735+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingWorkerOutboxBrokerSink    : outbox_event_published eventId=c13cf2b7-8bf6-477d-beae-157de0c77d74 tenantId=tenant-tc002-e3521042-f8d5-41f3-8c99-88b88a8aec45 topic=audit
+2026-10-06T00:16:32.736+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-e3521042-f8d5-41f3-8c99-88b88a8aec45 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-06T00:16:32.740+05:00  INFO 29909 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=published tenantId=tenant-tc002-e3521042-f8d5-41f3-8c99-88b88a8aec45 eventId=c13cf2b7-8bf6-477d-beae-157de0c77d74 outcome=PUBLISHED correlationId=corr-tc002 causationId=cause-tc002
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.privacy.RetentionDeletionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:38" hostname="pc" time="0.047">
+  <properties/>
+  <testcase name="PRIV-001-03-T003 — Enforce retention and deletion survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.privacy.RetentionDeletionTest" time="0.031"/>
+  <testcase name="PRIV-001-03-T004 — Enforce retention and deletion remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.privacy.RetentionDeletionTest" time="0.004"/>
+  <testcase name="PRIV-001-03-T001 — Enforce retention and deletion produces the required authoritative outcome()" classname="com.slotting.admin.privacy.RetentionDeletionTest" time="0.001"/>
+  <testcase name="PRIV-001-03-T002 — Enforce retention and deletion rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.privacy.RetentionDeletionTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

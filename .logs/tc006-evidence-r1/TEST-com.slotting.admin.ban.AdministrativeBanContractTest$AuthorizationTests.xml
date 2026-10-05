@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="1. RBAC and Session Authorization Contracts" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:08:25" hostname="pc" time="0.299">
+  <properties/>
+  <testcase name="Support role with RESTRICTIONS_MANAGE is permitted()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$AuthorizationTests" time="0.29"/>
+  <testcase name="Cross-tenant administrator throws FORBIDDEN()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$AuthorizationTests" time="0.002"/>
+  <testcase name="Expired session throws FORBIDDEN()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$AuthorizationTests" time="0.001"/>
+  <testcase name="Unauthenticated command throws UNAUTHENTICATED()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$AuthorizationTests" time="0.001"/>
+  <testcase name="Principal lacking RESTRICTIONS_MANAGE permission throws FORBIDDEN()" classname="com.slotting.admin.ban.AdministrativeBanContractTest$AuthorizationTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

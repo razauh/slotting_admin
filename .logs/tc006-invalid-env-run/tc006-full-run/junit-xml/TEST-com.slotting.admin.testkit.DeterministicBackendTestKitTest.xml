@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.testkit.DeterministicBackendTestKitTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:47" hostname="pc" time="0.023">
+  <properties/>
+  <testcase name="TEST-001-01-T002 Create deterministic backend test kit rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.testkit.DeterministicBackendTestKitTest" time="0.005"/>
+  <testcase name="TEST-001-01-T001 Create deterministic backend test kit produces the required authoritative outcome()" classname="com.slotting.admin.testkit.DeterministicBackendTestKitTest" time="0.007"/>
+  <testcase name="TEST-001-01-T003 Create deterministic backend test kit survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.testkit.DeterministicBackendTestKitTest" time="0.01"/>
+  <testcase name="TEST-001-01-T004 Create deterministic backend test kit remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.testkit.DeterministicBackendTestKitTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

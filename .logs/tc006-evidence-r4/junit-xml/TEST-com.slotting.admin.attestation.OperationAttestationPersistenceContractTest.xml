@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.attestation.OperationAttestationPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:56:18" hostname="pc" time="0.022">
+  <properties/>
+  <testcase name="V36 migration script defines all required schema objects, indexes, and idempotency constraints()" classname="com.slotting.admin.attestation.OperationAttestationPersistenceContractTest" time="0.018"/>
+  <testcase name="InMemoryOperationChallengeStore satisfies challenge saving, consumption, and audit idempotency contracts()" classname="com.slotting.admin.attestation.OperationAttestationPersistenceContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

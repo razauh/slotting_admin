@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.ban.AdministrativeBanPersistenceContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:15:42" hostname="pc" time="0.002">
+  <properties/>
+  <testcase name="V32 migration script exists and defines required administrative ban tables()" classname="com.slotting.admin.ban.AdministrativeBanPersistenceContractTest" time="0.001"/>
+  <testcase name="InMemoryAdministrativeBanStore satisfies durable ban CRUD and idempotency contracts()" classname="com.slotting.admin.ban.AdministrativeBanPersistenceContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

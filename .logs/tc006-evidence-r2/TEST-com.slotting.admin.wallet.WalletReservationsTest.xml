@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.wallet.WalletReservationsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:42" hostname="pc" time="0.029">
+  <properties/>
+  <testcase name="WALLET-003-T004 Reservations remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.wallet.WalletReservationsTest" time="0.01"/>
+  <testcase name="WALLET-003-T001 Reservations produces the required authoritative outcome()" classname="com.slotting.admin.wallet.WalletReservationsTest" time="0.005"/>
+  <testcase name="WALLET-003-T003 Reservations survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.wallet.WalletReservationsTest" time="0.007"/>
+  <testcase name="WALLET-003-T002 Reservations rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.wallet.WalletReservationsTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.AdminAuthorizationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:33" hostname="pc" time="0.032">
+  <properties/>
+  <testcase name="ADMIN-001-03-T001 Enforce segregation of duties and break-glass controls produces authoritative outcome()" classname="com.slotting.admin.auth.AdminAuthorizationTest" time="0.008"/>
+  <testcase name="ADMIN-001-03-T003 Enforce segregation of duties and break-glass controls survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.auth.AdminAuthorizationTest" time="0.009"/>
+  <testcase name="ADMIN-001-03-T004 Enforce segregation of duties and break-glass controls remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.auth.AdminAuthorizationTest" time="0.005"/>
+  <testcase name="ADMIN-001-03-T002 Enforce segregation of duties and break-glass controls rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.auth.AdminAuthorizationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

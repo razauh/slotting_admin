@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.auth.ApiResourceOwnershipTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T16:55:05" hostname="pc" time="0.091">
+  <properties/>
+  <testcase name="AUTHZ-002-01-T004 Enforce API resource ownership remains compatible recoverable observable and lifecycle-safe()" classname="com.slotting.admin.auth.ApiResourceOwnershipTest" time="0.003">
+    <failure message="org.opentest4j.AssertionFailedError: Found illegal migrations &gt; V16: [V32__durable_administrative_bans.sql, V39__atomic_command_sequence_allocation.sql, V17__operational_schemas.sql, V40__deterministic_command_keys_and_early_claim.sql, V23__payment_method_lifecycle.sql, V37__authoritative_analytics_facts_and_projections.sql, V27__authoritative_account_support_and_closure.sql, V36__operation_bound_attestation_challenges.sql, V30__authoritative_game_snapshot_and_event_checkpoint.sql, V34__durable_fraud_risk_event_and_rule_evaluation.sql, V28__durable_game_wager_and_settlement_authority.sql, V22__lossless_timeline_and_wallet_projection.sql, V19__durable_auth_sessions.sql, V26__durable_payout_dispatch_and_reconciliation.sql, V33__durable_responsible_gaming_limits_and_exclusions.sql, V21__persistent_double_entry_ledger.sql, V29__outcome_bound_fairness_authority.sql, V20__dual_control_approvals.sql, V31__distinct_server_restriction_sources_and_policy_matrix.sql, V24__durable_deposit_workflow.sql, V38__secure_password_reset_token.sql, V18__durable_delivery_substrate.sql, V25__authoritative_withdrawal_workflow.sql, V35__durable_fraud_cases_and_dispositions.sql]" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Found illegal migrations &gt; V16: [V32__durable_administrative_bans.sql, V39__atomic_command_sequence_allocation.sql, V17__operational_schemas.sql, V40__deterministic_command_keys_and_early_claim.sql, V23__payment_method_lifecycle.sql, V37__authoritative_analytics_facts_and_projections.sql, V27__authoritative_account_support_and_closure.sql, V36__operation_bound_attestation_challenges.sql, V30__authoritative_game_snapshot_and_event_checkpoint.sql, V34__durable_fraud_risk_event_and_rule_evaluation.sql, V28__durable_game_wager_and_settlement_authority.sql, V22__lossless_timeline_and_wallet_projection.sql, V19__durable_auth_sessions.sql, V26__durable_payout_dispatch_and_reconciliation.sql, V33__durable_responsible_gaming_limits_and_exclusions.sql, V21__persistent_double_entry_ledger.sql, V29__outcome_bound_fairness_authority.sql, V20__dual_control_approvals.sql, V31__distinct_server_restriction_sources_and_policy_matrix.sql, V24__durable_deposit_workflow.sql, V38__secure_password_reset_token.sql, V18__durable_delivery_substrate.sql, V25__authoritative_withdrawal_workflow.sql, V35__durable_fraud_cases_and_dispositions.sql]
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertTrue(Assertions.kt:44)
+	at app//kotlin.test.AssertionsKt.assertTrue(Unknown Source)
+	at app//com.slotting.admin.auth.ApiResourceOwnershipTest.AUTHZ-002-01-T004 Enforce API resource ownership remains compatible recoverable observable and lifecycle-safe(ApiResourceOwnershipTest.kt:579)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="AUTHZ-002-01-T003 Enforce API resource ownership survives concurrency duplicate delivery and dependency failure()" classname="com.slotting.admin.auth.ApiResourceOwnershipTest" time="0.047"/>
+  <testcase name="AUTHZ-002-01-T002 Enforce API resource ownership rejects invalid boundary unauthorized and stale input()" classname="com.slotting.admin.auth.ApiResourceOwnershipTest" time="0.022"/>
+  <testcase name="AUTHZ-002-01-T001 Enforce API resource ownership produces the required authoritative outcome()" classname="com.slotting.admin.auth.ApiResourceOwnershipTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

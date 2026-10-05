@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:02:21" hostname="pc" time="0.043">
+  <properties/>
+  <testcase name="three distinct human players provide client seeds for round()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.011"/>
+  <testcase name="wager exceeding aggregate round liability cap is rejected with ROUND_CAPACITY_REACHED()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.006"/>
+  <testcase name="fewer than 3 players deterministically fill fallback seeds()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.007"/>
+  <testcase name="standalone verifier reproduces multiplier deterministically without dependencies()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.003"/>
+  <testcase name="server tick authority rejects cashout if round crashed or current multiplier exceeds crash multiplier()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.005"/>
+  <testcase name="cashout payout is capped at MAX_PAYOUT_PER_BET()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.004"/>
+  <testcase name="instant bust condition produces exactly 1_00x multiplier()" classname="com.slotting.admin.gameprovider.SpribeProvablyFairCrashEngineTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

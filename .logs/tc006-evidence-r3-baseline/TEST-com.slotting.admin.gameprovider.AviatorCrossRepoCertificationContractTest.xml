@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:49:56" hostname="pc" time="1.314">
+  <properties/>
+  <testcase name="Cross-tenant access returns 403 Forbidden" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.276"/>
+  <testcase name="Bet limits endpoint returns schemaVersion 1 required by Android parser" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.117"/>
+  <testcase name="Stale expectedRoundVersion returns 409 CONFLICT" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.056"/>
+  <testcase name="Bootstrap returns exact schemaVersion 1, rules 1.0.0, protocol 1.2.0, and bet limits" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.039"/>
+  <testcase name="Lost response recovery via /api/command-result returns exact original ACK without double charge" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.101"/>
+  <testcase name="POST /api/my-info returns player bets history and GET /api/get-day-history returns top multipliers" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.088"/>
+  <testcase name="PLACE_BET using Android request body with nested accountMoney successfully reserves wager" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.051"/>
+  <testcase name="GET /api/snapshot accepts both ?round_id and ?roundId and returns complete DTO for Android parser" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.052"/>
+  <testcase name="Replay with same commandId but altered amount fails with 409 CONFLICT" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.045"/>
+  <testcase name="Malformed JSON fails closed with 400 Bad Request" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.029"/>
+  <testcase name="Bet placed when round has advanced to FLYING phase is rejected without deducting balance" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.064"/>
+  <testcase name="CANCEL_BET omits amount and refunds authoritative wager exactly" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.061"/>
+  <testcase name="Duplicate command returns cached ACK without double-charging ledger" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.088"/>
+  <testcase name="Non-INR currency in command is rejected" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.054"/>
+  <testcase name="Unauthenticated request to command or snapshot returns 401" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.038"/>
+  <testcase name="Server restart over preserved durable stores recovers state and prevents duplicate charges" classname="com.slotting.admin.gameprovider.AviatorCrossRepoCertificationContractTest" time="0.085"/>
+  <system-out><![CDATA[2026-10-05T20:49:56.197+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.199+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.199+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:56.272+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:56.460+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.461+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.461+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:56.589+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.589+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.590+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:56.641+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.641+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.642+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:56.692+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.695+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.696+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:56.791+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.792+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.793+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:56.857+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:56.880+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.881+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.881+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:56.934+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.935+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.937+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-10-05T20:49:56.993+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:56.993+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:56.994+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.036+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.037+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.038+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:57.053+05:00  WARN 110153 --- [    Test worker] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Unexpected character ('i' (code 105)): was expecting double-quote to start field name]
+2026-10-05T20:49:57.077+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.078+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.078+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.146+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.147+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.147+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.209+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.210+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.210+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.278+05:00  INFO 110153 --- [   scheduling-1] c.s.a.w.LoggingOutboxWorkerObservability : outbox_worker_metric eventType=worker_poll tenantId=tenant-tc002-57fed411-d074-4301-999b-df17136e8fa0 eventId=null outcome=LEASED_0 correlationId=scheduled-outbox-dispatch causationId=spring-scheduler
+2026-10-05T20:49:57.303+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.303+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.304+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.356+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.357+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.358+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-05T20:49:57.405+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.405+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.406+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-05T20:49:57.438+05:00  INFO 110153 --- [    Test worker] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-05T20:49:57.439+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T20:49:57.440+05:00  INFO 110153 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:44:42" hostname="pc" time="0.066">
+  <properties/>
+  <testcase name="WITHDRAW-002-03-T004 Apply maker-checker payout approval remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.028"/>
+  <testcase name="WITHDRAW-002-03-T003 Apply maker-checker payout approval survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.023"/>
+  <testcase name="WITHDRAW-002-03-T002 Apply maker-checker payout approval rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.01"/>
+  <testcase name="WITHDRAW-002-03-T001 Apply maker-checker payout approval produces the required authoritative outcome()" classname="com.slotting.admin.withdrawal.MakerCheckerPayoutApprovalTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.rg.ControlledAccountReopeningTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:03:46" hostname="pc" time="0.042">
+  <properties/>
+  <testcase name="RG-003-02-T002 — Control account reopening rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.rg.ControlledAccountReopeningTest" time="0.012"/>
+  <testcase name="RG-003-02-T001 — Control account reopening produces the required authoritative outcome()" classname="com.slotting.admin.rg.ControlledAccountReopeningTest" time="0.004"/>
+  <testcase name="RG-003-02-T004 — Control account reopening remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.rg.ControlledAccountReopeningTest" time="0.003"/>
+  <testcase name="RG-003-02-T003 — Control account reopening survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.rg.ControlledAccountReopeningTest" time="0.023"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

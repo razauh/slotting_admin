@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:57:13" hostname="pc" time="0.374">
+  <properties/>
+  <testcase name="test07 client return URL alone is rejected and never credits ledger or settles intent()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.006"/>
+  <testcase name="test08 reconciliation resolves ambiguous intent and posts ledger credit exactly once()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.11"/>
+  <testcase name="test03 duplicate intent returns cached result with same fingerprint or CONFLICT on altered payload()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.017"/>
+  <testcase name="test06 invalid callback signature or tampered payload is rejected and does not credit ledger()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.027"/>
+  <testcase name="test05 authenticated callback with valid signature credits ledger exactly once and transitions intent to SETTLED()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.046"/>
+  <testcase name="test10 zero credentials or secrets exposed in intent response or launch data()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.057"/>
+  <testcase name="test04 provider timeout during dispatch transitions intent to AMBIGUOUS_RECONCILING without failing prematurely()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.012"/>
+  <testcase name="test02 create intent rejects unauthenticated, foreign tenant, inactive method, or amount bounds violation()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.02"/>
+  <testcase name="test01 create intent persists intent, revalidates method, and dispatches to provider()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.009"/>
+  <testcase name="test09 concurrent callbacks allow exactly one ledger credit and reject duplicate credit()" classname="com.slotting.admin.deposit.DurableDepositWorkflowContractTest" time="0.054"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:27" hostname="pc" time="0.039">
+  <properties/>
+  <testcase name="scenario02 changed secret seed fails hash verification and raises alert()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.002"/>
+  <testcase name="scenario04 duplicate commitment for same round is rejected()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.002"/>
+  <testcase name="scenario11 V29 migration script exists and specifies all fairness invariants()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.002"/>
+  <testcase name="scenario03 changed algorithm or rules version fails verification()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.003"/>
+  <testcase name="scenario05 provider timeout holds settlement and marks round in pending reconciliation()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.003"/>
+  <testcase name="scenario09 independent verifier reproduces exact outcome from revealed seed and public salt()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.004"/>
+  <testcase name="scenario07 persistent fairness records survive service restart()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.005"/>
+  <testcase name="scenario01 committing or modifying commitment after bet has been placed fails closed()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.004"/>
+  <testcase name="scenario06 verification of unrevealed round returns pending reveal status without leaking secret()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.002"/>
+  <testcase name="scenario10 tampered multiplier evidence is detected and fails verification()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.003"/>
+  <testcase name="scenario08 key rotation produces distinct cryptographically unguessable seeds across rounds()" classname="com.slotting.admin.gameprovider.DurableOutcomeBoundFairnessContractTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

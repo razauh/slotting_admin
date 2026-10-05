@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - ProductionBeanGraphAndCompositionContractTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>ProductionBeanGraphAndCompositionContractTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.slotting.admin.composition.html">com.slotting.admin.composition</a> &gt; ProductionBeanGraphAndCompositionContractTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">17</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">18.616s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">TC040-01 production bean graph validator rejects in-memory or fake authoritative beans()</td>
+<td class="success">0.533s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-02 production bean graph validator accepts durable JDBC implementations()</td>
+<td class="success">0.038s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-03 production composition binds critical payment and game domain bindings()</td>
+<td class="success">0.002s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-04 security filter rejects unauthenticated request on protected route with 401()</td>
+<td class="success">0.568s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-05 security filter allows public endpoint without authentication()</td>
+<td class="success">0.010s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-06 security filter validates Bearer token and injects authenticated principal()</td>
+<td class="success">0.016s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-07 security filter rejects expired or invalid Bearer token with 401()</td>
+<td class="success">0.020s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-08 readiness health indicator reports UP when all dependencies are ready()</td>
+<td class="success">0.013s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-09 readiness health indicators fail closed (DOWN) when any dependency is degraded()</td>
+<td class="success">0.007s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-10 schema migration indicator fails closed if schema version does not match V37()</td>
+<td class="success">0.024s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-11 jdbc admin session directory resolves active sessions from durable database()</td>
+<td class="success">0.014s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-12 jdbc admin session directory returns null for non-existent session()</td>
+<td class="success">0.232s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-13 end to end player wallet snapshot smoke journey with verified principal()</td>
+<td class="success">0.255s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-14 normal boot and bean graph inspection with production composition()</td>
+<td class="success">16.522s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-15 readiness transition dynamically reflects dependency health()</td>
+<td class="success">0.003s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-16 context restart cleanly runs without orphan state()</td>
+<td class="success">0.357s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">TC040-17 partial feature degradation keeps capability unavailable and marks readiness DOWN()</td>
+<td class="success">0.002s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>20:56:54.628 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Validating production bean graph for banned fake/in-memory authoritative implementations...
+20:56:54.632 [Test worker] ERROR com.slotting.admin.config.ProductionBeanGraphValidator -- Authoritative singleton 'inMemoryStore' with class 'com.slotting.admin.auth.InMemoryDurableAuthStore' matches prohibited pattern '.*InMemory.*(Store|Service|Directory|Queue|Sink|Gate).*' and is prohibited in production profile! (TC-040 fail-closed invariant)
+20:57:09.345 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- ProductionBeanGraphValidator skipped: not running in production profile
+20:57:09.399 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:09.448 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:11.216 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Validating production bean graph for banned fake/in-memory authoritative implementations...
+20:57:11.231 [Test worker] INFO com.slotting.admin.config.ProductionBeanGraphValidator -- Production bean graph validation passed: 0 banned fakes or memory stores detected.
+20:57:12.304 [Test worker] WARN com.slotting.admin.security.SecurityAuthenticationFilter -- Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+20:57:12.339 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.340 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:12.391 [Test worker] WARN com.slotting.admin.security.SecurityAuthenticationFilter -- Unauthorized access attempt to protected route: uri=/api/v1/tenants/tenant-1/wallet/snapshot
+20:57:12.506 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.513 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+20:57:12.676 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Initializing production domain bindings...
+20:57:12.676 [Test worker] INFO com.slotting.admin.config.ProductionDomainBindingInitializer -- Production domain bindings initialized successfully.
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.7</a> at Oct 5, 2026, 8:58:34 PM</p>
+</div>
+</div>
+</body>
+</html>

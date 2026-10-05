@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.observability.OperationalObservabilityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:50:14" hostname="pc" time="0.02">
+  <properties/>
+  <testcase name="OBS-001-01-T004 — Emit correlated structured logs, metrics, and traces remains compatible, recoverable, observable, and lifecycle-safe" classname="com.slotting.admin.observability.OperationalObservabilityTest" time="0.002"/>
+  <testcase name="OBS-001-01-T002 — Emit correlated structured logs, metrics, and traces rejects invalid, boundary, unauthorized, and stale input" classname="com.slotting.admin.observability.OperationalObservabilityTest" time="0.006"/>
+  <testcase name="OBS-001-01-T003 — Emit correlated structured logs, metrics, and traces survives concurrency, duplicate delivery, and dependency failure" classname="com.slotting.admin.observability.OperationalObservabilityTest" time="0.009"/>
+  <testcase name="OBS-001-01-T001 — Emit correlated structured logs, metrics, and traces produces the required authoritative outcome" classname="com.slotting.admin.observability.OperationalObservabilityTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

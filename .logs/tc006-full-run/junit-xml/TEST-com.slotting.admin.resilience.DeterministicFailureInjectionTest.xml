@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.resilience.DeterministicFailureInjectionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.021">
+  <properties/>
+  <testcase name="RES-001-01-T002 — Build deterministic failure-injection experiments rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.resilience.DeterministicFailureInjectionTest" time="0.01"/>
+  <testcase name="RES-001-01-T001 — Build deterministic failure-injection experiments produces the required authoritative outcome()" classname="com.slotting.admin.resilience.DeterministicFailureInjectionTest" time="0.004"/>
+  <testcase name="RES-001-01-T003 — Build deterministic failure-injection experiments survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.resilience.DeterministicFailureInjectionTest" time="0.003"/>
+  <testcase name="RES-001-01-T004 — Build deterministic failure-injection experiments remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.resilience.DeterministicFailureInjectionTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotting.admin.payment.DepositStateMachineTest" tests="4" skipped="0" failures="1" errors="0" timestamp="2026-10-05T19:16:34" hostname="pc" time="0.034">
+  <properties/>
+  <testcase name="PAYMENT-002-T002 — Deposit state machine rejects invalid, boundary, unauthorized, and stale input()" classname="com.slotting.admin.payment.DepositStateMachineTest" time="0.015"/>
+  <testcase name="PAYMENT-002-T003 — Deposit state machine survives concurrency, duplicate delivery, and dependency failure()" classname="com.slotting.admin.payment.DepositStateMachineTest" time="0.011"/>
+  <testcase name="PAYMENT-002-T001 — Deposit state machine produces the required authoritative outcome()" classname="com.slotting.admin.payment.DepositStateMachineTest" time="0.004"/>
+  <testcase name="PAYMENT-002-T004 — Deposit state machine remains compatible, recoverable, observable, and lifecycle-safe()" classname="com.slotting.admin.payment.DepositStateMachineTest" time="0.002">
+    <failure message="org.opentest4j.AssertionFailedError: V17 must not be created prematurely" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: V17 must not be created prematurely
+	at app//org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at app//org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at app//kotlin.test.junit5.JUnit5Asserter.fail(JUnitSupport.kt:56)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:652)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.Asserter$DefaultImpls.assertTrue(Assertions.kt:662)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertTrue(JUnitSupport.kt:30)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertFalse(Assertions.kt:58)
+	at app//kotlin.test.AssertionsKt.assertFalse(Unknown Source)
+	at app//com.slotting.admin.payment.DepositStateMachineTest.PAYMENT-002-T004 — Deposit state machine remains compatible, recoverable, observable, and lifecycle-safe(DepositStateMachineTest.kt:624)
+	at java.base@17.0.20/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.20/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
