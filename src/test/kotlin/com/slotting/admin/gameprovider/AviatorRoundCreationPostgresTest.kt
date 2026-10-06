@@ -134,7 +134,8 @@ class AviatorRoundCreationPostgresTest {
             registrationStore = registrationStore,
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
-            clock = clock
+            clock = clock,
+            txManager = txManager,
         )
         fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
@@ -309,7 +310,8 @@ class AviatorRoundCreationPostgresTest {
                 registrationStore = registrationStore,
                 eligibilityStore = eligibilityStore,
                 adminPrincipal = adminPrincipal,
-                clock = testClock
+                clock = testClock,
+                txManager = txManager,
             ),
             fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = testClock),
             snapshotService = snapshotService,

@@ -151,7 +151,8 @@ class AviatorPostgresIntegrationTest {
             registrationStore = registrationStore,
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
-            clock = clock
+            clock = clock,
+            txManager = txManager,
         )
 
         jdbc.update(

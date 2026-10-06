@@ -37,7 +37,7 @@ data class GameCommandRequest(
 
 @RestController
 @RequestMapping("/api")
-@ConditionalOnBean(DurableGameWagerAndSettlementService::class)
+@ConditionalOnBean(value = [DurableGameWagerAndSettlementService::class, AuthoritativeGameSnapshotAndEventService::class])
 class AviatorGameRestController(
     private val snapshotAndEventService: AuthoritativeGameSnapshotAndEventService,
     private val gameService: DurableGameWagerAndSettlementService,

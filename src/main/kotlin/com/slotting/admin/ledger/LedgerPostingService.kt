@@ -48,6 +48,14 @@ class PostingStaleVersionException(
     message: String = "Stale version or concurrent modification",
 ) : LedgerPostingException("STALE_VERSION", message)
 
+class InsufficientAccountBalanceException(
+    message: String = "Insufficient account balance for authoritative debit",
+) : LedgerPostingException("INSUFFICIENT_FUNDS", message)
+
+class AccountLockTimeoutException(
+    message: String = "Timed out waiting for the authoritative account lock",
+) : LedgerPostingException("LOCK_TIMEOUT", message)
+
 data class DirectBalanceWriteCommand(
     val principal: AuthenticatedPrincipal?,
     val tenantId: String,
@@ -69,6 +77,7 @@ data class PostTransactionCommand(
     val operationId: UUID = UUID.randomUUID(),
     val effectiveAt: Instant? = null,
     val compensationForReference: String? = null,
+    val requireNonNegativeAccounts: Boolean = false,
 )
 
 data class PostingResult(
@@ -210,6 +219,26 @@ open class LedgerPostingService(
                 throw PostingInvalidException(
                     "Transaction unbalanced: debits ($totalDebits) != credits ($totalCredits)"
                 )
+            }
+
+            if (command.requireNonNegativeAccounts) {
+                val debitsByAccount = command.entries
+                    .filter { it.direction == JournalEntryDirection.DEBIT && it.accountReference.startsWith("PLAYER:") }
+                    .groupBy { it.accountReference }
+                    .mapValues { (_, entries) -> entries.sumOf { it.amountMinorUnits } }
+                for ((account, debitTotal) in debitsByAccount) {
+                    if (!store.lockAccount(command.tenantId, account, command.currencyCode)) {
+                        throw AccountLockTimeoutException(
+                            "Timed out acquiring the account lock for $account"
+                        )
+                    }
+                    val balance = store.findBalance(command.tenantId, account, command.currencyCode)
+                    if (balance - debitTotal < 0L) {
+                        throw InsufficientAccountBalanceException(
+                            "Account $account balance $balance is below required debit $debitTotal"
+                        )
+                    }
+                }
             }
 
             val resultId = command.operationId

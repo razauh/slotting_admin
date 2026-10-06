@@ -19,6 +19,9 @@ interface LedgerJournalStore {
     fun findLegs(tenantId: String, transactionId: UUID): List<JournalEntryRecord>
     fun findAllLegsForTenant(tenantId: String): List<JournalEntryRecord>
     fun findBalance(tenantId: String, accountReference: String, currencyCode: String): Long
+    fun lockAccount(tenantId: String, accountReference: String, currencyCode: String): Boolean {
+        return true
+    }
     fun nextLedgerVersion(tenantId: String): Long
     fun save(
         result: PostingResult,
@@ -100,6 +103,7 @@ open class InMemoryLedgerJournalStore : LedgerJournalStore {
 @Repository
 open class JdbcLedgerJournalStore(
     private val jdbc: JdbcTemplate,
+    private val lockWaitMillis: Long = 5000L,
 ) : LedgerJournalStore {
 
     override fun findByIdempotency(tenantId: String, idempotencyKey: String): Pair<String, PostingResult>? {
@@ -141,6 +145,25 @@ open class JdbcLedgerJournalStore(
             where tenant_id = ? and account_reference = ? and currency_code = ?
         """.trimIndent()
         return jdbc.queryForObject(query, Long::class.java, tenantId, accountReference, currencyCode) ?: 0L
+    }
+
+    override fun lockAccount(tenantId: String, accountReference: String, currencyCode: String): Boolean {
+        val key = "$tenantId:$accountReference:$currencyCode"
+        val deadline = System.nanoTime() + lockWaitMillis * 1_000_000L
+        while (true) {
+            val acquired = jdbc.queryForObject(
+                "select pg_try_advisory_xact_lock(hashtext(?))",
+                Boolean::class.java,
+                key,
+            ) ?: false
+            if (acquired) {
+                return true
+            }
+            if (System.nanoTime() >= deadline) {
+                return false
+            }
+            Thread.sleep(20)
+        }
     }
 
     @Transactional

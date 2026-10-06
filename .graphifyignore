@@ -287,3 +287,7 @@ Desktop.ini
 # Backups made by this initializer, if any are created manually
 .graphifyignore.backup.*
 # <<< graphify initializer: managed ignores <<<
+
+# Repository-local agent tooling and test/run output
+.scripts/
+.logs/

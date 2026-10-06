@@ -156,7 +156,7 @@ class DurableGameWagerAndSettlementService(
             // Sweep escrow to house revenue via double-entry ledger
             ledgerService.postTransaction(
                 PostTransactionCommand(
-                    principal = adminPrincipal,
+                    principal = ledgerPrincipal(command.tenantId),
                     tenantId = command.tenantId,
                     transactionReference = txRef,
                     currencyCode = bet.currencyCode,
@@ -220,12 +220,32 @@ class DurableGameWagerAndSettlementService(
 
         // 2. Command Idempotency & Exact Cached Replay
         val fp = computeCommandFingerprint(command)
-        val existingReceipt = store.findReceipt(command.tenantId, command.commandId)
-        if (existingReceipt != null) {
-            if (existingReceipt.fingerprint != fp) {
+        val claim = GameCommandReceiptClaim(
+            receiptId = UUID.randomUUID(),
+            tenantId = command.tenantId,
+            ownerId = playerId,
+            gameId = gameId,
+            commandId = command.commandId,
+            roundId = command.roundId,
+            handId = command.handId,
+            action = command.action,
+            fingerprint = fp,
+            causationId = command.causationId,
+            correlationId = command.correlationId,
+            roundVersion = command.expectedRoundVersion ?: 1L,
+            createdAt = now,
+        )
+        val claimOutcome = try {
+            store.claimReceipt(claim)
+        } catch (e: CommandClaimConflictException) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+        }
+        if (claimOutcome is CommandReceiptClaimResult.AlreadyClaimed) {
+            val stored = claimOutcome.receipt
+            if (stored.fingerprint != fp) {
                 throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
             }
-            return objectMapper.readValue(existingReceipt.responseJson, AviatorCommandAckResult::class.java)
+            return objectMapper.readValue(stored.responseJson, AviatorCommandAckResult::class.java)
         }
 
         // 3. Resolve Round
@@ -501,7 +521,7 @@ class DurableGameWagerAndSettlementService(
         try {
             ledgerService.postTransaction(
                 PostTransactionCommand(
-                    principal = adminPrincipal,
+                    principal = ledgerPrincipal(command.tenantId),
                     tenantId = command.tenantId,
                     transactionReference = txRef,
                     currencyCode = command.currency,
@@ -512,9 +532,18 @@ class DurableGameWagerAndSettlementService(
                     idempotencyKey = placeBetKey,
                     correlationId = command.correlationId,
                     causationId = command.causationId,
+                    requireNonNegativeAccounts = true,
                 )
             )
         } catch (e: Exception) {
+            val partiallyPosted = try {
+                ledgerService.store.findByIdempotency(command.tenantId, placeBetKey) != null
+            } catch (_: Exception) {
+                false
+            }
+            if (partiallyPosted) {
+                throw e
+            }
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -603,7 +632,7 @@ class DurableGameWagerAndSettlementService(
         }
 
         // Retrieve accepted bet
-        val bet = store.findBet(command.tenantId, gameId, command.roundId, playerId, command.handId)
+        val bet = store.findBetForUpdate(command.tenantId, gameId, command.roundId, playerId, command.handId)
         if (bet == null || bet.status != GameBetStatus.ACCEPTED) {
             return recordAndReturnRejection(
                 command = command,
@@ -635,10 +664,22 @@ class DurableGameWagerAndSettlementService(
         val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
         val txRef = AviatorCommandKeys.ledgerTransactionReference("CANCEL", settlementKey)
 
+        if (!store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.ACCEPTED, GameBetStatus.CANCELLED, now)) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.INVALID_HAND_STATE,
+                message = "Bet ${bet.betId} is no longer cancelable",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        }
+
         // Ledger reversal: Debit Escrow, Credit Player
         ledgerService.postTransaction(
             PostTransactionCommand(
-                principal = adminPrincipal,
+                principal = ledgerPrincipal(command.tenantId),
                 tenantId = command.tenantId,
                 transactionReference = txRef,
                 currencyCode = bet.currencyCode,
@@ -651,10 +692,6 @@ class DurableGameWagerAndSettlementService(
                 causationId = command.causationId,
             )
         )
-
-        bet.status = GameBetStatus.CANCELLED
-        bet.updatedAt = now
-        store.updateBet(bet)
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(
@@ -799,7 +836,7 @@ class DurableGameWagerAndSettlementService(
 
         ledgerService.postTransaction(
             PostTransactionCommand(
-                principal = adminPrincipal,
+                principal = ledgerPrincipal(command.tenantId),
                 tenantId = command.tenantId,
                 transactionReference = txRef,
                 currencyCode = bet.currencyCode,
@@ -888,27 +925,8 @@ class DurableGameWagerAndSettlementService(
         ack: AviatorCommandAckResult,
         roundVersion: Long,
     ) {
-        val now = clock.instant()
         val json = objectMapper.writeValueAsString(ack)
-        val receipt = GameCommandReceiptRecord(
-            receiptId = UUID.randomUUID(),
-            tenantId = command.tenantId,
-            ownerId = ownerId,
-            gameId = gameId,
-            commandId = command.commandId,
-            roundId = command.roundId,
-            handId = command.handId,
-            action = command.action,
-            status = ack.status.name,
-            fingerprint = fp,
-            responseJson = json,
-            causationId = command.causationId,
-            correlationId = command.correlationId,
-            serverSequenceId = ack.sequenceId,
-            roundVersion = roundVersion,
-            createdAt = now,
-        )
-        store.saveReceipt(receipt)
+        store.completeReceipt(command.tenantId, command.commandId, ack.status.name, json, ack.sequenceId, roundVersion)
     }
 
     private fun recordAndReturnRejection(
@@ -949,6 +967,8 @@ class DurableGameWagerAndSettlementService(
         recordReceipt(command, ownerId, gameId, fp, ack, roundVersion)
         return ack
     }
+
+    private fun ledgerPrincipal(tenantId: String): AuthenticatedPrincipal = adminPrincipal.copy(tenantId = tenantId)
 
     private fun computeCommandFingerprint(command: AviatorRestCommand): String {
         val raw = "${command.tenantId}:${command.commandId}:${command.roundId}:${command.handId}:${command.action}:${command.wagerMinor}:${command.currency}"

@@ -19,9 +19,11 @@ interface DurableGameWagerAndSettlementStore {
     fun insertRound(round: GameRoundRecord)
     fun updateRound(round: GameRoundRecord, expectedVersion: Long, allowedPriorPhases: Set<GameRoundPhase> = emptySet())
     fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord?
+    fun findBetForUpdate(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord?
     fun findBetsForRound(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord>
     fun saveBet(bet: GameAcceptedBetRecord)
     fun updateBet(bet: GameAcceptedBetRecord)
+    fun transitionBetStatus(betId: UUID, tenantId: String, from: GameBetStatus, to: GameBetStatus, updatedAt: Instant): Boolean
     fun findSettlement(tenantId: String, betId: UUID): GameBetSettlementRecord?
     fun saveSettlement(settlement: GameBetSettlementRecord)
     fun findReceipt(tenantId: String, commandId: String): GameCommandReceiptRecord?
@@ -103,6 +105,10 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
         return bets[betKey(tenantId, gameId, roundId, ownerId, handId)]?.copy()
     }
 
+    override fun findBetForUpdate(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {
+        return findBet(tenantId, gameId, roundId, ownerId, handId)
+    }
+
     override fun findBetsForRound(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord> {
         val prefix = "$tenantId:$gameId:$roundId:"
         return bets.filterKeys { it.startsWith(prefix) }.values.map { it.copy() }
@@ -121,6 +127,17 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
     override fun updateBet(bet: GameAcceptedBetRecord) {
         val key = betKey(bet.tenantId, bet.gameId, bet.roundId, bet.ownerId, bet.handId)
         bets[key] = bet.copy()
+    }
+
+    @Synchronized
+    override fun transitionBetStatus(betId: UUID, tenantId: String, from: GameBetStatus, to: GameBetStatus, updatedAt: Instant): Boolean {
+        val entry = bets.entries.firstOrNull { it.value.tenantId == tenantId && it.value.betId == betId } ?: return false
+        val current = entry.value
+        if (current.status != from) {
+            return false
+        }
+        bets[entry.key] = current.copy(status = to, updatedAt = updatedAt)
+        return true
     }
 
     override fun findSettlement(tenantId: String, betId: UUID): GameBetSettlementRecord? {
@@ -390,6 +407,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
         return list.firstOrNull()
     }
 
+    override fun findBetForUpdate(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {
+        val sql = """
+            select bet_id, tenant_id, owner_id, game_id, round_id, hand_id, wager_minor_units,
+                   currency_code, reservation_id, ledger_reservation_ref, status, created_at, updated_at
+            from game_accepted_bet
+            where tenant_id = ? and game_id = ? and round_id = ? and owner_id = ? and hand_id = ?
+            for update
+        """.trimIndent()
+        val list = jdbcTemplate.query(sql, { rs, _ -> mapBet(rs) }, tenantId, gameId, roundId, ownerId, handId)
+        return list.firstOrNull()
+    }
+
     override fun findBetsForRound(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord> {
         val sql = """
             select bet_id, tenant_id, owner_id, game_id, round_id, hand_id, wager_minor_units,
@@ -440,6 +469,17 @@ open class JdbcDurableGameWagerAndSettlementStore(
             bet.betId,
             bet.tenantId
         )
+    }
+
+    @Transactional
+    override fun transitionBetStatus(betId: UUID, tenantId: String, from: GameBetStatus, to: GameBetStatus, updatedAt: Instant): Boolean {
+        val sql = """
+            update game_accepted_bet
+            set status = ?, updated_at = ?
+            where bet_id = ? and tenant_id = ? and status = ?
+        """.trimIndent()
+        val rows = jdbcTemplate.update(sql, to.name, Timestamp.from(updatedAt), betId, tenantId, from.name)
+        return rows > 0
     }
 
     override fun findSettlement(tenantId: String, betId: UUID): GameBetSettlementRecord? {
