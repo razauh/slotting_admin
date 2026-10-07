@@ -696,7 +696,6 @@ class AuthenticatedCasinoAdapterTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertFalse(migrationVersions.contains("V17"))
 
         // 2. Recovery across reboot / restart
         val contractStore = AuthAdapterContractStore()

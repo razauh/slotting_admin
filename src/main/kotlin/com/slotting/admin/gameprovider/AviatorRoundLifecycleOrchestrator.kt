@@ -64,7 +64,7 @@ class ProductionAviatorLifecyclePort(
     private val gameService: DurableGameWagerAndSettlementService,
     private val fairnessAuthority: ProvablyFairOutcomeAuthority,
     private val snapshotService: AuthoritativeGameSnapshotAndEventService,
-    private val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
+    private val txManager: org.springframework.transaction.PlatformTransactionManager,
 ) : AviatorLifecyclePort {
     override fun latestRound(tenantId: String, gameId: String): GameRoundRecord? =
         gameService.store.findLatestRound(tenantId, gameId)
@@ -91,7 +91,7 @@ class ProductionAviatorLifecyclePort(
             val commitment = ensureCommitment(tenantId, gameId, roundId, properties)
             round to commitment
         }
-        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        return org.springframework.transaction.support.TransactionTemplate(txManager).execute { action() }
     }
 
     override fun ensureCommitment(

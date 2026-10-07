@@ -36,6 +36,10 @@ class SecurityAuthenticationFilter(
             "/actuator",
             "/error",
         )
+
+        private val PUBLIC_EXACT_PATHS = setOf(
+            "/api/bet-limits",
+        )
     }
 
     override fun doFilterInternal(
@@ -51,6 +55,14 @@ class SecurityAuthenticationFilter(
         if (!authHeader.isNullOrBlank() && authHeader.startsWith("Bearer ", ignoreCase = true)) {
             val token = authHeader.substring(7).trim()
             principal = runCatching { authService.validateAccessToken(token) }.getOrNull()
+        }
+
+        // 1b. Resolve principal from X-Session-Token if Bearer did not authenticate
+        if (principal == null) {
+            val sessionToken = request.getHeader("X-Session-Token")
+            if (!sessionToken.isNullOrBlank()) {
+                principal = runCatching { authService.validateAccessToken(sessionToken.trim()) }.getOrNull()
+            }
         }
 
         // 2. Resolve admin session if admin headers are present
@@ -98,6 +110,7 @@ class SecurityAuthenticationFilter(
     }
 
     private fun isPublicPath(uri: String): Boolean {
+        if (uri in PUBLIC_EXACT_PATHS) return true
         return PUBLIC_PATHS.any { publicPath ->
             uri == publicPath || uri.startsWith("$publicPath/")
         }

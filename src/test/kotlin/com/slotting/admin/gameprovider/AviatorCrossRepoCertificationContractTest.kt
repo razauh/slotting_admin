@@ -257,6 +257,7 @@ class AviatorCrossRepoCertificationContractTest {
             get("/api/bootstrap")
                 .header("X-Tenant-Id", testTenantId)
                 .param("gameId", "AVIATOR")
+                .requestAttr("authenticatedPrincipal", player1Principal)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.schemaVersion").value(1))

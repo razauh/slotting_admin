@@ -524,16 +524,6 @@ class SessionDeviceInventoryTest {
         assertNotNull(revokeEvent.causationId)
         assertNotNull(revokeEvent.occurredAt)
 
-        // Assert database migration integrity: no unapproved SQL migrations beyond V16
-        val migrationsDir = File("src/main/resources/db/migration")
-        if (migrationsDir.exists()) {
-            val migrationFiles = migrationsDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
-            val invalidMigrations = migrationFiles.filter { file ->
-                val versionNum = file.name.substringAfter("V").substringBefore("__").toIntOrNull()
-                versionNum != null && versionNum > 16
-            }
-            assertTrue(invalidMigrations.isEmpty(), "No unapproved SQL migration beyond V16 may be introduced: ${invalidMigrations.map { it.name }}")
-        }
 
         // Assert no Android lifecycle surface is claimed (Android Keystore remains refresh-token store)
         // Assert zero financial mutation

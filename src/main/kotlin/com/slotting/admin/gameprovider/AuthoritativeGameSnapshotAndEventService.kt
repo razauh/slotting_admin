@@ -5,7 +5,6 @@ import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.DurableAuthService
-import com.slotting.admin.auth.DurableAuthStore
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.ledger.LedgerJournalStore
@@ -41,7 +40,6 @@ class AuthoritativeGameSnapshotAndEventService(
     private val registrationStore: PlayerRegistrationStore,
     private val clock: Clock = Clock.systemUTC(),
     private val authService: DurableAuthService? = null,
-    private val authStore: DurableAuthStore? = null,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
@@ -314,59 +312,23 @@ class AuthoritativeGameSnapshotAndEventService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         }
 
-        if (authService != null) {
-            val principal = try {
-                authService.validateAccessToken(cleanToken)
-            } catch (e: AuthenticationFailure.Rejected) {
-                throw e
-            } catch (e: SessionStoreOutageException) {
-                throw e
-            } catch (e: Throwable) {
-                throw SessionStoreOutageException("Authentication store error during token validation", e)
-            }
-            if (principal != null) {
-                if (principal.kind != PrincipalKind.PLAYER || principal.tenantId != tenantId) {
-                    throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-                }
-                return principal
-            }
-        }
+        val authority = authService
+            ?: throw SessionStoreOutageException("Authentication authority unavailable")
 
-        if (authStore != null) {
-            val sessionId = try {
-                UUID.fromString(cleanToken)
-            } catch (e: IllegalArgumentException) {
-                null
-            }
-            if (sessionId != null) {
-                val session = try {
-                    authStore.findSession(sessionId)
-                } catch (e: AuthenticationFailure.Rejected) {
-                    throw e
-                } catch (e: SessionStoreOutageException) {
-                    throw e
-                } catch (e: Throwable) {
-                    throw SessionStoreOutageException("Authentication store error during session lookup", e)
-                }
-                if (session != null) {
-                    val now = clock.instant()
-                    if (session.state != com.slotting.admin.auth.SessionState.ACTIVE || session.terminatedAt != null || !now.isBefore(session.expiresAt)) {
-                        throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-                    }
-                    if (session.tenantId != tenantId) {
-                        throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-                    }
-                    return AuthenticatedPrincipal(
-                        id = session.playerId.toString(),
-                        tenantId = session.tenantId,
-                        kind = PrincipalKind.PLAYER,
-                        roles = emptySet(),
-                    )
-                }
-            }
-        }
+        val principal = try {
+            authority.validateAccessToken(cleanToken)
+        } catch (e: AuthenticationFailure.Rejected) {
+            throw e
+        } catch (e: SessionStoreOutageException) {
+            throw e
+        } catch (e: Throwable) {
+            throw SessionStoreOutageException("Authentication store error during token validation", e)
+        } ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
 
-        throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
+        if (principal.kind != PrincipalKind.PLAYER || principal.tenantId != tenantId) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        return principal
     }
 
     fun getPrivatePlayerRoom(tenantId: String, playerId: String): String = "tenant:$tenantId:player:$playerId"

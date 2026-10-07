@@ -491,7 +491,6 @@ class CoolingOffSelfExclusionTest {
 
     @Test
     fun `RG-002-T004 — Cooling-off self-exclusion remains compatible, recoverable, observable, and lifecycle-safe`() {
-        // 1. Schema migration contract: V16 Flyway migration exists, no rogue V17
         val migrationsDir = File("src/main/resources/db/migration")
         val sqlFiles = migrationsDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty(), "Migrations directory must contain Flyway files")

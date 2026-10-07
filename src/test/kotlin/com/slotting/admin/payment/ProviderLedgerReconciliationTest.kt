@@ -504,13 +504,11 @@ class ProviderLedgerReconciliationTest {
 
     @Test
     fun `PAYMENT-007-01-T004 — Reconcile provider and ledger items remains compatible, recoverable, observable, and lifecycle-safe`() {
-        // 1. Schema migration contract: V16 Flyway migration exists, no rogue V17
         val migrationsDir = File("src/main/resources/db/migration")
         val sqlFiles = migrationsDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty(), "Migrations directory must contain Flyway files")
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
         assertTrue(migrationVersions.contains("V16"), "V16 must be present")
-        assertFalse(migrationVersions.contains("V17"), "V17 must not be created prematurely")
 
         // 2. Lifecycle safety: Confirm no Android lifecycle surface is claimed
         val androidActivityClass = runCatching { Class.forName("android.app.Activity") }

@@ -42,6 +42,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -587,6 +588,102 @@ class AviatorRoundCreationPostgresTest {
             clientSeed3 = "00000000000000000000000000000000",
         )
         assertTrue(engineOutcome >= BigDecimal("1.0000"))
+    }
+
+    @Test
+    fun `GivenRoundCreation_WhenTransactionIsObserved_ThenAllRequiredWritesShareOneBoundary`() {
+        val roundId = "aviator-tx-${UUID.randomUUID()}"
+
+        val failingFairnessStore = object : FairnessEvidenceStore by fairnessStore {
+            override fun saveAuditEvent(event: FairnessAuditRecord) {
+                fairnessStore.saveAuditEvent(event)
+                throw RuntimeException("SIMULATED_FAILPOINT_AFTER_AUDIT_WRITE")
+            }
+        }
+        val failingAuthority = ProvablyFairOutcomeAuthority(store = failingFairnessStore, clock = clock)
+        val testPort = ProductionAviatorLifecyclePort(
+            gameService = gameService,
+            fairnessAuthority = failingAuthority,
+            snapshotService = snapshotService,
+            txManager = txManager,
+        )
+
+        assertThrows<Exception> {
+            testPort.createScheduledRoundWithCommitment(tenantId, gameId, roundId, properties)
+        }
+
+        val roundCount = jdbc.queryForObject(
+            "select count(*) from game_authoritative_round where tenant_id = ? and game_id = ? and round_id = ?",
+            Int::class.java,
+            tenantId, gameId, roundId
+        )
+        val commitmentCount = jdbc.queryForObject(
+            "select count(*) from game_fairness_commitment where tenant_id = ? and game_id = ? and round_id = ?",
+            Int::class.java,
+            tenantId, gameId, roundId
+        )
+        val auditCount = jdbc.queryForObject(
+            "select count(*) from game_fairness_audit where tenant_id = ? and round_id = ?",
+            Int::class.java,
+            tenantId, roundId
+        )
+
+        assertEquals(0, roundCount)
+        assertEquals(0, commitmentCount)
+        assertEquals(0, auditCount)
+    }
+
+    @Test
+    fun `GivenRoundCreation_WhenTenantOrRoundKeysDiffer_ThenNoCrossLinkedEvidenceIsCommitted`() {
+        val tenantA = "tenant-tc002-iso-a-${UUID.randomUUID()}"
+        val tenantB = "tenant-tc002-iso-b-${UUID.randomUUID()}"
+        val roundA = "aviator-iso-a-${UUID.randomUUID()}"
+        val roundB = "aviator-iso-b-${UUID.randomUUID()}"
+
+        try {
+            lifecyclePort.createScheduledRoundWithCommitment(tenantA, gameId, roundA, properties)
+            lifecyclePort.createScheduledRoundWithCommitment(tenantB, gameId, roundB, properties)
+
+            val commitmentA = fairnessStore.findCommitment(tenantA, gameId, roundA)
+            assertNotNull(commitmentA)
+            assertEquals(tenantA, commitmentA.tenantId)
+            assertEquals(roundA, commitmentA.roundId)
+
+            val commitmentB = fairnessStore.findCommitment(tenantB, gameId, roundB)
+            assertNotNull(commitmentB)
+            assertEquals(tenantB, commitmentB.tenantId)
+            assertEquals(roundB, commitmentB.roundId)
+
+            assertNull(fairnessStore.findCommitment(tenantA, gameId, roundB))
+            assertNull(fairnessStore.findCommitment(tenantB, gameId, roundA))
+
+            val auditsA = fairnessStore.findAuditEvents(tenantA, roundA)
+            assertEquals(1, auditsA.size)
+            assertEquals(roundA, auditsA.single().roundId)
+            assertEquals("PRE_BET_COMMITMENT_PUBLISHED", auditsA.single().action)
+            assertTrue(auditsA.single().detail.contains(commitmentA.commitmentHash))
+
+            assertEquals(0, fairnessStore.findAuditEvents(tenantB, roundA).size)
+            assertEquals(0, fairnessStore.findAuditEvents(tenantA, roundB).size)
+
+            val crossLinked = jdbc.queryForObject(
+                """
+                select count(*) from game_fairness_commitment c
+                where c.tenant_id in (?, ?) and not exists (
+                    select 1 from game_authoritative_round r
+                    where r.tenant_id = c.tenant_id and r.game_id = c.game_id and r.round_id = c.round_id
+                )
+                """.trimIndent(),
+                Int::class.java,
+                tenantA, tenantB
+            )
+            assertEquals(0, crossLinked)
+        } finally {
+            jdbc.update("delete from game_fairness_audit where tenant_id in (?, ?)", tenantA, tenantB)
+            jdbc.update("delete from game_fairness_reveal where tenant_id in (?, ?)", tenantA, tenantB)
+            jdbc.update("delete from game_fairness_commitment where tenant_id in (?, ?)", tenantA, tenantB)
+            jdbc.update("delete from game_authoritative_round where tenant_id in (?, ?)", tenantA, tenantB)
+        }
     }
 
     private class MutableTestClock(private var current: Instant) : Clock() {

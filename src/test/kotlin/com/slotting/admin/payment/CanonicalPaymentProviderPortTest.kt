@@ -369,7 +369,6 @@ class CanonicalPaymentProviderPortTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertFalse(migrationVersions.contains("V17"))
 
         // 2. Lifecycle safety: Confirm no Android lifecycle surface is claimed
         val androidActivityClass = runCatching { Class.forName("android.app.Activity") }

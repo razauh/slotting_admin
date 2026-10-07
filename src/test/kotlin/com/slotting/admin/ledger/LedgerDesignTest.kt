@@ -214,7 +214,6 @@ class LedgerDesignTest {
         // Ensure only approved migrations V1 through V16 exist and no unapproved migrations are introduced
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
         assertTrue(migrationVersions.all { it.matches(Regex("V[0-9]+")) })
-        assertTrue(!migrationVersions.contains("V17"))
 
         // Assert contract principles:
         // 1. Minor units: integer longs

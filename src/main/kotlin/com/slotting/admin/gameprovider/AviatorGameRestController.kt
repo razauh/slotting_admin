@@ -5,6 +5,7 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.PrincipalKind
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -68,9 +69,11 @@ class AviatorGameRestController(
         @RequestHeader(name = "X-Tenant-Id", required = false, defaultValue = "default") tenantIdHeader: String,
         @RequestParam(required = false, defaultValue = "AVIATOR") gameId: String,
         @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String? = null,
+        @RequestHeader(name = "Authorization", required = false) authHeader: String? = null,
         @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal? = null,
     ): ResponseEntity<Any> {
         return try {
+            resolvePrincipal(tenantIdHeader, sessionToken, authHeader, principalAttr)
             lifecycleOrchestrator?.ensureRunning(tenantIdHeader, gameId)
             val response = snapshotAndEventService.getBootstrap(tenantIdHeader, gameId.uppercase())
             ResponseEntity.ok(response)
@@ -86,7 +89,9 @@ class AviatorGameRestController(
         @RequestHeader(name = "X-Tenant-Id", required = false, defaultValue = "default") tenantIdHeader: String,
         @RequestParam(required = false, defaultValue = "AVIATOR") gameId: String,
     ): ResponseEntity<CrashBetLimits> {
-        return ResponseEntity.ok(snapshotAndEventService.getLimits())
+        return ResponseEntity.ok()
+            .cacheControl(CacheControl.maxAge(java.time.Duration.ofSeconds(60)).cachePublic())
+            .body(snapshotAndEventService.getLimits())
     }
 
     @GetMapping("/my-info")
@@ -186,10 +191,20 @@ class AviatorGameRestController(
         @RequestHeader(name = "X-Tenant-Id", required = false, defaultValue = "default") tenantIdHeader: String,
         @RequestParam(required = false, defaultValue = "AVIATOR") gameId: String,
         @RequestParam(required = false, defaultValue = "20") limit: Int,
-    ): ResponseEntity<List<RoundHistoryEntry>> {
-        val boundedLimit = limit.coerceIn(1, 100)
-        val history = snapshotAndEventService.getRoundHistory(tenantIdHeader, gameId.uppercase(), boundedLimit)
-        return ResponseEntity.ok(history)
+        @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String? = null,
+        @RequestHeader(name = "Authorization", required = false) authHeader: String? = null,
+        @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal? = null,
+    ): ResponseEntity<Any> {
+        return try {
+            resolvePrincipal(tenantIdHeader, sessionToken, authHeader, principalAttr)
+            val boundedLimit = limit.coerceIn(1, 100)
+            val history = snapshotAndEventService.getRoundHistory(tenantIdHeader, gameId.uppercase(), boundedLimit)
+            ResponseEntity.ok(history)
+        } catch (e: AuthenticationFailure.Rejected) {
+            handleAuthFailure(e)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("error" to (e.message ?: "UNKNOWN_ERROR")))
+        }
     }
 
     @PostMapping("/command")

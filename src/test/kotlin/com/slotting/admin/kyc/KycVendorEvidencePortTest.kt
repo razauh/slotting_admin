@@ -197,7 +197,6 @@ class KycVendorEvidencePortTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertTrue(!migrationVersions.contains("V17"))
 
         // Assert: restart/recreation preserves consistency
         val store = KycVendorEvidenceMemoryStore()

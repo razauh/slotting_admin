@@ -412,14 +412,18 @@ class DurableAuthService(
     fun validateAccessToken(token: String): AuthenticatedPrincipal? {
         val now = Instant.now(clock)
         val data = tokenCache[token] ?: return null
-        if (now.isAfter(data.expiresAt)) {
+        if (!now.isBefore(data.expiresAt)) {
             tokenCache.remove(token)
             return null
         }
 
         // Verify session and family are active in store
         val session = store.findSession(data.sessionId)
-        if (session == null || session.state != SessionState.ACTIVE) {
+        if (session == null ||
+            session.state != SessionState.ACTIVE ||
+            !now.isBefore(session.expiresAt) ||
+            session.tenantId != data.tenantId
+        ) {
             tokenCache.remove(token)
             return null
         }

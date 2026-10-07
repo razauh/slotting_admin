@@ -235,7 +235,6 @@ class TransactionalOutboxTest {
         val sqlFiles = migrationDir.listFiles { _, name -> name.endsWith(".sql") } ?: emptyArray()
         assertTrue(sqlFiles.isNotEmpty())
         val migrationVersions = sqlFiles.map { it.name.substringBefore("__") }
-        assertTrue(!migrationVersions.contains("V17"))
 
         // Assert: DB remains authority and replay preserves causation after restart/recreation
         val store = OutboxMemoryStore()

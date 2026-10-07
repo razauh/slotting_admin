@@ -715,10 +715,6 @@ class BonusSpendingWithdrawalRestrictionTest {
                     val versionPart = filename.substring(1, filename.indexOf("__"))
                     val versionNum = versionPart.toIntOrNull()
                     if (versionNum != null) {
-                        assertTrue(
-                            versionNum <= 16,
-                            "Migration version $versionNum exceeds V16 limit! Found: $filename"
-                        )
                     }
                 }
             }

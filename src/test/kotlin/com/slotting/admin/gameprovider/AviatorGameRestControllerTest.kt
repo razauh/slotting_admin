@@ -109,18 +109,6 @@ class AviatorGameRestControllerTest {
         fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         eventJournalStore = InMemoryGameEventJournalStore()
 
-        val authStore = InMemoryDurableAuthStore()
-        authStore.createSession(
-            PlayerSessionRecord(
-                sessionId = playerUuid,
-                tenantId = tenantId,
-                playerId = playerUuid,
-                createdAt = now,
-                expiresAt = now.plusSeconds(3600),
-                state = com.slotting.admin.auth.SessionState.ACTIVE,
-            )
-        )
-
         snapshotAndEventService = AuthoritativeGameSnapshotAndEventService(
             gameStore = gameStore,
             gameService = gameService,
@@ -130,7 +118,6 @@ class AviatorGameRestControllerTest {
             eventJournalStore = eventJournalStore,
             registrationStore = registrationStore,
             clock = clock,
-            authStore = authStore,
         )
 
         controller = AviatorGameRestController(
@@ -144,8 +131,7 @@ class AviatorGameRestControllerTest {
         val response = controller.getBootstrap(
             tenantIdHeader = tenantId,
             gameId = "aviator",
-            sessionToken = playerId,
-            principalAttr = null
+            principalAttr = playerPrincipal
         )
 
         assertEquals(HttpStatus.OK, response.statusCode)
@@ -195,9 +181,7 @@ class AviatorGameRestControllerTest {
         // Authenticated
         val authResponse = controller.getMyInfo(
             tenantIdHeader = tenantId,
-            sessionToken = playerId,
-            authHeader = null,
-            principalAttr = null
+            principalAttr = playerPrincipal
         )
         assertEquals(HttpStatus.OK, authResponse.statusCode)
         val body = authResponse.body as SnapshotUser
@@ -211,9 +195,7 @@ class AviatorGameRestControllerTest {
             tenantIdHeader = tenantId,
             gameId = "aviator",
             roundId = null,
-            sessionToken = playerId,
-            authHeader = null,
-            principalAttr = null
+            principalAttr = playerPrincipal
         )
         assertEquals(HttpStatus.OK, response.statusCode)
         val body = response.body as FullSnapshot
@@ -267,9 +249,7 @@ class AviatorGameRestControllerTest {
         val cmdResponse = controller.postCommand(
             tenantIdHeader = tenantId,
             request = cmdRequest,
-            sessionToken = playerId,
-            authHeader = null,
-            principalAttr = null
+            principalAttr = playerPrincipal
         )
         assertEquals(HttpStatus.OK, cmdResponse.statusCode)
         val ack = cmdResponse.body as AviatorCommandAckResult
@@ -282,9 +262,7 @@ class AviatorGameRestControllerTest {
             gameId = "AVIATOR",
             roundId = roundId,
             commandId = "cmd-rest-001",
-            sessionToken = playerId,
-            authHeader = null,
-            principalAttr = null
+            principalAttr = playerPrincipal
         )
         assertEquals(HttpStatus.OK, resultResponse.statusCode)
         val cachedAck = resultResponse.body as AviatorCommandAckResult

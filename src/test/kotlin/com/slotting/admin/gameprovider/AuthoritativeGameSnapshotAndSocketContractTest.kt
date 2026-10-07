@@ -115,7 +115,8 @@ class AuthoritativeGameSnapshotAndSocketContractTest {
             fairnessStore = fairnessStore,
             eventJournalStore = eventJournalStore,
             registrationStore = registrationStore,
-            clock = clock
+            clock = clock,
+            authService = DurableAuthService(store = InMemoryDurableAuthStore(), clock = clock),
         )
 
         // Seed player 1 registration

@@ -2,6 +2,7 @@ package com.slotting.admin.gameprovider
 
 import com.slotting.admin.auth.*
 import com.slotting.admin.auth.SessionState
+import com.slotting.admin.contract.auth.TokenResponseDto
 import com.slotting.admin.identity.*
 import com.slotting.admin.ledger.*
 import com.slotting.admin.wallet.AuthoritativeWalletService
@@ -93,7 +94,6 @@ class AviatorAuthenticationContractTest {
             registrationStore = registrationStore,
             clock = clock,
             authService = authService,
-            authStore = authStore,
         )
 
         controller = AviatorGameRestController(
@@ -156,6 +156,33 @@ class AviatorAuthenticationContractTest {
                 roundId = "rnd-auth-test-01",
                 phase = GameRoundPhase.BET_COUNTDOWN,
             )
+        )
+    }
+
+    private fun mintTokenResponse(
+        service: DurableAuthService = authService,
+        targetTenant: String = tenantId,
+        player: UUID = verifiedPlayerUuid,
+    ): TokenResponseDto {
+        val authCode = service.createAuthorizationCode(
+            clientId = "slotting-android",
+            redirectUri = "https://app.slotting.internal/auth/callback",
+            scope = "openid profile",
+            state = "state-123",
+            nonce = "nonce-123",
+            codeChallenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            codeChallengeMethod = "S256",
+            tenantId = targetTenant,
+            playerId = player,
+        )
+        return service.exchangeAuthorizationCode(
+            grantType = "authorization_code",
+            code = authCode.code,
+            codeVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+            codeChallengeMethod = "S256",
+            state = "state-123",
+            redirectUri = "https://app.slotting.internal/auth/callback",
+            clientId = "slotting-android",
         )
     }
 
@@ -297,18 +324,6 @@ class AviatorAuthenticationContractTest {
             )
         )
 
-        val tenantASessionId = UUID.randomUUID()
-        authStore.createSession(
-            PlayerSessionRecord(
-                sessionId = tenantASessionId,
-                tenantId = tenantId,
-                playerId = verifiedPlayerUuid,
-                state = SessionState.ACTIVE,
-                createdAt = now,
-                expiresAt = now.plus(Duration.ofDays(30)),
-            )
-        )
-
         val badTokens = listOf(
             "" to HttpStatus.UNAUTHORIZED,
             "arbitrary-attacker-string" to HttpStatus.UNAUTHORIZED,
@@ -333,16 +348,17 @@ class AviatorAuthenticationContractTest {
             assertEquals(AuthErrorCode.UNAUTHENTICATED, ex.code)
         }
 
+        val crossTenantToken = mintTokenResponse(targetTenant = tenantId, player = verifiedPlayerUuid).accessToken
         val crossTenantResponse = controller.getMyInfo(
             tenantIdHeader = otherTenantId,
-            sessionToken = tenantASessionId.toString(),
-            authHeader = null,
+            sessionToken = null,
+            authHeader = "Bearer $crossTenantToken",
             principalAttr = null,
         )
         assertEquals(HttpStatus.FORBIDDEN, crossTenantResponse.statusCode)
 
         val crossTenantSocketEx = assertFailsWith<AuthenticationFailure.Rejected> {
-            snapshotAndEventService.authenticateSession(otherTenantId, tenantASessionId.toString())
+            snapshotAndEventService.authenticateSession(otherTenantId, crossTenantToken)
         }
         assertEquals(AuthErrorCode.FORBIDDEN, crossTenantSocketEx.code)
 
@@ -354,12 +370,12 @@ class AviatorAuthenticationContractTest {
         )
         assertEquals(HttpStatus.FORBIDDEN, nonPlayerResponse.statusCode)
 
-        val outageSessionId = UUID.randomUUID()
         val outageAuthStore = object : DurableAuthStore by authStore {
             override fun findSession(sessionId: UUID): PlayerSessionRecord? {
                 throw SessionStoreOutageException("Database connection failure")
             }
         }
+        val outageAuthService = DurableAuthService(store = outageAuthStore, clock = clock)
         val outageStoreService = AuthoritativeGameSnapshotAndEventService(
             gameStore = gameStore,
             gameService = gameService,
@@ -369,38 +385,27 @@ class AviatorAuthenticationContractTest {
             eventJournalStore = eventJournalStore,
             registrationStore = registrationStore,
             clock = clock,
-            authStore = outageAuthStore,
+            authService = outageAuthService,
         )
         val outageController = AviatorGameRestController(
             snapshotAndEventService = outageStoreService,
             gameService = gameService,
         )
+        val outageToken = mintTokenResponse(service = outageAuthService).accessToken
         val outageResponse = outageController.getMyInfo(
             tenantIdHeader = tenantId,
-            sessionToken = outageSessionId.toString(),
-            authHeader = null,
+            sessionToken = null,
+            authHeader = "Bearer $outageToken",
             principalAttr = null,
         )
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, outageResponse.statusCode)
         assertFailsWith<SessionStoreOutageException> {
-            outageStoreService.authenticateSession(tenantId, outageSessionId.toString())
+            outageStoreService.authenticateSession(tenantId, outageToken)
         }
     }
 
     @Test
     fun `GivenVerifiedSession_WhenRestAndSocketCalled_ThenSubjectAndTenantMatch`() {
-        val validSessionId = UUID.randomUUID()
-        authStore.createSession(
-            PlayerSessionRecord(
-                sessionId = validSessionId,
-                tenantId = tenantId,
-                playerId = verifiedPlayerUuid,
-                state = SessionState.ACTIVE,
-                createdAt = now,
-                expiresAt = now.plus(Duration.ofDays(30)),
-            )
-        )
-
         registrationStore.players[verifiedPlayerUuid] = PlayerRegistrationRecord(
             playerId = verifiedPlayerUuid,
             tenantId = tenantId,
@@ -432,22 +437,24 @@ class AviatorAuthenticationContractTest {
             )
         )
 
-        val socketPrincipal = snapshotAndEventService.authenticateSession(tenantId, validSessionId.toString())
+        val token = mintTokenResponse(targetTenant = tenantId, player = verifiedPlayerUuid)
+
+        val socketPrincipal = snapshotAndEventService.authenticateSession(tenantId, token.accessToken)
         assertEquals(verifiedPlayerId, socketPrincipal.id)
-        assertNotEquals(validSessionId.toString(), socketPrincipal.id)
+        assertNotEquals(token.accessToken, socketPrincipal.id)
         assertEquals(tenantId, socketPrincipal.tenantId)
         assertEquals(PrincipalKind.PLAYER, socketPrincipal.kind)
 
         val restResponse = controller.getMyInfo(
             tenantIdHeader = tenantId,
-            sessionToken = validSessionId.toString(),
-            authHeader = null,
+            sessionToken = null,
+            authHeader = "Bearer ${token.accessToken}",
             principalAttr = null,
         )
         assertEquals(HttpStatus.OK, restResponse.statusCode)
         val body = restResponse.body as SnapshotUser
         assertEquals(verifiedPlayerId, body.userId)
-        assertNotEquals(validSessionId.toString(), body.userId)
+        assertNotEquals(token.accessToken, body.userId)
         assertEquals(75000L, body.balanceMinor)
 
         val trustedPrincipal = AuthenticatedPrincipal(
@@ -465,5 +472,52 @@ class AviatorAuthenticationContractTest {
         assertEquals(HttpStatus.OK, filterResponse.statusCode)
         val filterBody = filterResponse.body as SnapshotUser
         assertEquals(verifiedPlayerId, filterBody.userId)
+    }
+
+    @Test
+    fun `GivenActiveUuidSessionId_WhenUsedAsCredential_ThenUnauthenticated`() {
+        val activeSessionId = UUID.randomUUID()
+        authStore.createSession(
+            PlayerSessionRecord(
+                sessionId = activeSessionId,
+                tenantId = tenantId,
+                playerId = verifiedPlayerUuid,
+                state = SessionState.ACTIVE,
+                createdAt = now,
+                expiresAt = now.plus(Duration.ofDays(30)),
+            )
+        )
+
+        val socketEx = assertFailsWith<AuthenticationFailure.Rejected> {
+            snapshotAndEventService.authenticateSession(tenantId, activeSessionId.toString())
+        }
+        assertEquals(AuthErrorCode.UNAUTHENTICATED, socketEx.code)
+
+        val restResponse = controller.getMyInfo(
+            tenantIdHeader = tenantId,
+            sessionToken = activeSessionId.toString(),
+            authHeader = null,
+            principalAttr = null,
+        )
+        assertEquals(HttpStatus.UNAUTHORIZED, restResponse.statusCode)
+    }
+
+    @Test
+    fun `GivenRevokedSessionWithValidAccessToken_WhenAuthenticated_ThenUnauthenticated`() {
+        val token = mintTokenResponse(targetTenant = tenantId, player = verifiedPlayerUuid)
+        authStore.terminateSession(UUID.fromString(token.sessionId), now)
+
+        val socketEx = assertFailsWith<AuthenticationFailure.Rejected> {
+            snapshotAndEventService.authenticateSession(tenantId, token.accessToken)
+        }
+        assertEquals(AuthErrorCode.UNAUTHENTICATED, socketEx.code)
+
+        val restResponse = controller.getMyInfo(
+            tenantIdHeader = tenantId,
+            sessionToken = null,
+            authHeader = "Bearer ${token.accessToken}",
+            principalAttr = null,
+        )
+        assertEquals(HttpStatus.UNAUTHORIZED, restResponse.statusCode)
     }
 }
