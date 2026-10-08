@@ -285,6 +285,11 @@ class AuthoritativeGameSnapshotAndEventService(
         return record
     }
 
+    fun hasPublishedPhase(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean =
+        eventJournalStore.findEventsForRound(tenantId, gameId, roundId).any { event ->
+            runCatching { objectMapper.readTree(event.payloadJson).path("phase").asText() }.getOrNull() == phase.name
+        }
+
     fun resumeEvents(
         tenantId: String,
         gameId: String,

@@ -145,6 +145,8 @@ data class SettleRoundCrashResult(
 
 class RoundVersionConflictException(message: String) : RuntimeException(message)
 
+class CrashStateIntegrityException(message: String) : RuntimeException(message)
+
 fun legalPriorPhases(targetPhase: GameRoundPhase): Set<GameRoundPhase> = when (targetPhase) {
     GameRoundPhase.SCHEDULED -> setOf(GameRoundPhase.SCHEDULED)
     GameRoundPhase.BET_COUNTDOWN -> setOf(GameRoundPhase.SCHEDULED, GameRoundPhase.BET_COUNTDOWN)

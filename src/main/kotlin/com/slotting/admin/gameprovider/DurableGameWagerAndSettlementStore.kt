@@ -21,6 +21,7 @@ interface DurableGameWagerAndSettlementStore {
     fun findBet(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord?
     fun findBetForUpdate(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord?
     fun findBetsForRound(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord>
+    fun findBetsForRoundForUpdate(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord>
     fun saveBet(bet: GameAcceptedBetRecord)
     fun updateBet(bet: GameAcceptedBetRecord)
     fun transitionBetStatus(betId: UUID, tenantId: String, from: GameBetStatus, to: GameBetStatus, updatedAt: Instant): Boolean
@@ -113,6 +114,9 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
         val prefix = "$tenantId:$gameId:$roundId:"
         return bets.filterKeys { it.startsWith(prefix) }.values.map { it.copy() }
     }
+
+    override fun findBetsForRoundForUpdate(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord> =
+        findBetsForRound(tenantId, gameId, roundId).sortedBy { it.betId }
 
     @Synchronized
     override fun saveBet(bet: GameAcceptedBetRecord) {
@@ -425,6 +429,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
                    currency_code, reservation_id, ledger_reservation_ref, status, created_at, updated_at
             from game_accepted_bet
             where tenant_id = ? and game_id = ? and round_id = ?
+        """.trimIndent()
+        return jdbcTemplate.query(sql, { rs, _ -> mapBet(rs) }, tenantId, gameId, roundId)
+    }
+
+    override fun findBetsForRoundForUpdate(tenantId: String, gameId: String, roundId: String): List<GameAcceptedBetRecord> {
+        val sql = """
+            select bet_id, tenant_id, owner_id, game_id, round_id, hand_id, wager_minor_units,
+                   currency_code, reservation_id, ledger_reservation_ref, status, created_at, updated_at
+            from game_accepted_bet
+            where tenant_id = ? and game_id = ? and round_id = ?
+            order by bet_id
+            for update
         """.trimIndent()
         return jdbcTemplate.query(sql, { rs, _ -> mapBet(rs) }, tenantId, gameId, roundId)
     }

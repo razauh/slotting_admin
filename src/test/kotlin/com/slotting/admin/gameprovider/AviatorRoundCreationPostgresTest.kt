@@ -764,7 +764,10 @@ class AviatorRoundCreationPostgresTest {
                 timestampMillis = clock.instant().toEpochMilli(), createdAt = clock.instant(),
             )
 
-        override fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal) {}
+        override fun hasPublishedState(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean = false
+
+        override fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal): GameRoundRecord =
+            round ?: error("FakeFaithfulLifecyclePort has no round to crash")
 
         override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {}
     }

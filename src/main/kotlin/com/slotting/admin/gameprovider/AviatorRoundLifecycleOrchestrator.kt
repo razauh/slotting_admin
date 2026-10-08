@@ -49,7 +49,8 @@ interface AviatorLifecyclePort {
     fun deriveOutcome(tenantId: String, gameId: String, roundId: String): LifecycleOutcome
     fun persistRound(command: CreateOrUpdateRoundCommand): GameRoundRecord
     fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double): GameEventRecord
-    fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal)
+    fun hasPublishedState(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean
+    fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal): GameRoundRecord
     fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal)
 }
 
@@ -132,13 +133,18 @@ class ProductionAviatorLifecyclePort(
             elapsedFlightSeconds = elapsedFlightSeconds,
         )
 
+    override fun hasPublishedState(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean =
+        snapshotService.hasPublishedPhase(tenantId, gameId, roundId, phase)
+
     override fun settleCrash(
         tenantId: String,
         gameId: String,
         roundId: String,
         crashMultiplier: BigDecimal,
-    ) {
+    ): GameRoundRecord {
         gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, crashMultiplier))
+        return gameService.store.findRound(tenantId, gameId, roundId)
+            ?: throw CrashStateIntegrityException("Persisted crash round $roundId was not found after settlement")
     }
 
     override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {
@@ -268,8 +274,8 @@ class AviatorRoundLifecycleOrchestrator(
         val nextMultiplier = curveMultiplier.max(stepMultiplier).min(crash)
         return if (nextMultiplier >= crash) {
             flightStartTimes.remove(round.roundId)
-            val crashed = transition(round, GameRoundPhase.CRASHED, crash, crash)
-            port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
+            val crashed = port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
+            port.publishState(crashed, 0.0)
             logger.info("AVIATOR_CRASHED roundId={} roundVersion={} crashMultiplier={}", round.roundId, round.roundVersion, crash)
             crashed
         } else {
@@ -279,11 +285,13 @@ class AviatorRoundLifecycleOrchestrator(
 
     private fun finishCrashedRound(round: GameRoundRecord): GameRoundRecord {
         val crash = requireNotNull(round.crashMultiplier) { "CRASHED round ${round.roundId} has no crash multiplier" }
-        port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
+        val crashed = port.settleCrash(round.tenantId, round.gameId, round.roundId, crash)
+        if (!port.hasPublishedState(round.tenantId, round.gameId, round.roundId, GameRoundPhase.CRASHED)) {
+            port.publishState(crashed, 0.0)
+        }
         port.revealIfNeeded(round.tenantId, round.gameId, round.roundId, crash)
-        logger.info("AVIATOR_REVEALED roundId={} phase={} roundVersion={}", round.roundId, round.phase, round.roundVersion)
-        val current = port.latestRound(round.tenantId, round.gameId) ?: round
-        val closed = transition(current, GameRoundPhase.CLOSED, crash, crash)
+        logger.info("AVIATOR_REVEALED roundId={} phase={} roundVersion={}", round.roundId, crashed.phase, crashed.roundVersion)
+        val closed = transition(crashed, GameRoundPhase.CLOSED, crash, crash)
         logger.info("AVIATOR_CLOSED roundId={} roundVersion={}", closed.roundId, closed.roundVersion)
         return closed
     }

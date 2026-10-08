@@ -64,5 +64,6 @@ object PostgresIntegrationSupport {
         registry.add("spring.datasource.username") { user }
         registry.add("spring.datasource.password") { password }
         registry.add("spring.flyway.enabled") { "true" }
+        registry.add("spring.datasource.hikari.maximum-pool-size") { "4" }
     }
 }

@@ -15,6 +15,7 @@ interface GameEventJournalStore {
     fun latestSequenceId(tenantId: String, gameId: String): Long
     fun saveEvent(event: GameEventRecord)
     fun findEventsSince(tenantId: String, gameId: String, sinceSequenceId: Long, limit: Int): List<GameEventRecord>
+    fun findEventsForRound(tenantId: String, gameId: String, roundId: String): List<GameEventRecord>
 }
 
 open class InMemoryGameEventJournalStore : GameEventJournalStore {
@@ -40,6 +41,12 @@ open class InMemoryGameEventJournalStore : GameEventJournalStore {
             .filter { it.tenantId == tenantId && it.gameId == gameId && it.sequenceId > sinceSequenceId }
             .sortedBy { it.sequenceId }
             .take(limit)
+    }
+
+    override fun findEventsForRound(tenantId: String, gameId: String, roundId: String): List<GameEventRecord> {
+        return events
+            .filter { it.tenantId == tenantId && it.gameId == gameId && it.roundId == roundId }
+            .sortedBy { it.sequenceId }
     }
 }
 
@@ -100,6 +107,17 @@ open class JdbcGameEventJournalStore(
             limit ?
         """.trimIndent()
         return jdbcTemplate.query(sql, { rs, _ -> mapEvent(rs) }, tenantId, gameId, sinceSequenceId, limit)
+    }
+
+    override fun findEventsForRound(tenantId: String, gameId: String, roundId: String): List<GameEventRecord> {
+        val sql = """
+            select event_id, tenant_id, game_id, round_id, sequence_id, event_name,
+                   payload_json, target_scope, target_owner_id, timestamp_millis, created_at
+            from game_event_journal
+            where tenant_id = ? and game_id = ? and round_id = ?
+            order by sequence_id asc
+        """.trimIndent()
+        return jdbcTemplate.query(sql, { rs, _ -> mapEvent(rs) }, tenantId, gameId, roundId)
     }
 
     private fun mapEvent(rs: ResultSet): GameEventRecord {

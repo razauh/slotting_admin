@@ -174,13 +174,30 @@ class AviatorRoundLifecycleOrchestratorTest {
             )
         }
 
+        override fun hasPublishedState(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean =
+            events.contains(phase)
+
         override fun settleCrash(
             tenantId: String,
             gameId: String,
             roundId: String,
             crashMultiplier: BigDecimal,
-        ) {
+        ): GameRoundRecord {
             operations += "settle"
+            val existing = checkNotNull(round)
+            if (existing.phase == GameRoundPhase.CRASHED) return existing
+            val now = clock.instant()
+            val crashed = existing.copy(
+                phase = GameRoundPhase.CRASHED,
+                roundVersion = existing.roundVersion + 1,
+                currentMultiplier = crashMultiplier,
+                crashMultiplier = crashMultiplier,
+                crashedAt = now,
+                serverTime = now,
+                updatedAt = now,
+            )
+            round = crashed
+            return crashed
         }
 
         override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {

@@ -24,4 +24,7 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.20.1")
 }
 
-tasks.withType<Test> { useJUnitPlatform() }
+tasks.withType<Test> {
+    useJUnitPlatform()
+    maxHeapSize = "2g"
+}

@@ -116,8 +116,13 @@ class DurableGameWagerAndSettlementService(
 
     fun settleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
         DurableGameWagerAndSettlementBinding.checkBound()
+        val action = { executeSettleRoundCrash(command) }
+        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+    }
+
+    private fun executeSettleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
         val now = clock.instant()
-        val round = store.findRound(command.tenantId, command.gameId, command.roundId)
+        val round = store.findRoundForUpdate(command.tenantId, command.gameId, command.roundId)
             ?: createOrUpdateRound(
                 CreateOrUpdateRoundCommand(
                     tenantId = command.tenantId,
@@ -132,13 +137,14 @@ class DurableGameWagerAndSettlementService(
             val expectedVersion = round.roundVersion
             round.phase = GameRoundPhase.CRASHED
             round.roundVersion = expectedVersion + 1
+            round.currentMultiplier = command.crashMultiplier
             round.crashMultiplier = command.crashMultiplier
             round.crashedAt = round.crashedAt ?: now
             round.updatedAt = now
             store.updateRound(round, expectedVersion, legalPriorPhases(GameRoundPhase.CRASHED))
         }
 
-        val pendingBets = store.findBetsForRound(command.tenantId, command.gameId, command.roundId)
+        val pendingBets = store.findBetsForRoundForUpdate(command.tenantId, command.gameId, command.roundId)
             .filter { it.status == GameBetStatus.ACCEPTED }
 
         var settledCount = 0
@@ -146,6 +152,10 @@ class DurableGameWagerAndSettlementService(
         for (bet in pendingBets) {
             // Once-only check: verify not already settled
             if (store.findSettlement(command.tenantId, bet.betId) != null) {
+                continue
+            }
+
+            if (!store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.ACCEPTED, GameBetStatus.LOST, now)) {
                 continue
             }
 
@@ -170,10 +180,6 @@ class DurableGameWagerAndSettlementService(
                 )
             )
 
-            bet.status = GameBetStatus.LOST
-            bet.updatedAt = now
-            store.updateBet(bet)
-
             store.saveSettlement(
                 GameBetSettlementRecord(
                     settlementId = settlementId,
@@ -194,10 +200,13 @@ class DurableGameWagerAndSettlementService(
             settledCount++
         }
 
+        val authoritativeCrashMultiplier = round.crashMultiplier
+            ?: throw CrashStateIntegrityException("CRASHED round ${round.roundId} has no authoritative crash multiplier")
+
         return SettleRoundCrashResult(
-            roundId = command.roundId,
+            roundId = round.roundId,
             settledBetsCount = settledCount,
-            crashMultiplier = command.crashMultiplier,
+            crashMultiplier = authoritativeCrashMultiplier,
         )
     }
 
@@ -781,7 +790,7 @@ class DurableGameWagerAndSettlementService(
         }
 
         // Retrieve accepted bet
-        val bet = store.findBet(command.tenantId, gameId, command.roundId, playerId, command.handId)
+        val bet = store.findBetForUpdate(command.tenantId, gameId, command.roundId, playerId, command.handId)
         if (bet == null || bet.status != GameBetStatus.ACCEPTED) {
             return recordAndReturnRejection(
                 command = command,
@@ -813,6 +822,18 @@ class DurableGameWagerAndSettlementService(
         val calculatedPayout = wagerBd.multiply(authoritativeMultiplier).setScale(0, RoundingMode.FLOOR).toLong()
         val maxAllowedPayout = wagerBd.multiply(MAX_PAYOUT_PER_BET).setScale(0, RoundingMode.FLOOR).toLong()
         val payoutMinor = minOf(calculatedPayout, maxAllowedPayout)
+
+        if (!store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.ACCEPTED, GameBetStatus.CASHED_OUT, now)) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.INVALID_HAND_STATE,
+                message = "Bet ${bet.betId} is no longer cash-out eligible",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        }
 
         val settlementId = UUID.randomUUID()
         val settlementKey = AviatorCommandKeys.settlementKey(bet.betId)
@@ -846,10 +867,6 @@ class DurableGameWagerAndSettlementService(
                 causationId = command.causationId,
             )
         )
-
-        bet.status = GameBetStatus.CASHED_OUT
-        bet.updatedAt = now
-        store.updateBet(bet)
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(
