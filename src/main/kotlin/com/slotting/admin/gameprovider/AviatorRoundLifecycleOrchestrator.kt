@@ -396,16 +396,19 @@ class AviatorLifecycleConfiguration {
         @Value("\${slotting.aviator.lifecycle.algorithm-version:1.0.0}") algorithmVersion: String,
         @Value("\${slotting.aviator.lifecycle.public-salt:aviator-public}") publicSalt: String,
         @Value("#{'\${slotting.aviator.lifecycle.tenants:default}'.split(',')}") tenants: List<String>,
-    ) = AviatorLifecycleProperties(
-        scheduledMillis = scheduledMillis.coerceAtLeast(0),
-        bettingMillis = bettingMillis.coerceAtLeast(0),
-        closedMillis = closedMillis.coerceAtLeast(0),
-        multiplierStep = multiplierStep.max(BigDecimal("0.0001")),
-        rulesVersion = rulesVersion,
-        algorithmVersion = algorithmVersion,
-        publicSalt = publicSalt,
-        configuredTenants = tenants.map(String::trim).filter(String::isNotBlank).toSet(),
-    )
+    ): AviatorLifecycleProperties {
+        AviatorAlgorithmRegistry.requireSupported(algorithmVersion)
+        return AviatorLifecycleProperties(
+            scheduledMillis = scheduledMillis.coerceAtLeast(0),
+            bettingMillis = bettingMillis.coerceAtLeast(0),
+            closedMillis = closedMillis.coerceAtLeast(0),
+            multiplierStep = multiplierStep.max(BigDecimal("0.0001")),
+            rulesVersion = rulesVersion,
+            algorithmVersion = algorithmVersion,
+            publicSalt = publicSalt,
+            configuredTenants = tenants.map(String::trim).filter(String::isNotBlank).toSet(),
+        )
+    }
 }
 
 @Component

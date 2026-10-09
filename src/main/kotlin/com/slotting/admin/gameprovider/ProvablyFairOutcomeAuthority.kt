@@ -213,6 +213,7 @@ class ProvablyFairOutcomeAuthority(
         ProvablyFairOutcomeBinding.checkBound()
         var durable = store.findCommitment(tenantId, gameId, roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
+        AviatorAlgorithmRegistry.requireSupported(durable.algorithmVersion)
 
         var seeds = resolveClientSeeds(tenantId, gameId, roundId, durable)
         if (durable.clientSeed1 == null || durable.clientSeed2 == null || durable.clientSeed3 == null) {
@@ -249,7 +250,8 @@ class ProvablyFairOutcomeAuthority(
         }
         val (cs1, cs2, cs3) = seeds
 
-        val multiplier = computeMultiplier(
+        val multiplier = AviatorAlgorithmRegistry.compute(
+            algorithmVersion = durable.algorithmVersion,
             serverSeed = decryptSeed(durable),
             clientSeed1 = cs1,
             clientSeed2 = cs2,
@@ -314,6 +316,7 @@ class ProvablyFairOutcomeAuthority(
         val now = clock.instant()
         val commitment = store.findCommitment(command.tenantId, command.gameId, command.roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round ${command.roundId}")
+        AviatorAlgorithmRegistry.requireSupported(commitment.algorithmVersion)
 
         val existingReveal = store.findReveal(command.tenantId, command.gameId, command.roundId)
         if (existingReveal != null) {
@@ -379,7 +382,8 @@ class ProvablyFairOutcomeAuthority(
             val (cs1, cs2, cs3) = resolveClientSeeds(command.tenantId, command.gameId, command.roundId, commitment)
 
             // Derive authoritative multiplier
-            val derivedMultiplier = computeMultiplier(
+            val derivedMultiplier = AviatorAlgorithmRegistry.compute(
+                algorithmVersion = commitment.algorithmVersion,
                 serverSeed = plaintextSeed,
                 clientSeed1 = cs1,
                 clientSeed2 = cs2,
@@ -524,13 +528,12 @@ class ProvablyFairOutcomeAuthority(
             clientSeed1: String,
             clientSeed2: String,
             clientSeed3: String,
-        ): BigDecimal {
-            return IndependentFairnessVerifier.calculateCrashMultiplier(
-                serverSeed = serverSeed,
-                clientSeed1 = clientSeed1,
-                clientSeed2 = clientSeed2,
-                clientSeed3 = clientSeed3,
-            )
-        }
+        ): BigDecimal = AviatorAlgorithmRegistry.compute(
+            algorithmVersion = AviatorAlgorithmRegistry.VERSION_1_0_0,
+            serverSeed = serverSeed,
+            clientSeed1 = clientSeed1,
+            clientSeed2 = clientSeed2,
+            clientSeed3 = clientSeed3,
+        )
     }
 }

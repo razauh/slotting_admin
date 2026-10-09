@@ -27,7 +27,13 @@ class IndependentFairnessVerifier(
         clientSeed2: String,
         clientSeed3: String,
     ): BigDecimal {
-        return calculateCrashMultiplier(serverSeed, clientSeed1, clientSeed2, clientSeed3)
+        return AviatorAlgorithmRegistry.compute(
+            algorithmVersion = AviatorAlgorithmRegistry.VERSION_1_0_0,
+            serverSeed = serverSeed,
+            clientSeed1 = clientSeed1,
+            clientSeed2 = clientSeed2,
+            clientSeed3 = clientSeed3,
+        )
     }
 
     /**
@@ -39,7 +45,13 @@ class IndependentFairnessVerifier(
         clientSeed2: String,
         clientSeed3: String,
     ): BigDecimal {
-        return calculateCrashMultiplier(serverSeed, clientSeed1, clientSeed2, clientSeed3)
+        return AviatorAlgorithmRegistry.compute(
+            algorithmVersion = AviatorAlgorithmRegistry.VERSION_1_0_0,
+            serverSeed = serverSeed,
+            clientSeed1 = clientSeed1,
+            clientSeed2 = clientSeed2,
+            clientSeed3 = clientSeed3,
+        )
     }
 
     fun verifyHistoricalRound(query: VerifyHistoricalRoundQuery): HistoricalVerificationResult {
@@ -59,6 +71,21 @@ class IndependentFairnessVerifier(
                 failureCode = "ROUND_NOT_FOUND",
                 failureDetail = "No pre-bet commitment record found for round ${query.roundId}",
             )
+
+        if (!AviatorAlgorithmRegistry.isSupported(commitment.algorithmVersion)) {
+            return HistoricalVerificationResult(
+                isVerified = false,
+                roundId = query.roundId,
+                commitmentHash = commitment.commitmentHash,
+                revealedSecretSeed = null,
+                publicSalt = commitment.publicSalt,
+                derivedMultiplier = null,
+                algorithmVersion = commitment.algorithmVersion,
+                rulesVersion = commitment.rulesVersion,
+                failureCode = AviatorAlgorithmRegistry.UNSUPPORTED_VERSION_FAILURE_CODE,
+                failureDetail = "Recorded algorithm version ${commitment.algorithmVersion} is not registered",
+            )
+        }
 
         val reveal = evidenceStore.findReveal(query.tenantId, query.gameId, query.roundId)
             ?: return HistoricalVerificationResult(
@@ -115,7 +142,8 @@ class IndependentFairnessVerifier(
         val cs3 = commitment.clientSeed3 ?: sha256("${commitment.commitmentHash}:fallback:3:${query.roundId}")
 
         // 4. Mathematical outcome derivation re-computation
-        val computedMultiplier = calculateCrashMultiplier(
+        val computedMultiplier = AviatorAlgorithmRegistry.compute(
+            algorithmVersion = commitment.algorithmVersion,
             serverSeed = reveal.revealedSecretSeed,
             clientSeed1 = cs1,
             clientSeed2 = cs2,
