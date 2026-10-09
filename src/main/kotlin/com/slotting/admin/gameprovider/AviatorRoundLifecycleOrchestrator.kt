@@ -149,11 +149,11 @@ class ProductionAviatorLifecyclePort(
 
     override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {
         val existing = fairnessAuthority.store.findReveal(tenantId, gameId, roundId)
-        val reveal = existing ?: fairnessAuthority.store.findCommitment(tenantId, gameId, roundId)?.let { commitment ->
-            fairnessAuthority.revealAndVerifyOutcome(
-                RevealOutcomeCommand(tenantId, gameId, roundId, commitment.encryptedSecretSeed)
-            )
-        } ?: error("Commitment missing during reveal for round $roundId")
+        val reveal = existing ?: run {
+            fairnessAuthority.store.findCommitment(tenantId, gameId, roundId)
+                ?: error("Commitment missing during reveal for round $roundId")
+            fairnessAuthority.revealAndVerifyOutcome(RevealOutcomeCommand(tenantId, gameId, roundId))
+        }
         check(reveal.derivedMultiplier.compareTo(expectedMultiplier) == 0) {
             "Persisted crash multiplier differs from revealed fairness outcome for round $roundId"
         }

@@ -64,6 +64,10 @@ data class RoundCommitmentRecord(
     var clientSeed1: String? = null,
     var clientSeed2: String? = null,
     var clientSeed3: String? = null,
+    var secretNonce: String? = null,
+    var secretKeyId: String? = null,
+    var secretKeyVersion: Int? = null,
+    var secretFormatVersion: Int? = null,
 )
 
 data class RoundRevealRecord(
@@ -88,6 +92,9 @@ data class FairnessAuditRecord(
     val actor: String,
     val detail: String,
     val occurredAt: Instant,
+    val gameId: String? = null,
+    val commitmentId: UUID? = null,
+    val eventKey: String? = null,
 )
 
 data class PublishCommitmentCommand(
@@ -103,12 +110,10 @@ data class RevealOutcomeCommand(
     val tenantId: String,
     val gameId: String,
     val roundId: String,
-    val revealedSecretSeed: String,
 )
 
 data class AuthoritativeOutcomeResult(
     val roundId: String,
-    val secretSeed: String,
     val commitmentHash: String,
     val publicSalt: String,
     val multiplier: BigDecimal,

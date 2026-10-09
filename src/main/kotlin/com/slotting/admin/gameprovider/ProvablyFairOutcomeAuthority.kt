@@ -1,11 +1,14 @@
 package com.slotting.admin.gameprovider
 
 import org.springframework.stereotype.Service
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Clock
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -55,9 +58,15 @@ class RoundEntropyCollector {
 class ProvablyFairOutcomeAuthority(
     val store: FairnessEvidenceStore,
     private val clock: Clock = Clock.systemUTC(),
+    private val envelope: FairnessSeedEnvelope = FairnessSeedEnvelope.devDefault(),
+    private val txManager: PlatformTransactionManager? = null,
+    private val outcomeFinalization: OutcomeFinalizationPort? = null,
 ) {
     private val secureRandom = SecureRandom()
     private val entropyCollectors = ConcurrentHashMap<String, RoundEntropyCollector>()
+
+    private fun <T : Any> inTx(action: () -> T): T =
+        txManager?.let { requireNotNull(TransactionTemplate(it).execute { action() }) } ?: action()
 
     private fun key(tenantId: String, gameId: String, roundId: String) = "$tenantId:$gameId:$roundId"
 
@@ -65,28 +74,23 @@ class ProvablyFairOutcomeAuthority(
         ProvablyFairOutcomeBinding.checkBound()
         val now = clock.instant()
 
-        val existing = store.findCommitment(command.tenantId, command.gameId, command.roundId)
-        if (existing != null) {
-            if (existing.status != RoundCommitmentStatus.COMMITTED || existing.firstBetAcceptedAt != null) {
-                throw FairnessAuthorityException(
-                    "BETTING_ACTIVE_CANNOT_COMMIT",
-                    "Cannot publish or modify commitment after betting has become active for round ${command.roundId}"
-                )
-            }
-            throw FairnessAuthorityException(
-                "DUPLICATE_ROUND_COMMITMENT",
-                "Commitment already exists for round ${command.roundId}"
-            )
-        }
-
         // Generate cryptographically secure 256-bit un-guessable secret serverSeed
         val seedBytes = ByteArray(32)
         secureRandom.nextBytes(seedBytes)
         val serverSeed = seedBytes.joinToString("") { "%02x".format(it) }
         val serverSeedHash = sha256(serverSeed)
 
+        val commitmentId = UUID.randomUUID()
+        val sealed = envelope.seal(
+            tenantId = command.tenantId,
+            gameId = command.gameId,
+            roundId = command.roundId,
+            commitmentId = commitmentId.toString(),
+            plaintextSeed = serverSeed,
+        )
+
         val commitment = RoundCommitmentRecord(
-            commitmentId = UUID.randomUUID(),
+            commitmentId = commitmentId,
             tenantId = command.tenantId,
             gameId = command.gameId,
             roundId = command.roundId,
@@ -95,30 +99,52 @@ class ProvablyFairOutcomeAuthority(
             rulesVersion = command.rulesVersion,
             commitmentHash = serverSeedHash,
             publicSalt = command.publicSalt,
-            encryptedSecretSeed = serverSeed,
+            encryptedSecretSeed = sealed.ciphertextBase64,
             committedAt = now,
             firstBetAcceptedAt = null,
             status = RoundCommitmentStatus.COMMITTED,
             serverVersion = 1L,
             createdAt = now,
             updatedAt = now,
+            secretNonce = sealed.nonceBase64,
+            secretKeyId = sealed.keyId,
+            secretKeyVersion = sealed.keyVersion,
+            secretFormatVersion = sealed.formatVersion,
         )
 
-        entropyCollectors[key(command.tenantId, command.gameId, command.roundId)] = RoundEntropyCollector()
-        store.saveCommitment(commitment)
-        store.saveAuditEvent(
-            FairnessAuditRecord(
-                auditId = UUID.randomUUID(),
-                tenantId = command.tenantId,
-                roundId = command.roundId,
-                action = "PRE_BET_COMMITMENT_PUBLISHED",
-                actor = "SYSTEM_FAIRNESS_AUTHORITY",
-                detail = "Published commitment hash $serverSeedHash with salt ${command.publicSalt}",
-                occurredAt = now,
+        return inTx {
+            val existing = store.findCommitment(command.tenantId, command.gameId, command.roundId)
+            if (existing != null) {
+                if (existing.status != RoundCommitmentStatus.COMMITTED || existing.firstBetAcceptedAt != null) {
+                    throw FairnessAuthorityException(
+                        "BETTING_ACTIVE_CANNOT_COMMIT",
+                        "Cannot publish or modify commitment after betting has become active for round ${command.roundId}"
+                    )
+                }
+                throw FairnessAuthorityException(
+                    "DUPLICATE_ROUND_COMMITMENT",
+                    "Commitment already exists for round ${command.roundId}"
+                )
+            }
+
+            entropyCollectors[key(command.tenantId, command.gameId, command.roundId)] = RoundEntropyCollector()
+            store.saveCommitment(commitment)
+            store.saveAuditEvent(
+                FairnessAuditRecord(
+                    auditId = UUID.randomUUID(),
+                    tenantId = command.tenantId,
+                    roundId = command.roundId,
+                    action = "PRE_BET_COMMITMENT_PUBLISHED",
+                    actor = "SYSTEM_FAIRNESS_AUTHORITY",
+                    detail = "Published commitment hash $serverSeedHash with salt ${command.publicSalt}",
+                    occurredAt = now,
+                    gameId = command.gameId,
+                    commitmentId = commitmentId,
+                    eventKey = "PRE_BET_COMMITMENT_PUBLISHED",
+                )
             )
-        )
-
-        return commitment
+            commitment
+        }
     }
 
     fun notifyBetAccepted(
@@ -129,21 +155,31 @@ class ProvablyFairOutcomeAuthority(
         clientSeed: String? = null,
     ) {
         ProvablyFairOutcomeBinding.checkBound()
-        val commitment = store.findCommitment(tenantId, gameId, roundId)
-            ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
+        inTx {
+            val commitment = store.findCommitment(tenantId, gameId, roundId)
+                ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
 
-        if (commitment.firstBetAcceptedAt == null) {
-            commitment.firstBetAcceptedAt = clock.instant()
-            commitment.status = RoundCommitmentStatus.BETTING_ACTIVE
-            commitment.updatedAt = clock.instant()
-            store.updateCommitment(commitment)
-        }
-
-        if (playerId != null) {
-            val collector = entropyCollectors.computeIfAbsent(key(tenantId, gameId, roundId)) {
-                RoundEntropyCollector()
+            if (commitment.firstBetAcceptedAt == null) {
+                val advanced = commitment.copy(
+                    firstBetAcceptedAt = clock.instant(),
+                    status = RoundCommitmentStatus.BETTING_ACTIVE,
+                    updatedAt = clock.instant(),
+                )
+                if (!store.compareAndSetCommitment(advanced, commitment.serverVersion, setOf(RoundCommitmentStatus.COMMITTED))) {
+                    throw FairnessAuthorityException(
+                        "COMMIT_VERSION_CONFLICT",
+                        "Commitment ${commitment.commitmentId} lost the first-bet transition race"
+                    )
+                }
             }
-            collector.addPlayerBet(playerId, clientSeed)
+
+            if (playerId != null) {
+                val collector = entropyCollectors.computeIfAbsent(key(tenantId, gameId, roundId)) {
+                    RoundEntropyCollector()
+                }
+                collector.addPlayerBet(playerId, clientSeed)
+            }
+            Unit
         }
     }
 
@@ -175,20 +211,46 @@ class ProvablyFairOutcomeAuthority(
 
     fun deriveAuthoritativeOutcome(tenantId: String, gameId: String, roundId: String): AuthoritativeOutcomeResult {
         ProvablyFairOutcomeBinding.checkBound()
-        val commitment = store.findCommitment(tenantId, gameId, roundId)
+        var durable = store.findCommitment(tenantId, gameId, roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
 
-        val (cs1, cs2, cs3) = resolveClientSeeds(tenantId, gameId, roundId, commitment)
-        if (commitment.clientSeed1 == null || commitment.clientSeed2 == null || commitment.clientSeed3 == null) {
-            commitment.clientSeed1 = cs1
-            commitment.clientSeed2 = cs2
-            commitment.clientSeed3 = cs3
-            commitment.updatedAt = clock.instant()
-            store.updateCommitment(commitment)
+        var seeds = resolveClientSeeds(tenantId, gameId, roundId, durable)
+        if (durable.clientSeed1 == null || durable.clientSeed2 == null || durable.clientSeed3 == null) {
+            var attempt = 0
+            while (true) {
+                attempt++
+                val advanced = durable.copy(
+                    clientSeed1 = seeds.first,
+                    clientSeed2 = seeds.second,
+                    clientSeed3 = seeds.third,
+                    updatedAt = clock.instant(),
+                )
+                if (store.compareAndSetCommitment(advanced, durable.serverVersion, DERIVE_STATUSES)) {
+                    durable = advanced
+                    break
+                }
+                val fresh = store.findCommitment(tenantId, gameId, roundId)
+                    ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
+                durable = fresh
+                if (fresh.clientSeed1 != null && fresh.clientSeed2 != null && fresh.clientSeed3 != null) {
+                    break
+                }
+                if (attempt >= MAX_DERIVE_ATTEMPTS) {
+                    throw FairnessAuthorityException(
+                        "COMMIT_VERSION_CONFLICT",
+                        "Commitment ${fresh.commitmentId} client seeds could not be durably accepted"
+                    )
+                }
+                seeds = resolveClientSeeds(tenantId, gameId, roundId, fresh)
+            }
         }
+        if (durable.clientSeed1 != null && durable.clientSeed2 != null && durable.clientSeed3 != null) {
+            seeds = Triple(durable.clientSeed1!!, durable.clientSeed2!!, durable.clientSeed3!!)
+        }
+        val (cs1, cs2, cs3) = seeds
 
         val multiplier = computeMultiplier(
-            serverSeed = commitment.encryptedSecretSeed,
+            serverSeed = decryptSeed(durable),
             clientSeed1 = cs1,
             clientSeed2 = cs2,
             clientSeed3 = cs3,
@@ -196,100 +258,199 @@ class ProvablyFairOutcomeAuthority(
 
         return AuthoritativeOutcomeResult(
             roundId = roundId,
-            secretSeed = commitment.encryptedSecretSeed,
-            commitmentHash = commitment.commitmentHash,
-            publicSalt = commitment.publicSalt,
+            commitmentHash = durable.commitmentHash,
+            publicSalt = durable.publicSalt,
             multiplier = multiplier,
-            algorithmVersion = commitment.algorithmVersion,
-            rulesVersion = commitment.rulesVersion,
+            algorithmVersion = durable.algorithmVersion,
+            rulesVersion = durable.rulesVersion,
             clientSeed1 = cs1,
             clientSeed2 = cs2,
             clientSeed3 = cs3,
+        )
+    }
+
+    internal fun openCommittedSecret(tenantId: String, gameId: String, roundId: String): String {
+        val commitment = store.findCommitment(tenantId, gameId, roundId)
+            ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
+        return decryptSeed(commitment)
+    }
+
+    private fun decryptSeed(commitment: RoundCommitmentRecord): String {
+        val nonce = commitment.secretNonce
+            ?: throw FairnessAuthorityException(
+                "SECRET_ENVELOPE_MISSING",
+                "Commitment ${commitment.commitmentId} has no authenticated seed envelope"
+            )
+        val sealed = SealedFairnessSeed(
+            ciphertextBase64 = commitment.encryptedSecretSeed,
+            nonceBase64 = nonce,
+            keyId = commitment.secretKeyId ?: FairnessSeedEnvelope.DEFAULT_KEY_ID,
+            keyVersion = commitment.secretKeyVersion ?: 1,
+            formatVersion = commitment.secretFormatVersion ?: 1,
+        )
+        return envelope.open(
+            tenantId = commitment.tenantId,
+            gameId = commitment.gameId,
+            roundId = commitment.roundId,
+            commitmentId = commitment.commitmentId.toString(),
+            sealed = sealed,
         )
     }
 
     fun revealAndVerifyOutcome(command: RevealOutcomeCommand): RoundRevealRecord {
         ProvablyFairOutcomeBinding.checkBound()
-        val now = clock.instant()
+        var attempt = 0
+        while (true) {
+            attempt++
+            try {
+                return revealAttempt(command)
+            } catch (e: FairnessAuthorityException) {
+                if (e.errorCode != "COMMIT_VERSION_CONFLICT" || attempt >= MAX_REVEAL_ATTEMPTS) throw e
+            }
+        }
+    }
 
+    private fun revealAttempt(command: RevealOutcomeCommand): RoundRevealRecord = inTx {
+        val now = clock.instant()
         val commitment = store.findCommitment(command.tenantId, command.gameId, command.roundId)
             ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round ${command.roundId}")
 
         val existingReveal = store.findReveal(command.tenantId, command.gameId, command.roundId)
         if (existingReveal != null) {
-            return existingReveal
-        }
-
-        // Verify that revealed secret seed reproduces exact commitment hash
-        val calculatedHash = sha256(command.revealedSecretSeed)
-        if (calculatedHash != commitment.commitmentHash) {
-            store.saveAuditEvent(
-                FairnessAuditRecord(
-                    auditId = UUID.randomUUID(),
-                    tenantId = command.tenantId,
-                    roundId = command.roundId,
-                    action = "FAIRNESS_VERIFICATION_FAILED",
-                    actor = "SYSTEM_FAIRNESS_AUTHORITY",
-                    detail = "Security Alert: Revealed seed $calculatedHash does not match pre-bet commitment ${commitment.commitmentHash} (tampered seed detected)",
-                    occurredAt = now,
+            if (!store.existsAuditEvent(command.tenantId, commitment.commitmentId, REVEAL_EVENT_KEY)) {
+                store.saveAuditEvent(verifiedAudit(command, existingReveal.derivedMultiplier, commitment, now))
+            }
+            if (commitment.status != RoundCommitmentStatus.REVEALED) {
+                val restored = store.compareAndSetCommitment(
+                    commitment.copy(status = RoundCommitmentStatus.REVEALED, updatedAt = now),
+                    commitment.serverVersion,
+                    setOf(
+                        RoundCommitmentStatus.COMMITTED,
+                        RoundCommitmentStatus.BETTING_ACTIVE,
+                        RoundCommitmentStatus.LOCKED,
+                        RoundCommitmentStatus.REVEALED,
+                    ),
                 )
+                if (!restored) {
+                    val fresh = store.findCommitment(command.tenantId, command.gameId, command.roundId)
+                    if (fresh?.status != RoundCommitmentStatus.REVEALED) {
+                        throw FairnessAuthorityException(
+                            "COMMIT_VERSION_CONFLICT",
+                            "Commitment ${commitment.commitmentId} status could not be restored to REVEALED"
+                        )
+                    }
+                }
+            }
+            existingReveal
+        } else {
+            val finalization = outcomeFinalization
+            if (finalization != null && commitment.status != RoundCommitmentStatus.REVEALED &&
+                !finalization.isFinalizedOutcome(command.tenantId, command.gameId, command.roundId)
+            ) {
+                throw FairnessAuthorityException(
+                    "OUTCOME_NOT_FINALIZED",
+                    "Fairness reveal for round ${command.roundId} requires a finalized crash outcome"
+                )
+            }
+            // Verify that revealed secret seed reproduces exact commitment hash
+            val plaintextSeed = decryptSeed(commitment)
+            val calculatedHash = sha256(plaintextSeed)
+            if (calculatedHash != commitment.commitmentHash) {
+                store.saveAuditEvent(
+                    FairnessAuditRecord(
+                        auditId = UUID.randomUUID(),
+                        tenantId = command.tenantId,
+                        roundId = command.roundId,
+                        action = "FAIRNESS_VERIFICATION_FAILED",
+                        actor = "SYSTEM_FAIRNESS_AUTHORITY",
+                        detail = "Security Alert: Revealed seed $calculatedHash does not match pre-bet commitment ${commitment.commitmentHash} (tampered seed detected)",
+                        occurredAt = now,
+                        gameId = command.gameId,
+                        commitmentId = commitment.commitmentId,
+                        eventKey = null,
+                    )
+                )
+                throw FairnessVerificationException(
+                    "COMMITMENT_HASH_MISMATCH",
+                    "Revealed secret seed does not match published pre-bet commitment hash"
+                )
+            }
+
+            val (cs1, cs2, cs3) = resolveClientSeeds(command.tenantId, command.gameId, command.roundId, commitment)
+
+            // Derive authoritative multiplier
+            val derivedMultiplier = computeMultiplier(
+                serverSeed = plaintextSeed,
+                clientSeed1 = cs1,
+                clientSeed2 = cs2,
+                clientSeed3 = cs3,
             )
-            throw FairnessVerificationException(
-                "COMMITMENT_HASH_MISMATCH",
-                "Revealed secret seed does not match published pre-bet commitment hash"
+
+            val advanced = commitment.copy(
+                status = RoundCommitmentStatus.REVEALED,
+                updatedAt = now,
+                clientSeed1 = cs1,
+                clientSeed2 = cs2,
+                clientSeed3 = cs3,
             )
-        }
+            val applied = store.compareAndSetCommitment(
+                advanced,
+                commitment.serverVersion,
+                setOf(
+                    RoundCommitmentStatus.COMMITTED,
+                    RoundCommitmentStatus.BETTING_ACTIVE,
+                    RoundCommitmentStatus.LOCKED,
+                    RoundCommitmentStatus.REVEALED,
+                ),
+            )
+            if (!applied) {
+                throw FairnessAuthorityException(
+                    "COMMIT_VERSION_CONFLICT",
+                    "Commitment ${commitment.commitmentId} changed during reveal; re-reading for idempotent retry"
+                )
+            }
 
-        val (cs1, cs2, cs3) = resolveClientSeeds(command.tenantId, command.gameId, command.roundId, commitment)
-        if (commitment.clientSeed1 == null) {
-            commitment.clientSeed1 = cs1
-            commitment.clientSeed2 = cs2
-            commitment.clientSeed3 = cs3
-        }
+            val evidenceRef = sha256("${command.tenantId}:${command.roundId}:$plaintextSeed:$derivedMultiplier:${now.toEpochMilli()}")
 
-        // Derive authoritative multiplier
-        val derivedMultiplier = computeMultiplier(
-            serverSeed = command.revealedSecretSeed,
-            clientSeed1 = cs1,
-            clientSeed2 = cs2,
-            clientSeed3 = cs3,
-        )
-
-        commitment.status = RoundCommitmentStatus.REVEALED
-        commitment.updatedAt = now
-        store.updateCommitment(commitment)
-
-        val evidenceRef = sha256("${command.tenantId}:${command.roundId}:${command.revealedSecretSeed}:$derivedMultiplier:${now.toEpochMilli()}")
-
-        val reveal = RoundRevealRecord(
-            revealId = UUID.randomUUID(),
-            commitmentId = commitment.commitmentId,
-            tenantId = command.tenantId,
-            gameId = command.gameId,
-            roundId = command.roundId,
-            revealedSecretSeed = command.revealedSecretSeed,
-            derivedMultiplier = derivedMultiplier,
-            revealedAt = now,
-            verificationStatus = FairnessVerificationStatus.VERIFIED,
-            verificationError = null,
-            evidenceReference = evidenceRef,
-        )
-
-        store.saveReveal(reveal)
-        store.saveAuditEvent(
-            FairnessAuditRecord(
-                auditId = UUID.randomUUID(),
+            val reveal = RoundRevealRecord(
+                revealId = UUID.randomUUID(),
+                commitmentId = commitment.commitmentId,
                 tenantId = command.tenantId,
+                gameId = command.gameId,
                 roundId = command.roundId,
-                action = "ROUND_OUTCOME_REVEALED_AND_VERIFIED",
-                actor = "SYSTEM_FAIRNESS_AUTHORITY",
-                detail = "Verified outcome multiplier $derivedMultiplier against pre-bet commitment ${commitment.commitmentHash}",
-                occurredAt = now,
+                revealedSecretSeed = plaintextSeed,
+                derivedMultiplier = derivedMultiplier,
+                revealedAt = now,
+                verificationStatus = FairnessVerificationStatus.VERIFIED,
+                verificationError = null,
+                evidenceReference = evidenceRef,
             )
-        )
 
-        return reveal
+            store.saveReveal(reveal)
+            if (!store.existsAuditEvent(command.tenantId, commitment.commitmentId, REVEAL_EVENT_KEY)) {
+                store.saveAuditEvent(verifiedAudit(command, derivedMultiplier, commitment, now))
+            }
+            reveal
+        }
     }
+
+    private fun verifiedAudit(
+        command: RevealOutcomeCommand,
+        derivedMultiplier: BigDecimal,
+        commitment: RoundCommitmentRecord,
+        occurredAt: Instant,
+    ): FairnessAuditRecord = FairnessAuditRecord(
+        auditId = UUID.randomUUID(),
+        tenantId = command.tenantId,
+        roundId = command.roundId,
+        action = REVEAL_EVENT_KEY,
+        actor = "SYSTEM_FAIRNESS_AUTHORITY",
+        detail = "Verified outcome multiplier $derivedMultiplier against pre-bet commitment ${commitment.commitmentHash}",
+        occurredAt = occurredAt,
+        gameId = command.gameId,
+        commitmentId = commitment.commitmentId,
+        eventKey = REVEAL_EVENT_KEY,
+    )
 
     fun executeProviderFairnessReconciliation(
         tenantId: String,
@@ -335,6 +496,17 @@ class ProvablyFairOutcomeAuthority(
     }
 
     companion object {
+        const val MAX_REVEAL_ATTEMPTS = 3
+        const val MAX_DERIVE_ATTEMPTS = 3
+        const val REVEAL_EVENT_KEY = "ROUND_OUTCOME_REVEALED_AND_VERIFIED"
+
+        val DERIVE_STATUSES = setOf(
+            RoundCommitmentStatus.COMMITTED,
+            RoundCommitmentStatus.BETTING_ACTIVE,
+            RoundCommitmentStatus.LOCKED,
+            RoundCommitmentStatus.REVEALED,
+        )
+
         fun sha256(input: String): String {
             val md = MessageDigest.getInstance("SHA-256")
             val bytes = md.digest(input.toByteArray(StandardCharsets.UTF_8))

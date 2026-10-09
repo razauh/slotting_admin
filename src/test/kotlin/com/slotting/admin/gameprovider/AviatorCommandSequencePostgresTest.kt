@@ -334,7 +334,7 @@ class AviatorCommandSequencePostgresTest {
             .cleanDisabled(true)
             .load()
 
-        jdbc.update("delete from flyway_schema_history where version in ('39', '40')")
+        jdbc.update("delete from flyway_schema_history where version is not null and version::int >= 39")
         jdbc.update("drop table if exists game_command_sequence cascade")
         jdbc.update("drop index if exists ix_game_command_receipt_tenant_seq")
 
@@ -394,7 +394,7 @@ class AviatorCommandSequencePostgresTest {
             assertEquals(2, countAfter, "No rows must be deleted or renumbered during diagnostic abort")
         } finally {
             jdbc.update("delete from game_command_receipt where tenant_id = ?", legacyTenant)
-            jdbc.update("delete from flyway_schema_history where version in ('39', '40')")
+            jdbc.update("delete from flyway_schema_history where version is not null and version::int >= 39")
             flyway.repair()
             flyway.migrate()
         }

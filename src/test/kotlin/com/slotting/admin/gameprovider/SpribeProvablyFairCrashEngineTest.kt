@@ -257,7 +257,7 @@ class SpribeProvablyFairCrashEngineTest {
 
         // Verify with standalone verifier
         val expectedMultiplier = IndependentFairnessVerifier.calculateCrashMultiplier(
-            outcome.secretSeed, "seed-p1", "seed-p2", "seed-p3"
+            fairnessAuthority.openCommittedSecret(tenantId, gameId, roundId), "seed-p1", "seed-p2", "seed-p3"
         )
         assertEquals(expectedMultiplier, outcome.multiplier)
     }
@@ -307,7 +307,7 @@ class SpribeProvablyFairCrashEngineTest {
         assertEquals(expectedFallback3, outcome.clientSeed3)
 
         val expectedMultiplier = IndependentFairnessVerifier.calculateCrashMultiplier(
-            outcome.secretSeed, "p1-seed-custom", expectedFallback2, expectedFallback3
+            fairnessAuthority.openCommittedSecret(tenantId, gameId, roundId), "p1-seed-custom", expectedFallback2, expectedFallback3
         )
         assertEquals(expectedMultiplier, outcome.multiplier)
     }

@@ -30,7 +30,10 @@ management:
 
 slotting:
   schema:
-    supported-version: 40
+    supported-version: 44
+  fairness:
+    reveal:
+      require-finalized: true
   outbox:
     worker:
       enabled: true

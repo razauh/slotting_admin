@@ -232,18 +232,18 @@ class DurableOutcomeBoundFairnessContractTest {
     @Test
     fun `scenario02 changed secret seed fails hash verification and raises alert`() {
         val roundId = "rnd-fair-002"
-        val commitment = seedRoundWithFairness(roundId)
+        seedRoundWithFairness(roundId)
 
-        // Settle round and reveal with tampered seed (e.g. attacker swapped secret seed)
-        val tamperedSeed = "f".repeat(64) // Different 64-char hex seed
+        // Settle round and reveal with tampered commitment hash (e.g. attacker swapped stored commitment)
+        val stored = fairnessStore.findCommitment(tenantId, gameId, roundId)!!
+        fairnessStore.updateCommitment(stored.copy(commitmentHash = "f".repeat(64)))
 
         val ex = assertFailsWith<FairnessVerificationException> {
             fairnessAuthority.revealAndVerifyOutcome(
                 RevealOutcomeCommand(
                     tenantId = tenantId,
                     gameId = gameId,
-                    roundId = roundId,
-                    revealedSecretSeed = tamperedSeed
+                    roundId = roundId
                 )
             )
         }
@@ -267,9 +267,8 @@ class DurableOutcomeBoundFairnessContractTest {
             RevealOutcomeCommand(
                 tenantId = tenantId,
                 gameId = gameId,
-                roundId = roundId,
-                revealedSecretSeed = outcome.secretSeed
-            )
+                roundId = roundId
+                )
         )
         assertEquals(FairnessVerificationStatus.VERIFIED, revealResult.verificationStatus)
 
@@ -381,9 +380,8 @@ class DurableOutcomeBoundFairnessContractTest {
             RevealOutcomeCommand(
                 tenantId = tenantId,
                 gameId = gameId,
-                roundId = roundId,
-                revealedSecretSeed = outcome.secretSeed
-            )
+                roundId = roundId
+                )
         )
 
         // Simulate restart: construct new instances reading from the persistent store
@@ -420,16 +418,20 @@ class DurableOutcomeBoundFairnessContractTest {
         assertNotEquals(c1.commitmentHash, c3.commitmentHash)
 
         // Derive outcomes and check secret seeds are distinct 256-bit hex strings
-        val o1 = fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-01")
-        val o2 = fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-02")
-        val o3 = fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-03")
+        fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-01")
+        fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-02")
+        fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, "rnd-rot-03")
 
-        assertEquals(64, o1.secretSeed.length)
-        assertEquals(64, o2.secretSeed.length)
-        assertEquals(64, o3.secretSeed.length)
+        val s1 = fairnessAuthority.openCommittedSecret(tenantId, gameId, "rnd-rot-01")
+        val s2 = fairnessAuthority.openCommittedSecret(tenantId, gameId, "rnd-rot-02")
+        val s3 = fairnessAuthority.openCommittedSecret(tenantId, gameId, "rnd-rot-03")
 
-        assertNotEquals(o1.secretSeed, o2.secretSeed)
-        assertNotEquals(o2.secretSeed, o3.secretSeed)
+        assertEquals(64, s1.length)
+        assertEquals(64, s2.length)
+        assertEquals(64, s3.length)
+
+        assertNotEquals(s1, s2)
+        assertNotEquals(s2, s3)
     }
 
     // =========================================================================
@@ -446,9 +448,8 @@ class DurableOutcomeBoundFairnessContractTest {
             RevealOutcomeCommand(
                 tenantId = tenantId,
                 gameId = gameId,
-                roundId = roundId,
-                revealedSecretSeed = outcome.secretSeed
-            )
+                roundId = roundId
+                )
         )
 
         val verifier = IndependentFairnessVerifier(fairnessStore)
@@ -487,7 +488,7 @@ class DurableOutcomeBoundFairnessContractTest {
                 tenantId = tenantId,
                 gameId = gameId,
                 roundId = roundId,
-                revealedSecretSeed = outcome.secretSeed,
+                revealedSecretSeed = fairnessAuthority.openCommittedSecret(tenantId, gameId, roundId),
                 derivedMultiplier = BigDecimal("999.9900"), // Tampered! Actual was outcome.multiplier
                 revealedAt = now,
                 verificationStatus = FairnessVerificationStatus.VERIFIED,

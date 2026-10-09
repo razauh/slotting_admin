@@ -58,7 +58,11 @@ class MigrationInventoryContractTest {
             "V37__authoritative_analytics_facts_and_projections.sql",
             "V38__secure_password_reset_token.sql",
             "V39__atomic_command_sequence_allocation.sql",
-            "V40__deterministic_command_keys_and_early_claim.sql"
+            "V40__deterministic_command_keys_and_early_claim.sql",
+            "V41__fairness_secret_envelope.sql",
+            "V42__fairness_secret_migration_run.sql",
+            "V43__fairness_audit_evidence_identity.sql",
+            "V44__fairness_audit_commitment_identity.sql"
         )
 
         val actualSet = actualFiles.toSet()

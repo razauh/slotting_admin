@@ -231,6 +231,17 @@ class AviatorPlaceBetTransactionTest {
             delegate.updateCommitment(commitment)
             after("fairnessUpdate")
         }
+
+        override fun compareAndSetCommitment(
+            commitment: RoundCommitmentRecord,
+            expectedServerVersion: Long,
+            expectedStatuses: Set<RoundCommitmentStatus>,
+        ): Boolean {
+            before("fairnessUpdate")
+            val result = delegate.compareAndSetCommitment(commitment, expectedServerVersion, expectedStatuses)
+            after("fairnessUpdate")
+            return result
+        }
     }
 
     class LockRankTracingStore(

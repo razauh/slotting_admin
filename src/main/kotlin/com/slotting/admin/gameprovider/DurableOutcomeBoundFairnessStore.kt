@@ -11,8 +11,26 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 interface FairnessEvidenceStore {
     fun findCommitment(tenantId: String, gameId: String, roundId: String): RoundCommitmentRecord?
+    fun findAllCommitments(tenantId: String): List<RoundCommitmentRecord>
     fun saveCommitment(commitment: RoundCommitmentRecord)
     fun updateCommitment(commitment: RoundCommitmentRecord)
+    fun compareAndSetCommitment(
+        commitment: RoundCommitmentRecord,
+        expectedServerVersion: Long,
+        expectedStatuses: Set<RoundCommitmentStatus>,
+    ): Boolean
+    fun existsAuditEvent(tenantId: String, commitmentId: java.util.UUID, eventKey: String): Boolean
+    fun rotateCommitmentEnvelope(
+        commitmentId: java.util.UUID,
+        tenantId: String,
+        expectedServerVersion: Long,
+        encryptedSeed: String,
+        nonce: String,
+        keyId: String,
+        keyVersion: Int,
+        formatVersion: Int,
+        updatedAt: java.time.Instant,
+    ): Boolean
     fun findReveal(tenantId: String, gameId: String, roundId: String): RoundRevealRecord?
     fun saveReveal(reveal: RoundRevealRecord)
     fun saveAuditEvent(event: FairnessAuditRecord)
@@ -30,6 +48,37 @@ open class InMemoryFairnessEvidenceStore : FairnessEvidenceStore {
         return commitments[key(tenantId, gameId, roundId)]?.copy()
     }
 
+    override fun findAllCommitments(tenantId: String): List<RoundCommitmentRecord> {
+        return commitments.values.filter { it.tenantId == tenantId }.map { it.copy() }.sortedBy { it.commitmentId }
+    }
+
+    @Synchronized
+    override fun rotateCommitmentEnvelope(
+        commitmentId: java.util.UUID,
+        tenantId: String,
+        expectedServerVersion: Long,
+        encryptedSeed: String,
+        nonce: String,
+        keyId: String,
+        keyVersion: Int,
+        formatVersion: Int,
+        updatedAt: java.time.Instant,
+    ): Boolean {
+        val entry = commitments.entries.firstOrNull { it.value.commitmentId == commitmentId && it.value.tenantId == tenantId }
+            ?: return false
+        if (entry.value.serverVersion != expectedServerVersion) return false
+        commitments[entry.key] = entry.value.copy(
+            encryptedSecretSeed = encryptedSeed,
+            secretNonce = nonce,
+            secretKeyId = keyId,
+            secretKeyVersion = keyVersion,
+            secretFormatVersion = formatVersion,
+            serverVersion = expectedServerVersion + 1,
+            updatedAt = updatedAt,
+        )
+        return true
+    }
+
     @Synchronized
     override fun saveCommitment(commitment: RoundCommitmentRecord) {
         val k = key(commitment.tenantId, commitment.gameId, commitment.roundId)
@@ -44,6 +93,31 @@ open class InMemoryFairnessEvidenceStore : FairnessEvidenceStore {
         val k = key(commitment.tenantId, commitment.gameId, commitment.roundId)
         commitments[k] = commitment.copy()
     }
+
+    @Synchronized
+    override fun compareAndSetCommitment(
+        commitment: RoundCommitmentRecord,
+        expectedServerVersion: Long,
+        expectedStatuses: Set<RoundCommitmentStatus>,
+    ): Boolean {
+        val entry = commitments.entries.firstOrNull { it.value.commitmentId == commitment.commitmentId && it.value.tenantId == commitment.tenantId }
+            ?: return false
+        val current = entry.value
+        if (current.serverVersion != expectedServerVersion || current.status !in expectedStatuses) return false
+        commitments[entry.key] = current.copy(
+            status = commitment.status,
+            firstBetAcceptedAt = commitment.firstBetAcceptedAt,
+            clientSeed1 = commitment.clientSeed1,
+            clientSeed2 = commitment.clientSeed2,
+            clientSeed3 = commitment.clientSeed3,
+            serverVersion = expectedServerVersion + 1,
+            updatedAt = commitment.updatedAt,
+        )
+        return true
+    }
+
+    override fun existsAuditEvent(tenantId: String, commitmentId: java.util.UUID, eventKey: String): Boolean =
+        auditLogs.any { it.tenantId == tenantId && it.commitmentId == commitmentId && it.eventKey == eventKey }
 
     override fun findReveal(tenantId: String, gameId: String, roundId: String): RoundRevealRecord? {
         return reveals[key(tenantId, gameId, roundId)]?.copy()
@@ -77,12 +151,61 @@ open class JdbcFairnessEvidenceStore(
             select commitment_id, tenant_id, game_id, round_id, authority_type, algorithm_version,
                    rules_version, commitment_hash, public_salt, encrypted_secret_seed,
                    committed_at, first_bet_accepted_at, status, server_version, created_at, updated_at,
-                   client_seed1, client_seed2, client_seed3
+                   client_seed1, client_seed2, client_seed3,
+                   secret_nonce, secret_key_id, secret_key_version, secret_format_version
             from game_fairness_commitment
             where tenant_id = ? and game_id = ? and round_id = ?
         """.trimIndent()
         val list = jdbcTemplate.query(sql, { rs, _ -> mapCommitment(rs) }, tenantId, gameId, roundId)
         return list.firstOrNull()
+    }
+
+    override fun findAllCommitments(tenantId: String): List<RoundCommitmentRecord> {
+        val sql = """
+            select commitment_id, tenant_id, game_id, round_id, authority_type, algorithm_version,
+                   rules_version, commitment_hash, public_salt, encrypted_secret_seed,
+                   committed_at, first_bet_accepted_at, status, server_version, created_at, updated_at,
+                   client_seed1, client_seed2, client_seed3,
+                   secret_nonce, secret_key_id, secret_key_version, secret_format_version
+            from game_fairness_commitment
+            where tenant_id = ?
+            order by commitment_id asc
+        """.trimIndent()
+        return jdbcTemplate.query(sql, { rs, _ -> mapCommitment(rs) }, tenantId)
+    }
+
+    @Transactional
+    override fun rotateCommitmentEnvelope(
+        commitmentId: java.util.UUID,
+        tenantId: String,
+        expectedServerVersion: Long,
+        encryptedSeed: String,
+        nonce: String,
+        keyId: String,
+        keyVersion: Int,
+        formatVersion: Int,
+        updatedAt: java.time.Instant,
+    ): Boolean {
+        val sql = """
+            update game_fairness_commitment
+            set encrypted_secret_seed = ?, secret_nonce = ?, secret_key_id = ?,
+                secret_key_version = ?, secret_format_version = ?,
+                server_version = server_version + 1, updated_at = ?
+            where commitment_id = ? and tenant_id = ? and server_version = ?
+        """.trimIndent()
+        val updated = jdbcTemplate.update(
+            sql,
+            encryptedSeed,
+            nonce,
+            keyId,
+            keyVersion,
+            formatVersion,
+            Timestamp.from(updatedAt),
+            commitmentId,
+            tenantId,
+            expectedServerVersion,
+        )
+        return updated == 1
     }
 
     @Transactional
@@ -92,8 +215,9 @@ open class JdbcFairnessEvidenceStore(
                 commitment_id, tenant_id, game_id, round_id, authority_type, algorithm_version,
                 rules_version, commitment_hash, public_salt, encrypted_secret_seed, committed_at,
                 first_bet_accepted_at, status, server_version, created_at, updated_at,
-                client_seed1, client_seed2, client_seed3
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                client_seed1, client_seed2, client_seed3,
+                secret_nonce, secret_key_id, secret_key_version, secret_format_version
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -115,7 +239,11 @@ open class JdbcFairnessEvidenceStore(
             Timestamp.from(commitment.updatedAt),
             commitment.clientSeed1,
             commitment.clientSeed2,
-            commitment.clientSeed3
+            commitment.clientSeed3,
+            commitment.secretNonce,
+            commitment.secretKeyId,
+            commitment.secretKeyVersion,
+            commitment.secretFormatVersion
         )
     }
 
@@ -138,6 +266,43 @@ open class JdbcFairnessEvidenceStore(
             commitment.commitmentId,
             commitment.tenantId
         )
+    }
+
+    @Transactional
+    override fun compareAndSetCommitment(
+        commitment: RoundCommitmentRecord,
+        expectedServerVersion: Long,
+        expectedStatuses: Set<RoundCommitmentStatus>,
+    ): Boolean {
+        val placeholders = expectedStatuses.joinToString(", ") { "?" }
+        val sql = """
+            update game_fairness_commitment
+            set first_bet_accepted_at = ?, status = ?, server_version = server_version + 1, updated_at = ?,
+                client_seed1 = ?, client_seed2 = ?, client_seed3 = ?
+            where commitment_id = ? and tenant_id = ? and server_version = ?
+              and status in ($placeholders)
+        """.trimIndent()
+        val args = ArrayList<Any?>()
+        args.add(commitment.firstBetAcceptedAt?.let { Timestamp.from(it) })
+        args.add(commitment.status.name)
+        args.add(Timestamp.from(commitment.updatedAt))
+        args.add(commitment.clientSeed1)
+        args.add(commitment.clientSeed2)
+        args.add(commitment.clientSeed3)
+        args.add(commitment.commitmentId)
+        args.add(commitment.tenantId)
+        args.add(expectedServerVersion)
+        expectedStatuses.forEach { args.add(it.name) }
+        val updated = jdbcTemplate.update(sql, *args.toTypedArray())
+        return updated == 1
+    }
+
+    override fun existsAuditEvent(tenantId: String, commitmentId: java.util.UUID, eventKey: String): Boolean {
+        val count = jdbcTemplate.queryForObject(
+            "select count(*) from game_fairness_audit where tenant_id = ? and commitment_id = ? and event_key = ?",
+            Int::class.java, tenantId, commitmentId, eventKey,
+        ) ?: 0
+        return count > 0
     }
 
     override fun findReveal(tenantId: String, gameId: String, roundId: String): RoundRevealRecord? {
@@ -179,8 +344,10 @@ open class JdbcFairnessEvidenceStore(
     override fun saveAuditEvent(event: FairnessAuditRecord) {
         val sql = """
             insert into game_fairness_audit (
-                audit_id, tenant_id, round_id, action, actor, detail, occurred_at
-            ) values (?, ?, ?, ?, ?, ?, ?)
+                audit_id, tenant_id, round_id, action, actor, detail, occurred_at,
+                game_id, commitment_id, event_key
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict do nothing
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -190,13 +357,17 @@ open class JdbcFairnessEvidenceStore(
             event.action,
             event.actor,
             event.detail,
-            Timestamp.from(event.occurredAt)
+            Timestamp.from(event.occurredAt),
+            event.gameId,
+            event.commitmentId,
+            event.eventKey,
         )
     }
 
     override fun findAuditEvents(tenantId: String, roundId: String): List<FairnessAuditRecord> {
         val sql = """
-            select audit_id, tenant_id, round_id, action, actor, detail, occurred_at
+            select audit_id, tenant_id, round_id, action, actor, detail, occurred_at,
+                   game_id, commitment_id, event_key
             from game_fairness_audit
             where tenant_id = ? and round_id = ?
             order by occurred_at asc
@@ -225,6 +396,10 @@ open class JdbcFairnessEvidenceStore(
             clientSeed1 = runCatching { rs.getString("client_seed1") }.getOrNull(),
             clientSeed2 = runCatching { rs.getString("client_seed2") }.getOrNull(),
             clientSeed3 = runCatching { rs.getString("client_seed3") }.getOrNull(),
+            secretNonce = runCatching { rs.getString("secret_nonce") }.getOrNull(),
+            secretKeyId = runCatching { rs.getString("secret_key_id") }.getOrNull(),
+            secretKeyVersion = runCatching { rs.getObject("secret_key_version", Integer::class.java)?.toInt() }.getOrNull(),
+            secretFormatVersion = runCatching { rs.getObject("secret_format_version", Integer::class.java)?.toInt() }.getOrNull(),
         )
     }
 
@@ -253,6 +428,9 @@ open class JdbcFairnessEvidenceStore(
             actor = rs.getString("actor"),
             detail = rs.getString("detail"),
             occurredAt = rs.getTimestamp("occurred_at").toInstant(),
+            gameId = runCatching { rs.getString("game_id") }.getOrNull(),
+            commitmentId = runCatching { rs.getObject("commitment_id", UUID::class.java) }.getOrNull(),
+            eventKey = runCatching { rs.getString("event_key") }.getOrNull(),
         )
     }
 }
