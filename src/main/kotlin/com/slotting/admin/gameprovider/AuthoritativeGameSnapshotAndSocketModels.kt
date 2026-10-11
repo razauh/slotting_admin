@@ -78,6 +78,7 @@ data class GameEventRecord(
     val targetOwnerId: String? = null,
     val timestampMillis: Long,
     val createdAt: Instant,
+    val roundVersion: Long = 1L,
 )
 
 sealed class SocketResumeOutcome {
@@ -106,4 +107,3 @@ data class TopHistoryItem(
 )
 
 class SessionStoreOutageException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
-

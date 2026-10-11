@@ -1,4 +1,5 @@
 .gradle/
+.gradle_user_home/
 build/
 out/
 *.iml

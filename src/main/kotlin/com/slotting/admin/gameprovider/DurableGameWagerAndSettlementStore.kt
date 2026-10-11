@@ -28,6 +28,7 @@ interface DurableGameWagerAndSettlementStore {
     fun findSettlement(tenantId: String, betId: UUID): GameBetSettlementRecord?
     fun saveSettlement(settlement: GameBetSettlementRecord)
     fun findReceipt(tenantId: String, commandId: String): GameCommandReceiptRecord?
+    fun findAllReceiptsForTenant(tenantId: String): List<GameCommandReceiptRecord> = emptyList()
     fun saveReceipt(receipt: GameCommandReceiptRecord)
     fun claimReceipt(claim: GameCommandReceiptClaim): CommandReceiptClaimResult
     fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long)
@@ -35,6 +36,7 @@ interface DurableGameWagerAndSettlementStore {
     fun addDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long)
     fun nextSequenceId(tenantId: String): Long
     fun findLatestRound(tenantId: String, gameId: String): GameRoundRecord?
+    fun findActiveRounds(tenantId: String, gameId: String): List<GameRoundRecord> = emptyList()
     fun findFinishedRounds(tenantId: String, gameId: String, limit: Int): List<GameRoundRecord>
     fun findBetsForOwner(tenantId: String, ownerId: String, limit: Int): List<GameAcceptedBetRecord>
     fun findTopSettlements(tenantId: String, limit: Int): List<GameBetSettlementRecord>
@@ -161,6 +163,9 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
         return receipts[receiptKey(tenantId, commandId)]?.copy()
     }
 
+    override fun findAllReceiptsForTenant(tenantId: String): List<GameCommandReceiptRecord> =
+        receipts.values.filter { it.tenantId == tenantId }.map { it.copy() }
+
     @Synchronized
     override fun saveReceipt(receipt: GameCommandReceiptRecord) {
         val key = receiptKey(receipt.tenantId, receipt.commandId)
@@ -250,6 +255,10 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
             .firstOrNull()?.copy()
     }
 
+    override fun findActiveRounds(tenantId: String, gameId: String): List<GameRoundRecord> =
+        rounds.filter { it.key.startsWith("$tenantId:$gameId:") && it.value.phase != GameRoundPhase.CLOSED }
+            .values.map { it.copy() }
+
     override fun findFinishedRounds(tenantId: String, gameId: String, limit: Int): List<GameRoundRecord> {
         val prefix = "$tenantId:$gameId:"
         return rounds.filterKeys { it.startsWith(prefix) }.values
@@ -288,7 +297,9 @@ open class JdbcDurableGameWagerAndSettlementStore(
     override fun findRound(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
         val sql = """
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ? and round_id = ?
         """.trimIndent()
@@ -296,10 +307,17 @@ open class JdbcDurableGameWagerAndSettlementStore(
         return list.firstOrNull()
     }
 
+    override fun findAllReceiptsForTenant(tenantId: String): List<GameCommandReceiptRecord> {
+        val sql = "select * from game_command_receipt where tenant_id = ? order by created_at, command_id"
+        return jdbcTemplate.query(sql, { rs, _ -> mapReceipt(rs) }, tenantId)
+    }
+
     override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
         val sql = """
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ? and round_id = ?
             for share
@@ -311,7 +329,9 @@ open class JdbcDurableGameWagerAndSettlementStore(
     override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
         val sql = """
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ? and round_id = ?
             for update
@@ -325,8 +345,10 @@ open class JdbcDurableGameWagerAndSettlementStore(
         val sql = """
             insert into game_authoritative_round (
                 tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         try {
             jdbcTemplate.update(
@@ -341,6 +363,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
                 Timestamp.from(round.startedAt),
                 round.crashedAt?.let { Timestamp.from(it) },
                 round.closedAt?.let { Timestamp.from(it) },
+                round.flyingAt?.let { Timestamp.from(it) },
+                round.phaseStartedAt?.let { Timestamp.from(it) },
+                round.phaseDeadlineAt?.let { Timestamp.from(it) },
+                round.lifecycleConfigFingerprint,
+                round.scheduledMillis,
+                round.bettingMillis,
+                round.closedMillis,
+                round.tickMillis,
+                round.multiplierStep,
+                round.rulesVersion,
+                round.algorithmVersion,
+                round.publicSalt,
                 Timestamp.from(round.serverTime),
                 Timestamp.from(round.createdAt),
                 Timestamp.from(round.updatedAt),
@@ -363,6 +397,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
                 crash_multiplier = ?,
                 crashed_at = ?,
                 closed_at = ?,
+                flying_at = ?,
+                phase_started_at = ?,
+                phase_deadline_at = ?,
+                config_fingerprint = ?,
+                scheduled_millis = ?,
+                betting_millis = ?,
+                closed_millis = ?,
+                tick_millis = ?,
+                multiplier_step = ?,
+                rules_version = ?,
+                algorithm_version = ?,
+                public_salt = ?,
                 server_time = ?,
                 updated_at = ?
             where tenant_id = ? and game_id = ? and round_id = ?
@@ -376,6 +422,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
             round.crashMultiplier,
             round.crashedAt?.let { Timestamp.from(it) },
             round.closedAt?.let { Timestamp.from(it) },
+            round.flyingAt?.let { Timestamp.from(it) },
+            round.phaseStartedAt?.let { Timestamp.from(it) },
+            round.phaseDeadlineAt?.let { Timestamp.from(it) },
+            round.lifecycleConfigFingerprint,
+            round.scheduledMillis,
+            round.bettingMillis,
+            round.closedMillis,
+            round.tickMillis,
+            round.multiplierStep,
+            round.rulesVersion,
+            round.algorithmVersion,
+            round.publicSalt,
             Timestamp.from(round.serverTime),
             Timestamp.from(round.updatedAt),
             round.tenantId,
@@ -679,7 +737,9 @@ open class JdbcDurableGameWagerAndSettlementStore(
     override fun findLatestRound(tenantId: String, gameId: String): GameRoundRecord? {
         val sql = """
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ?
             order by started_at desc, updated_at desc, round_id desc
@@ -689,10 +749,25 @@ open class JdbcDurableGameWagerAndSettlementStore(
         return list.firstOrNull()
     }
 
+    override fun findActiveRounds(tenantId: String, gameId: String): List<GameRoundRecord> {
+        val sql = """
+            select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
+            from game_authoritative_round
+            where tenant_id = ? and game_id = ? and phase <> 'CLOSED'
+            order by started_at, round_id
+        """.trimIndent()
+        return jdbcTemplate.query(sql, { rs, _ -> mapRound(rs) }, tenantId, gameId)
+    }
+
     override fun findFinishedRounds(tenantId: String, gameId: String, limit: Int): List<GameRoundRecord> {
         val sql = """
             select tenant_id, game_id, round_id, phase, round_version, current_multiplier,
-                   crash_multiplier, started_at, crashed_at, closed_at, server_time, created_at, updated_at
+                   crash_multiplier, started_at, crashed_at, closed_at, flying_at, phase_started_at, phase_deadline_at,
+                   config_fingerprint, scheduled_millis, betting_millis, closed_millis, tick_millis, multiplier_step,
+                   rules_version, algorithm_version, public_salt, server_time, created_at, updated_at
             from game_authoritative_round
             where tenant_id = ? and game_id = ? and phase in ('CRASHED', 'CLOSED')
             order by started_at desc, updated_at desc, round_id desc
@@ -737,6 +812,18 @@ open class JdbcDurableGameWagerAndSettlementStore(
             startedAt = rs.getTimestamp("started_at").toInstant(),
             crashedAt = rs.getTimestamp("crashed_at")?.toInstant(),
             closedAt = rs.getTimestamp("closed_at")?.toInstant(),
+            flyingAt = rs.getTimestamp("flying_at")?.toInstant(),
+            phaseStartedAt = rs.getTimestamp("phase_started_at")?.toInstant(),
+            phaseDeadlineAt = rs.getTimestamp("phase_deadline_at")?.toInstant(),
+            lifecycleConfigFingerprint = rs.getString("config_fingerprint"),
+            scheduledMillis = rs.getObject("scheduled_millis")?.let { rs.getLong("scheduled_millis") },
+            bettingMillis = rs.getObject("betting_millis")?.let { rs.getLong("betting_millis") },
+            closedMillis = rs.getObject("closed_millis")?.let { rs.getLong("closed_millis") },
+            tickMillis = rs.getObject("tick_millis")?.let { rs.getLong("tick_millis") },
+            multiplierStep = rs.getBigDecimal("multiplier_step"),
+            rulesVersion = rs.getString("rules_version"),
+            algorithmVersion = rs.getString("algorithm_version"),
+            publicSalt = rs.getString("public_salt"),
             serverTime = rs.getTimestamp("server_time").toInstant(),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),

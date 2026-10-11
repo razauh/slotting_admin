@@ -321,6 +321,7 @@ class AviatorCrashLifecycleRecoveryTest {
             fairnessAuthority = authority,
             snapshotService = snapshotService,
             txManager = txManager,
+            clock = testClock,
         )
         return AviatorRoundLifecycleOrchestrator(port = port, properties = properties, clock = testClock)
     }
@@ -431,7 +432,7 @@ class AviatorCrashLifecycleRecoveryTest {
             clock = testClock,
         )
         val orchestrator = AviatorRoundLifecycleOrchestrator(
-            port = ProductionAviatorLifecyclePort(gameService, fairnessAuthority, publishingSnapshot, txManager),
+            port = ProductionAviatorLifecyclePort(gameService, fairnessAuthority, publishingSnapshot, txManager, clock = testClock),
             properties = properties,
             clock = testClock,
         )
@@ -452,7 +453,7 @@ class AviatorCrashLifecycleRecoveryTest {
 
         failingJournal.failNextGameStateSave = false
         val recovered = AviatorRoundLifecycleOrchestrator(
-            port = ProductionAviatorLifecyclePort(gameService, fairnessAuthority, publishingSnapshot, txManager),
+            port = ProductionAviatorLifecyclePort(gameService, fairnessAuthority, publishingSnapshot, txManager, clock = testClock),
             properties = properties,
             clock = testClock,
         )

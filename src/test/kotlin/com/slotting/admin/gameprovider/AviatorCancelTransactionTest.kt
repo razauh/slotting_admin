@@ -234,13 +234,14 @@ class AviatorCancelTransactionTest {
         )
     }
 
-    private fun createRound(roundId: String) {
+    private fun createRound(roundId: String, phase: GameRoundPhase = GameRoundPhase.BET_COUNTDOWN) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,
                 gameId = gameId,
                 roundId = roundId,
-                phase = GameRoundPhase.BET_COUNTDOWN,
+                phase = phase,
                 roundVersion = 1L,
                 currentMultiplier = BigDecimal("1.0000"),
             )
@@ -276,6 +277,76 @@ class AviatorCancelTransactionTest {
             currency = currency,
             correlationId = "corr-$commandId",
         )
+
+    @Test
+    fun `GivenScheduledRound_WhenPlaceOrCancelRequested_ThenBettingWindowRejectsWithoutMoneyEffect`() {
+        val startingBalance = 50000L
+        seedFunds(startingBalance)
+        val roundId = "rnd-tc022-scheduled"
+        createRound(roundId, GameRoundPhase.SCHEDULED)
+
+        val place = gameService.processCommand(
+            AviatorRestCommand(
+                tenantId = tenantId,
+                principal = playerPrincipal,
+                commandId = "cmd-tc022-scheduled-place",
+                roundId = roundId,
+                handId = "hand_primary",
+                action = "PLACE_BET",
+                wagerMinor = 60L,
+                currency = currency,
+                correlationId = "corr-tc022-scheduled-place",
+            )
+        )
+        val cancel = gameService.processCommand(cancelCommand(roundId, "cmd-tc022-scheduled-cancel"))
+
+        assertEquals(AviatorCommandAckStatus.REJECTED, place.status)
+        assertEquals(AviatorCommandRejectionCode.INVALID_PHASE, place.rejection?.code)
+        assertEquals(AviatorCommandAckStatus.REJECTED, cancel.status)
+        assertEquals(AviatorCommandRejectionCode.INVALID_PHASE, cancel.rejection?.code)
+        assertNull(gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary"))
+        assertEquals(startingBalance, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+    }
+
+    @Test
+    fun `GivenAcceptedCommand_WhenRetriedAfterWindowCloses_ThenOriginalResultReturns`() {
+        seedFunds(50000L)
+        val roundId = "rnd-tc022-replay-after-close"
+        createRound(roundId)
+        val commandId = "cmd-tc022-replay-after-close"
+        val accepted = placeBet(roundId, commandId, 60L)
+
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                currentMultiplier = BigDecimal("1.1000"),
+            )
+        )
+
+        val replay = gameService.processCommand(
+            AviatorRestCommand(
+                tenantId = tenantId,
+                principal = playerPrincipal,
+                commandId = commandId,
+                roundId = roundId,
+                handId = "hand_primary",
+                action = "PLACE_BET",
+                wagerMinor = 60L,
+                currency = currency,
+                correlationId = "corr-$commandId",
+            )
+        )
+
+        assertEquals(accepted.status, replay.status)
+        assertEquals(accepted.sequenceId, replay.sequenceId)
+        assertEquals(accepted.result?.accountMoneyAfterMinor, replay.result?.accountMoneyAfterMinor)
+        assertEquals(1, jdbc.queryForObject("select count(*) from game_accepted_bet where tenant_id = ? and round_id = ?", Int::class.java, tenantId, roundId))
+        assertEquals(50000L - 60L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+    }
 
     private fun settlementCount(outcome: GameSettlementOutcome): Int =
         jdbc.queryForObject(

@@ -54,6 +54,7 @@ class DurableGameWagerAndSettlementService(
         val MAX_PAYOUT_PER_BET: BigDecimal = BigDecimal("100.00")
         val MAX_MULTIPLIER: BigDecimal = BigDecimal("100.00")
         const val DEFAULT_HOUSE_MAX_ROUND_EXPOSURE: Long = 100_000_000L
+        private val BETTING_OPEN_PHASES = setOf(GameRoundPhase.BET_COUNTDOWN)
     }
 
     fun createOrUpdateRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
@@ -73,6 +74,23 @@ class DurableGameWagerAndSettlementService(
                     startedAt = now,
                     crashedAt = if (command.phase == GameRoundPhase.CRASHED) now else null,
                     closedAt = if (command.phase == GameRoundPhase.CLOSED) now else null,
+                    flyingAt = command.flyingAt,
+                    phaseStartedAt = command.phaseStartedAt ?: now,
+                    phaseDeadlineAt = command.phaseDeadlineAt ?: when (command.phase) {
+                        GameRoundPhase.SCHEDULED -> now.plusMillis(3000L)
+                        GameRoundPhase.BET_COUNTDOWN -> now.plusMillis(3000L)
+                        GameRoundPhase.CLOSED -> now.plusMillis(3000L)
+                        else -> null
+                    },
+                    lifecycleConfigFingerprint = command.lifecycleConfigFingerprint,
+                    scheduledMillis = command.scheduledMillis,
+                    bettingMillis = command.bettingMillis,
+                    closedMillis = command.closedMillis,
+                    tickMillis = command.tickMillis,
+                    multiplierStep = command.multiplierStep,
+                    rulesVersion = command.rulesVersion,
+                    algorithmVersion = command.algorithmVersion,
+                    publicSalt = command.publicSalt,
                     serverTime = now,
                     createdAt = now,
                     updatedAt = now,
@@ -107,6 +125,18 @@ class DurableGameWagerAndSettlementService(
                 if (command.phase == GameRoundPhase.CLOSED && existing.closedAt == null) {
                     existing.closedAt = now
                 }
+                existing.flyingAt = command.flyingAt ?: existing.flyingAt
+                existing.phaseStartedAt = command.phaseStartedAt ?: now
+                existing.phaseDeadlineAt = command.phaseDeadlineAt
+                existing.lifecycleConfigFingerprint = command.lifecycleConfigFingerprint ?: existing.lifecycleConfigFingerprint
+                existing.scheduledMillis = command.scheduledMillis ?: existing.scheduledMillis
+                existing.bettingMillis = command.bettingMillis ?: existing.bettingMillis
+                existing.closedMillis = command.closedMillis ?: existing.closedMillis
+                existing.tickMillis = command.tickMillis ?: existing.tickMillis
+                existing.multiplierStep = command.multiplierStep ?: existing.multiplierStep
+                existing.rulesVersion = command.rulesVersion ?: existing.rulesVersion
+                existing.algorithmVersion = command.algorithmVersion ?: existing.algorithmVersion
+                existing.publicSalt = command.publicSalt ?: existing.publicSalt
                 store.updateRound(existing, expectedVersion, allowedPrior)
                 existing
             }
@@ -326,7 +356,7 @@ class DurableGameWagerAndSettlementService(
         val now = clock.instant()
 
         // Phase check
-        if (round.phase != GameRoundPhase.BET_COUNTDOWN && round.phase != GameRoundPhase.SCHEDULED) {
+        if (round.phase !in BETTING_OPEN_PHASES) {
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -628,7 +658,7 @@ class DurableGameWagerAndSettlementService(
         val now = clock.instant()
 
         // Phase check: cancel is only valid during BET_COUNTDOWN
-        if (round.phase != GameRoundPhase.BET_COUNTDOWN && round.phase != GameRoundPhase.SCHEDULED) {
+        if (round.phase !in BETTING_OPEN_PHASES) {
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -816,8 +846,18 @@ class DurableGameWagerAndSettlementService(
             )
         }
 
-        // Authoritative multiplier and payout calculation (derived entirely on server, rejecting client-sent multiplier)
-        val authoritativeMultiplier = round.currentMultiplier
+        val authority = fairnessAuthority
+            ?: throw FairnessAuthorityException(
+                "RULES_VERSION_UNAVAILABLE",
+                "Fairness rules unavailable for cash-out",
+            )
+        val commitment = authority.store.findCommitment(command.tenantId, gameId, command.roundId)
+            ?: throw FairnessAuthorityException(
+                "RULES_VERSION_UNAVAILABLE",
+                "Fairness commitment unavailable for cash-out",
+            )
+        val rulesVersion = commitment.rulesVersion
+        val authoritativeMultiplier = FlightClock.resolveAuthoritativeMultiplier(round, rulesVersion, clock)
         val wagerBd = BigDecimal(bet.wagerMinorUnits)
         val calculatedPayout = wagerBd.multiply(authoritativeMultiplier).setScale(0, RoundingMode.FLOOR).toLong()
         val maxAllowedPayout = wagerBd.multiply(MAX_PAYOUT_PER_BET).setScale(0, RoundingMode.FLOOR).toLong()

@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 interface LedgerJournalStore {
     fun findByIdempotency(tenantId: String, idempotencyKey: String): Pair<String, PostingResult>?
     fun findByTransactionReference(tenantId: String, transactionReference: String): PostingResult?
+    fun findAllTransactionsForTenant(tenantId: String): List<PostingResult> = emptyList()
     fun findLegs(tenantId: String, transactionId: UUID): List<JournalEntryRecord>
     fun findAllLegsForTenant(tenantId: String): List<JournalEntryRecord>
     fun findBalance(tenantId: String, accountReference: String, currencyCode: String): Long
@@ -46,6 +47,9 @@ open class InMemoryLedgerJournalStore : LedgerJournalStore {
     override fun findByTransactionReference(tenantId: String, transactionReference: String): PostingResult? {
         return transactions["$tenantId:$transactionReference"]
     }
+
+    override fun findAllTransactionsForTenant(tenantId: String): List<PostingResult> =
+        transactions.values.filter { it.tenantId == tenantId }
 
     override fun findLegs(tenantId: String, transactionId: UUID): List<JournalEntryRecord> {
         return legsStore[transactionId]?.filter { it.tenantId == tenantId } ?: emptyList()
@@ -124,6 +128,9 @@ open class JdbcLedgerJournalStore(
         val query = "select * from ledger_transaction where tenant_id = ? and transaction_reference = ?"
         return jdbc.query(query, { rs, _ -> rs.toPostingResult() }, tenantId, transactionReference).firstOrNull()
     }
+
+    override fun findAllTransactionsForTenant(tenantId: String): List<PostingResult> =
+        jdbc.query("select * from ledger_transaction where tenant_id = ? order by posted_at, ledger_version", { rs, _ -> rs.toPostingResult() }, tenantId)
 
     override fun findLegs(tenantId: String, transactionId: UUID): List<JournalEntryRecord> {
         val query = "select * from ledger_leg where tenant_id = ? and transaction_id = ? order by line_order"

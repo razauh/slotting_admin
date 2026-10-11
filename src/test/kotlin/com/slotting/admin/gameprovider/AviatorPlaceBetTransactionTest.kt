@@ -376,6 +376,7 @@ class AviatorPlaceBetTransactionTest {
         version: Long = 1L,
         multiplier: BigDecimal = BigDecimal("1.0000"),
     ) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,

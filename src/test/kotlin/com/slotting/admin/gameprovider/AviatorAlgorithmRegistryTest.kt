@@ -560,21 +560,6 @@ class AviatorAlgorithmRegistryTest {
         assertEquals(startingBalance - wagerMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
 
-        val cancelRound = "rnd-tc016-golden-cancel"
-        createRound(cancelRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cancelRound, "cmd-tc016-golden-bet-cancel")).status)
-        assertEquals(startingBalance - 2 * wagerMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
-        assertEquals(2 * wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
-        val cancelAck = gameService.processCommand(
-            AviatorRestCommand(
-                tenantId = tenantId, principal = playerPrincipal, commandId = "cmd-tc016-golden-cancel-1",
-                roundId = cancelRound, handId = "hand_primary", action = "CANCEL_BET", currency = currency, correlationId = "corr-tc016-golden-cancel-1",
-            )
-        )
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, cancelAck.status)
-        assertEquals(startingBalance - wagerMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
-        assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
-
         gameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier))
         val cashOutAck = gameService.processCommand(
             AviatorRestCommand(
@@ -584,6 +569,21 @@ class AviatorAlgorithmRegistryTest {
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, cashOutAck.status)
         assertEquals(expectedWinMinor, cashOutAck.result?.payoutMinor)
+        assertEquals(startingBalance - wagerMinor + expectedWinMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
+
+        val cancelRound = "rnd-tc016-golden-cancel"
+        createRound(cancelRound)
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cancelRound, "cmd-tc016-golden-bet-cancel")).status)
+        assertEquals(startingBalance - 2 * wagerMinor + expectedWinMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+        assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
+        val cancelAck = gameService.processCommand(
+            AviatorRestCommand(
+                tenantId = tenantId, principal = playerPrincipal, commandId = "cmd-tc016-golden-cancel-1",
+                roundId = cancelRound, handId = "hand_primary", action = "CANCEL_BET", currency = currency, correlationId = "corr-tc016-golden-cancel-1",
+            )
+        )
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, cancelAck.status)
         assertEquals(startingBalance - wagerMinor + expectedWinMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertEquals(0L, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
 
@@ -736,12 +736,14 @@ class AviatorAlgorithmRegistryTest {
     }
 
     private fun createRound(roundId: String) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.BET_COUNTDOWN, 1L, BigDecimal("1.0000"))
         )
     }
 
     private fun insertRound(roundId: String, phase: String = "SCHEDULED", game: String = gameId) {
+        closeActiveRoundsFor(jdbc, tenantId, game, keepRoundId = roundId)
         jdbc.update(
             """
             insert into game_authoritative_round (

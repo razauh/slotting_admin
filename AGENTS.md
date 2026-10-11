@@ -4,6 +4,41 @@ These instructions apply to every AI agent, coding assistant, subagent, and
 automation working in this repository. More-specific `AGENTS.md` files may add
 rules for a subtree, but they must not weaken the Graphify guardrails below.
 
+## Terminal command and execution policy
+
+AI agents must not directly run terminal commands that install, update, select,
+or change software, dependencies, package managers, language toolchains, or
+environment configuration. Examples of prohibited direct commands include
+`npm install`, `rustup default stable-x86_64-unknown-linux-gnu`, and
+`cargo --version`. This applies to equivalent commands such as package manager
+install or update operations and toolchain selection commands.
+
+Routine read-only inspection commands such as `ls`, `grep`, `rg`, `cat`, and
+`sed` are allowed. Other read-only commands may be used when they do not
+install, mutate, or configure software or the repository.
+
+At the beginning of a session that will use Gradle, prewarm the Gradle daemon
+once with a lightweight command such as `./gradlew help --daemon`. Use the same
+Gradle version, JDK, and repository-local `GRADLE_USER_HOME` for later builds
+and tests so they reuse that daemon. Do not pass `--no-daemon` to those later
+commands unless daemon isolation is specifically required. The daemon remains
+available between commands until its idle timeout, an explicit `--stop`, or an
+environment change requires a new daemon.
+
+Every test command must be run through a purpose-specific test script stored
+inside `.scripts/`. Test scripts must not be created or stored elsewhere.
+Create `.scripts/` when needed.
+
+Every log produced by a test run, including captured standard output and error,
+must be written inside `.logs/`. Configure each test script to direct its test
+output and logs there. Do not write test logs to the repository root, temporary
+directories, or other locations. Create `.logs/` when needed.
+
+Whenever a prohibited command needs to be run, create a purpose-specific
+`.sh` script inside `.scripts/` containing that command and redirect its output
+to a log file inside `.logs/` instead of printing it in the terminal.
+
+
 ## Graph-first policy
 
 This repository has a local code knowledge graph in `graphify-out/`. Treat the

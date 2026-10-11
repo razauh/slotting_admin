@@ -95,6 +95,7 @@ class AviatorRoundLifecycleOrchestratorTest {
             gameId: String,
             roundId: String,
             properties: AviatorLifecycleProperties,
+            token: LifecycleLeaseToken?,
         ): Pair<GameRoundRecord, String> {
             val round = persistRound(
                 CreateOrUpdateRoundCommand(
@@ -125,12 +126,12 @@ class AviatorRoundLifecycleOrchestratorTest {
             return "commitment-$roundId"
         }
 
-        override fun deriveOutcome(tenantId: String, gameId: String, roundId: String): LifecycleOutcome {
+        override fun deriveOutcome(tenantId: String, gameId: String, roundId: String, token: LifecycleLeaseToken?): LifecycleOutcome {
             deriveCount++
             return LifecycleOutcome(BigDecimal("1.1000"))
         }
 
-        override fun persistRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
+        override fun persistRound(command: CreateOrUpdateRoundCommand, token: LifecycleLeaseToken?): GameRoundRecord {
             val now = clock.instant()
             val existing = round
             round = if (existing == null || existing.roundId != command.roundId) {
@@ -163,7 +164,7 @@ class AviatorRoundLifecycleOrchestratorTest {
             return round!!.copy()
         }
 
-        override fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double): GameEventRecord {
+        override fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double, token: LifecycleLeaseToken?): GameEventRecord {
             operations += "event:${round.phase}"
             events += round.phase
             return GameEventRecord(
@@ -182,6 +183,7 @@ class AviatorRoundLifecycleOrchestratorTest {
             gameId: String,
             roundId: String,
             crashMultiplier: BigDecimal,
+            token: LifecycleLeaseToken?,
         ): GameRoundRecord {
             operations += "settle"
             val existing = checkNotNull(round)
@@ -200,7 +202,7 @@ class AviatorRoundLifecycleOrchestratorTest {
             return crashed
         }
 
-        override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {
+        override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal, token: LifecycleLeaseToken?) {
             check(expectedMultiplier.compareTo(BigDecimal("1.1000")) == 0)
             if (revealCount == 0) revealCount++
         }

@@ -170,6 +170,7 @@ class FairnessSecretMigrationTest {
     }
 
     private fun insertRound(roundId: String, phase: String = "SCHEDULED") {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         jdbc.update(
             """
             insert into game_authoritative_round (
@@ -448,6 +449,7 @@ class FairnessSecretMigrationTest {
     }
 
     private fun createRound(roundId: String) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.BET_COUNTDOWN, 1L, BigDecimal("1.0000"))
         )

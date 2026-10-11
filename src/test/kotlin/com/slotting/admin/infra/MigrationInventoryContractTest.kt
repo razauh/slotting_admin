@@ -62,7 +62,12 @@ class MigrationInventoryContractTest {
             "V41__fairness_secret_envelope.sql",
             "V42__fairness_secret_migration_run.sql",
             "V43__fairness_audit_evidence_identity.sql",
-            "V44__fairness_audit_commitment_identity.sql"
+            "V44__fairness_audit_commitment_identity.sql",
+            "V45__lifecycle_lease_and_single_active_round.sql",
+            "V46__persisted_flight_clock_and_phase_deadlines.sql",
+            "V47__atomic_event_round_version_identity.sql",
+            "V48__persisted_lifecycle_configuration.sql",
+            "V49__durable_lifecycle_attempt_journal.sql"
         )
 
         val actualSet = actualFiles.toSet()

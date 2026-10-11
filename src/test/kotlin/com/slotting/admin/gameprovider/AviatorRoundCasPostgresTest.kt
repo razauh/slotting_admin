@@ -506,6 +506,7 @@ class AviatorRoundCasPostgresTest {
         for ((idx, actionType) in actionTypes.withIndex()) {
             for (i in 0 until 5) {
                 val roundId = "rnd-lock-cas-$idx-$i-${UUID.randomUUID().toString().take(6)}"
+                closeActiveRoundsFor(jdbc, tenantId, gameId)
                 gameService.createOrUpdateRound(
                     CreateOrUpdateRoundCommand(
                         tenantId = tenantId,
@@ -659,6 +660,7 @@ class AviatorRoundCasPostgresTest {
 
         for (actionType in listOf("PLACE_BET", "CANCEL_BET", "CASH_OUT")) {
             val testRoundId = "rnd-lock-share-hold-$actionType-${UUID.randomUUID().toString().take(6)}"
+            closeActiveRoundsFor(jdbc, tenantId, gameId)
             gameService.createOrUpdateRound(
                 CreateOrUpdateRoundCommand(
                     tenantId = tenantId,
@@ -936,6 +938,7 @@ class AviatorRoundCasPostgresTest {
         assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
 
         val roundId2 = "rnd-gld2-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
 
         val betAck2 = gameService.processCommand(

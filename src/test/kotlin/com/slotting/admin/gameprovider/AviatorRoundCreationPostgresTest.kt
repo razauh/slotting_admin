@@ -380,6 +380,7 @@ class AviatorRoundCreationPostgresTest {
 
         for (i in 0 until iterations) {
             val roundId = "aviator-lock-${UUID.randomUUID()}"
+            closeActiveRoundsFor(jdbc, tenantId, gameId)
             lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId, properties)
 
             val latch = CountDownLatch(2)
@@ -511,6 +512,7 @@ class AviatorRoundCreationPostgresTest {
         assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
 
         val roundId2 = "rnd-gld2-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
 
         val betAck2 = gameService.processCommand(
@@ -705,6 +707,7 @@ class AviatorRoundCreationPostgresTest {
             gameId: String,
             roundId: String,
             properties: AviatorLifecycleProperties,
+            token: LifecycleLeaseToken?,
         ): Pair<GameRoundRecord, String> {
             val created = persistRound(
                 CreateOrUpdateRoundCommand(
@@ -734,10 +737,10 @@ class AviatorRoundCreationPostgresTest {
             return "commitment-$roundId"
         }
 
-        override fun deriveOutcome(tenantId: String, gameId: String, roundId: String): LifecycleOutcome =
+        override fun deriveOutcome(tenantId: String, gameId: String, roundId: String, token: LifecycleLeaseToken?): LifecycleOutcome =
             LifecycleOutcome(BigDecimal("1.1000"))
 
-        override fun persistRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
+        override fun persistRound(command: CreateOrUpdateRoundCommand, token: LifecycleLeaseToken?): GameRoundRecord {
             val now = clock.instant()
             val created = GameRoundRecord(
                 tenantId = command.tenantId,
@@ -756,7 +759,7 @@ class AviatorRoundCreationPostgresTest {
             return created
         }
 
-        override fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double): GameEventRecord =
+        override fun publishState(round: GameRoundRecord, elapsedFlightSeconds: Double, token: LifecycleLeaseToken?): GameEventRecord =
             GameEventRecord(
                 eventId = UUID.randomUUID(), tenantId = round.tenantId, gameId = round.gameId,
                 roundId = round.roundId, sequenceId = 1L, eventName = "gameState",
@@ -766,9 +769,9 @@ class AviatorRoundCreationPostgresTest {
 
         override fun hasPublishedState(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean = false
 
-        override fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal): GameRoundRecord =
+        override fun settleCrash(tenantId: String, gameId: String, roundId: String, crashMultiplier: BigDecimal, token: LifecycleLeaseToken?): GameRoundRecord =
             round ?: error("FakeFaithfulLifecyclePort has no round to crash")
 
-        override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal) {}
+        override fun revealIfNeeded(tenantId: String, gameId: String, roundId: String, expectedMultiplier: BigDecimal, token: LifecycleLeaseToken?) {}
     }
 }

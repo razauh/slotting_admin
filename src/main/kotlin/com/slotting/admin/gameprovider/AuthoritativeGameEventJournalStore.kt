@@ -10,9 +10,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
+class GameEventIdentityConflictException(message: String) : RuntimeException(message)
+
 interface GameEventJournalStore {
     fun nextSequenceId(tenantId: String, gameId: String): Long
     fun latestSequenceId(tenantId: String, gameId: String): Long
+    fun findEventByIdentity(tenantId: String, gameId: String, roundId: String, roundVersion: Long, eventName: String): GameEventRecord?
     fun saveEvent(event: GameEventRecord)
     fun findEventsSince(tenantId: String, gameId: String, sinceSequenceId: Long, limit: Int): List<GameEventRecord>
     fun findEventsForRound(tenantId: String, gameId: String, roundId: String): List<GameEventRecord>
@@ -30,6 +33,13 @@ open class InMemoryGameEventJournalStore : GameEventJournalStore {
 
     override fun latestSequenceId(tenantId: String, gameId: String): Long {
         return checkpoints[key(tenantId, gameId)]?.get() ?: 0L
+    }
+
+    override fun findEventByIdentity(tenantId: String, gameId: String, roundId: String, roundVersion: Long, eventName: String): GameEventRecord? {
+        return events.firstOrNull {
+            it.tenantId == tenantId && it.gameId == gameId && it.roundId == roundId &&
+                it.roundVersion == roundVersion && it.eventName == eventName
+        }
     }
 
     override fun saveEvent(event: GameEventRecord) {
@@ -73,13 +83,24 @@ open class JdbcGameEventJournalStore(
         return list.firstOrNull() ?: 0L
     }
 
+    override fun findEventByIdentity(tenantId: String, gameId: String, roundId: String, roundVersion: Long, eventName: String): GameEventRecord? {
+        val sql = """
+            select event_id, tenant_id, game_id, round_id, sequence_id, event_name,
+                   round_version, payload_json, target_scope, target_owner_id, timestamp_millis, created_at
+            from game_event_journal
+            where tenant_id = ? and game_id = ? and round_id = ? and round_version = ? and event_name = ?
+            limit 1
+        """.trimIndent()
+        return jdbcTemplate.query(sql, { rs, _ -> mapEvent(rs) }, tenantId, gameId, roundId, roundVersion, eventName).firstOrNull()
+    }
+
     @Transactional
     override fun saveEvent(event: GameEventRecord) {
         val sql = """
             insert into game_event_journal (
-                event_id, tenant_id, game_id, round_id, sequence_id, event_name,
+                event_id, tenant_id, game_id, round_id, sequence_id, event_name, round_version,
                 payload_json, target_scope, target_owner_id, timestamp_millis, created_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -89,6 +110,7 @@ open class JdbcGameEventJournalStore(
             event.roundId,
             event.sequenceId,
             event.eventName,
+            event.roundVersion,
             event.payloadJson,
             event.targetScope,
             event.targetOwnerId,
@@ -100,7 +122,7 @@ open class JdbcGameEventJournalStore(
     override fun findEventsSince(tenantId: String, gameId: String, sinceSequenceId: Long, limit: Int): List<GameEventRecord> {
         val sql = """
             select event_id, tenant_id, game_id, round_id, sequence_id, event_name,
-                   payload_json, target_scope, target_owner_id, timestamp_millis, created_at
+                   round_version, payload_json, target_scope, target_owner_id, timestamp_millis, created_at
             from game_event_journal
             where tenant_id = ? and game_id = ? and sequence_id > ?
             order by sequence_id asc
@@ -112,7 +134,7 @@ open class JdbcGameEventJournalStore(
     override fun findEventsForRound(tenantId: String, gameId: String, roundId: String): List<GameEventRecord> {
         val sql = """
             select event_id, tenant_id, game_id, round_id, sequence_id, event_name,
-                   payload_json, target_scope, target_owner_id, timestamp_millis, created_at
+                   round_version, payload_json, target_scope, target_owner_id, timestamp_millis, created_at
             from game_event_journal
             where tenant_id = ? and game_id = ? and round_id = ?
             order by sequence_id asc
@@ -128,6 +150,7 @@ open class JdbcGameEventJournalStore(
             roundId = rs.getString("round_id"),
             sequenceId = rs.getLong("sequence_id"),
             eventName = rs.getString("event_name"),
+            roundVersion = rs.getLong("round_version"),
             payloadJson = rs.getString("payload_json"),
             targetScope = rs.getString("target_scope"),
             targetOwnerId = rs.getString("target_owner_id"),

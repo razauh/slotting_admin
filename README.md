@@ -135,7 +135,7 @@ flowchart TD
 
 `AviatorRoundLifecycleOrchestrator` is the single in-process owner that connects the existing round store, fairness authority, crash settlement, and authoritative event journal. It advances `SCHEDULED -> BET_COUNTDOWN -> FLYING -> CRASHED -> CLOSED`, recovers the latest persisted round, and never uses a connected client to drive domain state.
 
-The scheduler is controlled by `slotting.aviator.lifecycle.*`. Its checked-in timing fallbacks (`scheduled-ms`, `betting-ms`, `closed-ms`, `tick-ms`, and `multiplier-step`) are development defaults, not approved production game rules. `tenants` defaults to `default`; set `enabled=false` to disable the lifecycle owner. Current ownership is intentionally single-application-instance only; clustered leader election remains future work.
+The scheduler is controlled by `slotting.aviator.lifecycle.*`. Its checked-in timing fallbacks (`scheduled-ms`, `betting-ms`, `closed-ms`, `tick-ms`, and `multiplier-step`) are development defaults, not approved production game rules. Production profiles must explicitly set all timing, rules, algorithm, salt, and step properties; invalid or unsupported values fail startup. Each new round stores these behavior parameters and a SHA-256 configuration fingerprint, so later configuration changes do not alter an in-flight round. `tenants` defaults to `default`; set `enabled=false` to disable the lifecycle owner. Current ownership is intentionally single-application-instance only; clustered leader election remains future work.
 
 Run its deterministic fake-clock tests with:
 

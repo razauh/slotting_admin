@@ -35,6 +35,13 @@ open class FairnessAuthorityException(
     override val message: String
 ) : RuntimeException(message)
 
+class UnsupportedRulesVersionException(
+    val rulesVersion: String?,
+) : FairnessAuthorityException(
+    "UNSUPPORTED_RULES_VERSION",
+    "Rules version is not registered: ${rulesVersion ?: "missing"}",
+)
+
 class FairnessVerificationException(
     val errorCode: String,
     override val message: String
@@ -43,6 +50,11 @@ class FairnessVerificationException(
 class ExternalFairnessProviderTimeoutException(
     override val message: String
 ) : RuntimeException(message)
+
+class CommitmentStateConflictException(
+    val reason: String,
+    override val message: String
+) : FairnessAuthorityException("COMMITMENT_STATE_CONFLICT", message)
 
 data class RoundCommitmentRecord(
     val commitmentId: UUID,

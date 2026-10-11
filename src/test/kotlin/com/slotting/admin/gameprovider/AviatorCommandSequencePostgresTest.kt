@@ -663,6 +663,7 @@ class AviatorCommandSequencePostgresTest {
 
         val txTemplate = TransactionTemplate(txManager)
         val roundContentionId = "rnd-seq-contention-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,
@@ -737,6 +738,7 @@ class AviatorCommandSequencePostgresTest {
         assertEquals(seqA + 1L, seqB, "Worker B must receive consecutive sequence immediately after Worker A commits")
 
         val roundInvertId = "rnd-invert-deadlock-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,
@@ -808,6 +810,7 @@ class AviatorCommandSequencePostgresTest {
         for (i in 0 until 100) {
             val actionType = actionTypes[rng.nextInt(actionTypes.size)]
             val roundId = "rnd-seeded-100-$i-${UUID.randomUUID().toString().take(6)}"
+            closeActiveRoundsFor(jdbc, tenantId, gameId)
             gameService.createOrUpdateRound(
                 CreateOrUpdateRoundCommand(
                     tenantId = tenantId,
@@ -1074,6 +1077,7 @@ class AviatorCommandSequencePostgresTest {
         assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
 
         val roundId2 = "rnd-seq-gld2-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
 
         val betAck2 = gameService.processCommand(
@@ -1121,6 +1125,7 @@ class AviatorCommandSequencePostgresTest {
         assertEquals(expectedBalance, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
 
         val roundId3 = "rnd-seq-gld3-${UUID.randomUUID().toString().take(6)}"
+        closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId3, properties)
 
         val betAck3 = gameService.processCommand(

@@ -188,6 +188,7 @@ class FairnessEnvelopePostgresTest {
     }
 
     private fun insertRound(roundId: String, phase: String = "SCHEDULED") {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         jdbc.update(
             """
             insert into game_authoritative_round (
@@ -199,6 +200,7 @@ class FairnessEnvelopePostgresTest {
     }
 
     private fun createRound(roundId: String, phase: GameRoundPhase = GameRoundPhase.BET_COUNTDOWN) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,

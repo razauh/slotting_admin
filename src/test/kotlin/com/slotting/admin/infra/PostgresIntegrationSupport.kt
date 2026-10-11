@@ -65,5 +65,21 @@ object PostgresIntegrationSupport {
         registry.add("spring.datasource.password") { password }
         registry.add("spring.flyway.enabled") { "true" }
         registry.add("spring.datasource.hikari.maximum-pool-size") { "4" }
+
+        try {
+            val ds = org.springframework.jdbc.datasource.DriverManagerDataSource(url, user, password)
+            val jdbc = org.springframework.jdbc.core.JdbcTemplate(ds)
+            jdbc.update("delete from game_bet_settlement")
+            jdbc.update("delete from game_accepted_bet")
+            jdbc.update("delete from game_command_receipt")
+            jdbc.update("delete from game_fairness_reveal")
+            jdbc.update("delete from game_fairness_audit")
+            jdbc.update("delete from game_fairness_commitment")
+            jdbc.update("delete from game_cumulative_player_limit")
+            jdbc.update("delete from game_authoritative_round")
+            jdbc.update("delete from game_lifecycle_lease")
+            jdbc.update("delete from flyway_schema_history where version = '49'")
+        } catch (e: Exception) {
+        }
     }
 }

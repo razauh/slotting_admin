@@ -178,6 +178,7 @@ class AviatorCrashCashOutRaceStressTest {
     }
 
     private fun createRound(roundId: String) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(
                 tenantId = tenantId,

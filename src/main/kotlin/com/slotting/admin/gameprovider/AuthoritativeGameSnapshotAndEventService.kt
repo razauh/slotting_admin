@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.Clock
 import java.util.UUID
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
+fun interface GameEventDispatcher {
+    fun dispatch(event: GameEventRecord)
+}
 
 /**
  * Gate to enforce TC-023: Authoritative game snapshots and event ordered delivery.
@@ -40,6 +46,8 @@ class AuthoritativeGameSnapshotAndEventService(
     private val registrationStore: PlayerRegistrationStore,
     private val clock: Clock = Clock.systemUTC(),
     private val authService: DurableAuthService? = null,
+    private val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
+    private val eventDispatcher: GameEventDispatcher? = null,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
@@ -175,6 +183,7 @@ class AuthoritativeGameSnapshotAndEventService(
         val registration = playerUuid?.let { registrationStore.findById(tenantId, it) }
         val userName = registration?.maskedEmail ?: targetOwnerId
 
+        val elapsedFlightSeconds = round?.let { FlightClock.computeElapsedFlightSeconds(it, clock) } ?: 0.0
         return FullSnapshot(
             schemaVersion = 1,
             protocolVersion = "1.2.0",
@@ -182,7 +191,7 @@ class AuthoritativeGameSnapshotAndEventService(
             phase = round?.phase?.name ?: "NONE",
             serverTimeMillis = now.toEpochMilli(),
             multiplier = round?.currentMultiplier?.toDouble() ?: 1.00,
-            elapsedFlightSeconds = if (round?.phase == GameRoundPhase.FLYING) 2.0 else 0.0,
+            elapsedFlightSeconds = elapsedFlightSeconds,
             sequenceId = seqId,
             roundVersion = round?.roundVersion ?: 1L,
             currency = "INR",
@@ -234,24 +243,60 @@ class AuthoritativeGameSnapshotAndEventService(
         multiplier: BigDecimal,
         roundVersion: Long,
         elapsedFlightSeconds: Double,
+    ): GameEventRecord = txManager?.let {
+        org.springframework.transaction.support.TransactionTemplate(it).execute {
+            recordAndBroadcastGameStateInTransaction(
+                tenantId, gameId, roundId, phase, multiplier, roundVersion, elapsedFlightSeconds
+            )
+        } ?: error("Event transaction did not return a record")
+    } ?: recordAndBroadcastGameStateInTransaction(
+        tenantId, gameId, roundId, phase, multiplier, roundVersion, elapsedFlightSeconds
+    )
+
+    private fun recordAndBroadcastGameStateInTransaction(
+        tenantId: String,
+        gameId: String,
+        roundId: String,
+        phase: GameRoundPhase,
+        multiplier: BigDecimal,
+        roundVersion: Long,
+        elapsedFlightSeconds: Double,
     ): GameEventRecord {
         AuthoritativeGameSnapshotBinding.checkBound()
         val now = clock.instant()
-        val sequenceId = eventJournalStore.nextSequenceId(tenantId, gameId)
+        val eventName = "gameState"
+        val existingEvent = eventJournalStore.findEventByIdentity(tenantId, gameId, roundId, roundVersion, eventName)
+        if (existingEvent != null) {
+            val payload = runCatching { objectMapper.readTree(existingEvent.payloadJson) }.getOrNull()
+            val samePayload = payload != null && payload.path("phase").asText() == phase.name &&
+                payload.path("multiplier").decimalValue().compareTo(multiplier) == 0 &&
+                payload.path("roundVersion").asLong() == roundVersion
+            if (samePayload) return existingEvent
+            throw GameEventIdentityConflictException(
+                "Conflicting event payload for $tenantId/$gameId/$roundId version $roundVersion"
+            )
+        }
 
         val existingRound = gameStore.findRound(tenantId, gameId, roundId)
         if (existingRound != null && (existingRound.roundVersion < roundVersion || existingRound.phase != phase || existingRound.currentMultiplier != multiplier)) {
             val expectedVer = existingRound.roundVersion
-            existingRound.phase = phase
-            existingRound.currentMultiplier = multiplier
-            existingRound.roundVersion = roundVersion
-            existingRound.updatedAt = now
+            val updatedRound = existingRound.copy(
+                phase = phase,
+                currentMultiplier = multiplier,
+                roundVersion = roundVersion,
+                updatedAt = now,
+            )
             if (phase == GameRoundPhase.CRASHED) {
-                existingRound.crashMultiplier = multiplier
-                existingRound.crashedAt = now
+                updatedRound.crashMultiplier = multiplier
+                updatedRound.crashedAt = now
             }
-            gameStore.updateRound(existingRound, expectedVer, legalPriorPhases(phase))
+            gameStore.updateRound(updatedRound, expectedVer, legalPriorPhases(phase))
         }
+
+        val persistedRound = gameStore.findRound(tenantId, gameId, roundId)
+        val effectiveElapsed = persistedRound?.let { FlightClock.computeElapsedFlightSeconds(it, clock) }
+            ?: if (elapsedFlightSeconds > 0.0) elapsedFlightSeconds else 0.0
+        val sequenceId = eventJournalStore.nextSequenceId(tenantId, gameId)
 
         val payload = mapOf(
             "schemaVersion" to 1,
@@ -263,8 +308,9 @@ class AuthoritativeGameSnapshotAndEventService(
                 multiplier.toDouble()
             } else null,
             "serverTimeMillis" to now.toEpochMilli(),
-            "elapsedFlightSeconds" to elapsedFlightSeconds,
+            "elapsedFlightSeconds" to effectiveElapsed,
             "sequenceId" to sequenceId,
+            "roundVersion" to roundVersion,
         )
 
         val record = GameEventRecord(
@@ -273,16 +319,31 @@ class AuthoritativeGameSnapshotAndEventService(
             gameId = gameId,
             roundId = roundId,
             sequenceId = sequenceId,
-            eventName = "gameState",
+            eventName = eventName,
             payloadJson = objectMapper.writeValueAsString(payload),
             targetScope = "BROADCAST",
             targetOwnerId = null,
             timestampMillis = now.toEpochMilli(),
             createdAt = now,
+            roundVersion = roundVersion,
         )
 
         eventJournalStore.saveEvent(record)
+        dispatchAfterCommit(record)
         return record
+    }
+
+    private fun dispatchAfterCommit(event: GameEventRecord) {
+        val dispatcher = eventDispatcher ?: return
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    runCatching { dispatcher.dispatch(event) }
+                }
+            })
+        } else {
+            runCatching { dispatcher.dispatch(event) }
+        }
     }
 
     fun hasPublishedPhase(tenantId: String, gameId: String, roundId: String, phase: GameRoundPhase): Boolean =

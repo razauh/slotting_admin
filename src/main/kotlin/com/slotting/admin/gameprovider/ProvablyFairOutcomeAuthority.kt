@@ -277,6 +277,66 @@ class ProvablyFairOutcomeAuthority(
         return decryptSeed(commitment)
     }
 
+    fun validateCommitmentForReuse(
+        commitment: RoundCommitmentRecord,
+        expectedRulesVersion: String,
+        expectedAlgorithmVersion: String,
+        expectedPublicSalt: String,
+        expectedAuthorityType: FairnessAuthorityType = FairnessAuthorityType.INTERNAL_HMAC_SHA256,
+    ) {
+        if (commitment.status != RoundCommitmentStatus.COMMITTED) {
+            throw CommitmentStateConflictException(
+                "INVALID_STATUS",
+                "Commitment ${commitment.commitmentId} status is ${commitment.status}, expected COMMITTED"
+            )
+        }
+        if (commitment.firstBetAcceptedAt != null) {
+            throw CommitmentStateConflictException(
+                "FIRST_BET_ACCEPTED",
+                "Commitment ${commitment.commitmentId} already has first bet accepted at ${commitment.firstBetAcceptedAt}"
+            )
+        }
+        if (commitment.rulesVersion != expectedRulesVersion) {
+            throw CommitmentStateConflictException(
+                "RULES_VERSION_MISMATCH",
+                "Commitment ${commitment.commitmentId} rules version ${commitment.rulesVersion} != expected $expectedRulesVersion"
+            )
+        }
+        if (commitment.algorithmVersion != expectedAlgorithmVersion) {
+            throw CommitmentStateConflictException(
+                "ALGORITHM_VERSION_MISMATCH",
+                "Commitment ${commitment.commitmentId} algorithm version ${commitment.algorithmVersion} != expected $expectedAlgorithmVersion"
+            )
+        }
+        if (commitment.publicSalt != expectedPublicSalt) {
+            throw CommitmentStateConflictException(
+                "PUBLIC_SALT_MISMATCH",
+                "Commitment ${commitment.commitmentId} public salt mismatch"
+            )
+        }
+        if (commitment.authorityType != expectedAuthorityType) {
+            throw CommitmentStateConflictException(
+                "AUTHORITY_TYPE_MISMATCH",
+                "Commitment ${commitment.commitmentId} authority type ${commitment.authorityType} != expected $expectedAuthorityType"
+            )
+        }
+        val plaintextSeed = try {
+            decryptSeed(commitment)
+        } catch (e: Exception) {
+            throw CommitmentStateConflictException(
+                "UNDECRYPTABLE_ENVELOPE",
+                "Commitment ${commitment.commitmentId} seed envelope cannot be decrypted"
+            )
+        }
+        val calculatedHash = sha256(plaintextSeed)
+        if (calculatedHash != commitment.commitmentHash) {
+            throw CommitmentStateConflictException(
+                "COMMITMENT_HASH_MISMATCH",
+                "Commitment ${commitment.commitmentId} decrypted seed hash mismatch"
+            )
+        }
+    }
+
     private fun decryptSeed(commitment: RoundCommitmentRecord): String {
         val nonce = commitment.secretNonce
             ?: throw FairnessAuthorityException(

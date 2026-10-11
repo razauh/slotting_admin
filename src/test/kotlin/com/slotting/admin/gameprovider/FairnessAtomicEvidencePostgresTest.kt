@@ -204,6 +204,7 @@ class FairnessAtomicEvidencePostgresTest {
         ProvablyFairOutcomeAuthority(store = store, clock = clock, txManager = txManager, outcomeFinalization = finalization)
 
     private fun insertRound(roundId: String, phase: String = "SCHEDULED", game: String = gameId) {
+        closeActiveRoundsFor(jdbc, tenantId, game, keepRoundId = roundId)
         jdbc.update(
             """
             insert into game_authoritative_round (
@@ -699,6 +700,7 @@ class FairnessAtomicEvidencePostgresTest {
     }
 
     private fun createRound(roundId: String) {
+        closeActiveRoundsFor(jdbc, tenantId, gameId, keepRoundId = roundId)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.BET_COUNTDOWN, 1L, BigDecimal("1.0000"))
         )

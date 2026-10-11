@@ -30,7 +30,7 @@ management:
 
 slotting:
   schema:
-    supported-version: 44
+    supported-version: 49
   fairness:
     reveal:
       require-finalized: true
