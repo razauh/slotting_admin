@@ -105,6 +105,7 @@ data class AdminSessionStatus(
     val expiresAt: Instant,
     val mfaVerified: Boolean = true,
     val mfaExpiresAt: Instant? = null,
+    val roles: Set<AdminRole> = emptySet(),
 )
 
 interface AdminSessionDirectory {

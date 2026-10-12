@@ -27,11 +27,13 @@ enum class WebhookSignatureVerification {
 
 object WebhookSignatureFixtures {
     const val SAFEPAY_RAAST = "SAFEPAY_RAAST"
+    const val ONELINK_RAAST = "ONELINK_RAAST"
     const val TIMESTAMPED_DEPOSIT = "TIMESTAMPED_DEPOSIT"
 
     private val logger = LoggerFactory.getLogger(WebhookSignatureFixtures::class.java)
     private val canonicalizers = mapOf<String, (String, String?) -> String>(
         SAFEPAY_RAAST to { rawPayload, _ -> rawPayload },
+        ONELINK_RAAST to { rawPayload, _ -> rawPayload },
         TIMESTAMPED_DEPOSIT to { rawPayload, timestamp ->
             require(!timestamp.isNullOrBlank()) { "TIMESTAMP_REQUIRED" }
             "$timestamp.$rawPayload"
@@ -103,6 +105,16 @@ object WebhookSignatureFixtures {
             providerId = fixture.providerId,
             rawBody = fixture.rawPayload,
             headers = if (fixture.signature.isBlank()) emptyMap() else mapOf("x-sfpy-signature" to fixture.signature),
+            queryParams = mapOf("event_id" to fixture.eventId),
+        )
+    }
+
+    fun oneLinkCallback(fixture: WebhookSignatureFixture): ProviderCallbackPayload {
+        require(fixture.providerId == ONELINK_RAAST) { "ONELINK_PROVIDER_REQUIRED" }
+        return ProviderCallbackPayload(
+            providerId = fixture.providerId,
+            rawBody = fixture.rawPayload,
+            headers = if (fixture.signature.isBlank()) emptyMap() else mapOf("x-raast-signature" to fixture.signature),
             queryParams = mapOf("event_id" to fixture.eventId),
         )
     }

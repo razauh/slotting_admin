@@ -25,6 +25,7 @@ class AdminMfaAuthenticationTest {
         assertEquals(now.plusSeconds(1800), result.expiresAt)
         assertEquals(1, store.audit.size)
         assertEquals(1, store.outbox.size)
+        assertEquals(setOf(AdminRole.SECURITY), store.rolesBySession["tenant-1:admin-1:session-1"])
         assertEquals("ADMIN_BREAK_GLASS_STARTED", alerts.events.single().type)
         assertTrue(result.evidenceReference.startsWith("admin-auth:"))
     }
@@ -67,6 +68,7 @@ class AdminMfaAuthenticationTest {
         assertTrue(migration.contains("admin_audit_event"))
         assertTrue(migration.contains("admin_outbox_event"))
         assertTrue(!migration.contains("update admin_")) // no posted-history update statement
+        assertTrue(java.io.File("src/main/resources/db/migration/V50__persist_admin_session_roles.sql").readText().contains("add column roles"))
         val policy = RoleChangePolicy(dualControlRequired = true)
         val admin = command().principal!!
         assertTrue(!policy.isAllowed(admin, admin.id))
@@ -100,14 +102,16 @@ private class MemoryStore : AuthenticationStore {
     val results = mutableMapOf<String, Pair<String, AuthenticationResult>>()
     val audit = mutableListOf<AuditEvent>()
     val outbox = mutableListOf<OutboxEvent>()
+    val rolesBySession = mutableMapOf<String, Set<AdminRole>>()
     override fun findByIdempotency(tenantId: String, key: String) = synchronized(this) {
         results["$tenantId:$key"]
     }
     override fun currentVersion(tenantId: String, principalId: String) = synchronized(this) {
         results.values.maxOfOrNull { it.second.serverVersion } ?: 0L
     }
-    override fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent) = synchronized(this) {
+    override fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, roles: Set<AdminRole>, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent) = synchronized(this) {
         results["$tenantId:$idempotencyKey"] = requestFingerprint to result
+        rolesBySession["$tenantId:$principalId:$sessionId"] = roles
         this.audit += audit
         this.outbox += outbox
     }

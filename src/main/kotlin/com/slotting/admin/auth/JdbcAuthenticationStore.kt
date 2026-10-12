@@ -22,10 +22,10 @@ class JdbcAuthenticationStore(private val jdbc: JdbcTemplate) : AuthenticationSt
         ).firstOrNull()
 
     @Transactional
-    override fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent) {
+    override fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, roles: Set<AdminRole>, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent) {
         jdbc.update(
-            "insert into admin_mfa_authentication(result_id, tenant_id, principal_id, session_id, state, server_version, authenticated_at, expires_at, idempotency_key, request_fingerprint, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            result.resultId, tenantId, principalId, sessionId, result.state.name, result.serverVersion, result.serverTime, result.expiresAt, idempotencyKey, requestFingerprint, audit.correlationId, audit.causationId,
+            "insert into admin_mfa_authentication(result_id, tenant_id, principal_id, session_id, roles, state, server_version, authenticated_at, expires_at, idempotency_key, request_fingerprint, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            result.resultId, tenantId, principalId, sessionId, roles.map(AdminRole::name).sorted().joinToString(","), result.state.name, result.serverVersion, result.serverTime, result.expiresAt, idempotencyKey, requestFingerprint, audit.correlationId, audit.causationId,
         )
         jdbc.update("insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)", result.resultId, tenantId, "ADMIN_MFA_AUTHENTICATION", result.serverTime)
         jdbc.update(

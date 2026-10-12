@@ -10,6 +10,7 @@ import java.time.Clock
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import org.slf4j.LoggerFactory
 
 open class DurableDepositWorkflowService(
     private val workflowStore: DepositWorkflowStore,
@@ -20,7 +21,9 @@ open class DurableDepositWorkflowService(
     private val credentialsResolver: (tenantId: String, providerId: String) -> ProviderCredentials? = { _, _ -> null },
     private val configResolver: (tenantId: String, providerId: String) -> ProviderConfiguration? = { _, _ -> null },
     private val clock: Clock = Clock.systemUTC(),
+    private val reconciliationAlerts: DepositReconciliationAlertSink = InMemoryDepositReconciliationAlertSink(),
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val intentLocks = ConcurrentHashMap<UUID, Any>()
 
     private fun sha256(input: String): String {
@@ -272,6 +275,17 @@ open class DurableDepositWorkflowService(
             else -> null
         } ?: throw IllegalStateException("Could not match callback to an existing deposit intent")
 
+        if (command.providerId == "JAZZCASH" || command.providerId == "ONELINK_RAAST") {
+            val verifiedEvidence = verification.outcome?.evidence.orEmpty()
+            val verifiedAmount = verifiedEvidence["amountMinorUnits"]?.toLongOrNull()
+            val verifiedCurrency = verifiedEvidence["currency"]
+            val amountMismatch = verifiedAmount != candidateIntent.amountMinorUnits
+            val currencyMismatch = command.providerId == "JAZZCASH" && verifiedCurrency != candidateIntent.currencyCode
+            if (amountMismatch || currencyMismatch) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            }
+        }
+
         // 5. Concurrency-safe, exactly-once ledger credit under per-intent lock
         synchronized(getOrCreateLock(candidateIntent.intentId)) {
             val currentIntent = workflowStore.findIntent(candidateIntent.tenantId, candidateIntent.intentId)
@@ -386,7 +400,6 @@ open class DurableDepositWorkflowService(
 
             // 3. Query status from provider port
             val port = providerPorts[currentIntent.providerId]
-                ?: throw IllegalStateException("Payment provider port '${currentIntent.providerId}' is not configured")
 
             val config = configResolver(command.tenantId, currentIntent.providerId)
                 ?: ProviderConfiguration(
@@ -402,19 +415,84 @@ open class DurableDepositWorkflowService(
                 providerId = currentIntent.providerId,
                 providerReference = currentIntent.providerReference,
                 idempotencyKey = currentIntent.idempotencyKey,
+                expectedAmountMinorUnits = currentIntent.amountMinorUnits,
+                expectedCurrency = currentIntent.currencyCode,
             )
 
-            val outcome = try {
-                port.queryStatus(query, config, credentials)
-            } catch (e: Exception) {
-                ProviderOutcome.ambiguous(
+            val outcome = if (port == null) {
+                ProviderOutcome.unavailable(
                     operationId = currentIntent.intentId,
-                    code = "QUERY_EXCEPTION",
-                    reason = e.message ?: "Exception querying status",
+                    reason = "Provider status adapter is not configured",
+                    code = "STATUS_ADAPTER_UNAVAILABLE",
                 )
+            } else {
+                try {
+                    port.queryStatus(query, config, credentials)
+                } catch (e: Exception) {
+                    ProviderOutcome.ambiguous(
+                        operationId = currentIntent.intentId,
+                        code = "QUERY_EXCEPTION",
+                        reason = e.message ?: "Exception querying status",
+                    )
+                }
             }
 
             val previousStatus = currentIntent.status
+            if (outcome.status == ProviderOutcomeStatus.ACCEPTED) {
+                val proof = outcome.verifiedStatus
+                val mismatch = when {
+                    proof == null -> null
+                    outcome.operationId != currentIntent.intentId -> "STATUS_OPERATION_MISMATCH"
+                    !proof.signatureVerified -> "STATUS_SIGNATURE_INVALID"
+                    proof.providerReference.isBlank() -> "STATUS_REFERENCE_MISSING"
+                    outcome.providerReference != proof.providerReference -> "STATUS_REFERENCE_UNBOUND"
+                    currentIntent.providerReference != null && currentIntent.providerReference != proof.providerReference -> "STATUS_REFERENCE_MISMATCH"
+                    proof.amountMinorUnits != currentIntent.amountMinorUnits -> "STATUS_AMOUNT_MISMATCH"
+                    !proof.currency.equals(currentIntent.currencyCode, ignoreCase = true) -> "STATUS_CURRENCY_MISMATCH"
+                    else -> null
+                }
+                if (proof == null || mismatch != null) {
+                    val quarantine = proof != null
+                    val reason = mismatch ?: "STATUS_EVIDENCE_UNVERIFIED"
+                    reconciliationAlerts.sendAlert(command.tenantId, currentIntent.intentId, reason, outcome.safeReason)
+                    logger.error("Deposit reconciliation blocked for intent {}: {}", currentIntent.intentId, reason)
+                    val nextStatus = if (quarantine) DepositIntentStatus.QUARANTINED else currentIntent.status
+                    if (quarantine) {
+                        workflowStore.updateIntent(
+                            currentIntent.copy(
+                                status = nextStatus,
+                                failureReason = reason,
+                                serverVersion = currentIntent.serverVersion + 1,
+                                updatedAt = clock.instant(),
+                            ),
+                            expectedVersion = currentIntent.serverVersion,
+                        )
+                    }
+                    workflowStore.recordReconciliation(
+                        DepositReconciliationRecord(
+                            reconciliationId = UUID.randomUUID(),
+                            tenantId = command.tenantId,
+                            intentId = currentIntent.intentId,
+                            actionType = if (quarantine) "QUARANTINED_STATUS_MISMATCH" else "INQUIRY_REMAINS_UNVERIFIED",
+                            previousStatus = previousStatus,
+                            newStatus = nextStatus,
+                            performedBy = principal.id,
+                            occurredAt = clock.instant(),
+                            notes = reason,
+                        )
+                    )
+                    return DepositReconciliationResult(
+                        intentId = currentIntent.intentId,
+                        previousStatus = previousStatus,
+                        status = nextStatus,
+                        actionTaken = if (quarantine) "QUARANTINED_STATUS_MISMATCH" else "INQUIRY_REMAINS_UNVERIFIED",
+                        ledgerTransactionReference = null,
+                    )
+                }
+            } else if (outcome.status == ProviderOutcomeStatus.UNAVAILABLE || outcome.status == ProviderOutcomeStatus.UNKNOWN_AMBIGUOUS) {
+                reconciliationAlerts.sendAlert(command.tenantId, currentIntent.intentId, outcome.rawResponseCode ?: "STATUS_INQUIRY_UNAVAILABLE", outcome.safeReason)
+                logger.error("Deposit reconciliation inquiry unavailable for intent {}: {}", currentIntent.intentId, outcome.rawResponseCode)
+            }
             return when (outcome.status) {
                 ProviderOutcomeStatus.ACCEPTED -> {
                     // Provider confirms payment settled: post ledger credit

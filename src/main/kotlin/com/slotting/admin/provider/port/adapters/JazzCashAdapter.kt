@@ -1,7 +1,11 @@
 package com.slotting.admin.provider.port.adapters
 
 import com.slotting.admin.provider.port.*
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Concrete adapter for JazzCash Payment Gateway (Category B: Integration confirmed, merchant onboarding required).
@@ -20,7 +24,7 @@ class JazzCashAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = false,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = false,
         supportsRefund = true,
         supportsWebhookVerification = true,
@@ -80,15 +84,7 @@ class JazzCashAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "JC-TXN-${query.operationId}",
-            code = "PAID",
-            evidence = mapOf("provider" to providerId, "status" to "SUCCESS")
-        )
+        return ProviderOutcome.unavailable(query.operationId, "JazzCash status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(
@@ -127,17 +123,64 @@ class JazzCashAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): CallbackVerificationResult {
-        if (credentials?.signingSecretOrKey == null) {
+        val secret = credentials?.signingSecretOrKey?.takeIf(String::isNotBlank)
+        if (secret == null) {
             return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNING_KEY_UNAVAILABLE")
         }
-        val sig = callback.headers["pp_SecureHash"] ?: callback.queryParams["pp_SecureHash"]
-        if (sig.isNullOrBlank()) {
+        val presented = callback.headers.entries.firstOrNull { it.key.equals("pp_SecureHash", true) }?.value
+            ?: callback.queryParams["pp_SecureHash"]
+        if (presented.isNullOrBlank()) {
             return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_SIGNATURE")
+        }
+        val fields = callback.queryParams.filterKeys { it.startsWith("pp", ignoreCase = true) }
+        if (!presented.matches(Regex("[0-9a-fA-F]{64}")) ||
+            !MessageDigest.isEqual(
+                calculateSecureHash(fields, secret).lowercase().toByteArray(StandardCharsets.US_ASCII),
+                presented.lowercase().toByteArray(StandardCharsets.US_ASCII),
+            )
+        ) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNATURE_MISMATCH")
+        }
+
+        val providerReference = fields["pp_TxnRefNo"]?.takeIf(String::isNotBlank)
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_TRANSACTION_REFERENCE")
+        val amountMinorUnits = fields["pp_Amount"]?.toLongOrNull()
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_AMOUNT")
+        val currency = fields["pp_TxnCurrency"]?.takeIf(String::isNotBlank)
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_CURRENCY")
+        val responseCode = fields["pp_ResponseCode"]
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_RESPONSE_CODE")
+        if (responseCode != "000") {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "PAYMENT_NOT_SUCCESSFUL")
         }
         return CallbackVerificationResult(
             isValid = true,
             eventType = "PAYMENT_CONFIRMATION",
-            providerReference = callback.queryParams["pp_TxnRefNo"] ?: "JC-REF",
+            providerReference = providerReference,
+            outcome = ProviderOutcome.accepted(
+                operationId = UUID.nameUUIDFromBytes(providerReference.toByteArray(StandardCharsets.UTF_8)),
+                providerReference = providerReference,
+                code = responseCode,
+                evidence = mapOf(
+                    "amountMinorUnits" to amountMinorUnits.toString(),
+                    "currency" to currency,
+                    "responseCode" to responseCode,
+                ),
+            ),
         )
+    }
+
+    fun calculateSecureHash(fields: Map<String, String>, secret: String): String {
+        val canonicalFields = fields.entries
+            .filter { (name, _) -> name.startsWith("pp", ignoreCase = true) && !name.equals("pp_SecureHash", true) }
+            .sortedBy { it.key }
+            .joinToString("&") { it.value }
+        val message = "$secret&$canonicalFields"
+        val utf8Bytes = message.toByteArray(StandardCharsets.UTF_8)
+        val latin1RoundTrip = String(utf8Bytes, StandardCharsets.ISO_8859_1)
+            .toByteArray(StandardCharsets.ISO_8859_1)
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256"))
+        return mac.doFinal(latin1RoundTrip).joinToString("") { "%02x".format(it) }
     }
 }

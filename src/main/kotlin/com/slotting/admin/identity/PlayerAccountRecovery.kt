@@ -4,6 +4,7 @@ import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
+import com.slotting.admin.auth.PasswordKdfService
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -341,7 +342,12 @@ class PlayerAccountRecoveryService(
 
         // 4. Update player password and state
         tokenRecord.consumed = true
-        player.passwordHash = sha256(command.newPassword)
+        val password = PasswordKdfService.hashPassword(command.newPassword)
+        player.passwordHash = password.hash
+        player.passwordSalt = password.salt
+        player.passwordIterations = password.iterations
+        player.passwordAlgo = password.algo
+        registrationStore.updatePassword(player)
         if (player.status == PlayerAccountStatus.PENDING_MFA) {
             player.status = PlayerAccountStatus.ACTIVE
         }

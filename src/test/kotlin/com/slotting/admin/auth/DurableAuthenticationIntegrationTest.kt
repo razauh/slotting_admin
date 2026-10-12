@@ -267,6 +267,7 @@ class DurableAuthenticationIntegrationTest {
                     tenantId: String,
                     principalId: String,
                     sessionId: String,
+                    roles: Set<AdminRole>,
                     idempotencyKey: String,
                     requestFingerprint: String,
                     audit: AuditEvent,

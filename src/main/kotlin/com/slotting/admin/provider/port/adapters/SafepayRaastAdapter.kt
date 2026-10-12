@@ -21,7 +21,7 @@ class SafepayRaastAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = true,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = false,
         supportsRefund = true,
         supportsWebhookVerification = true,
@@ -102,15 +102,7 @@ class SafepayRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "track_${query.operationId}",
-            code = "PAID",
-            evidence = mapOf("provider" to providerId, "status" to "PAID")
-        )
+        return ProviderOutcome.unavailable(query.operationId, "Safepay status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(

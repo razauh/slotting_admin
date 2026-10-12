@@ -24,7 +24,7 @@ class EasypaisaAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = false,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = false,
         supportsRefund = false,
         supportsWebhookVerification = false,
@@ -85,15 +85,7 @@ class EasypaisaAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "EP-TXN-${query.operationId}",
-            code = "PAID",
-            evidence = mapOf("provider" to providerId, "contractVersion" to contractVersionAssumption)
-        )
+        return ProviderOutcome.unavailable(query.operationId, "Easypaisa status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(

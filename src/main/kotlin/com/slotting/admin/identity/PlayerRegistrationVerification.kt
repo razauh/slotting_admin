@@ -4,6 +4,8 @@ import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
+import com.slotting.admin.auth.PasswordKdfService
+import com.slotting.admin.auth.UnpredictableChallengeService
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -51,7 +53,7 @@ data class RegisterPlayerCommand(
     val phone: String,
     val jurisdiction: String,
     val riskScore: Double = 0.0,
-    val rawPassword: String = "DefaultPass123!",
+    val rawPassword: String = "",
     val idempotencyKey: String,
     val correlationId: String,
     val causationId: String,
@@ -108,6 +110,9 @@ data class PlayerRegistrationRecord(
     val riskScore: Double,
     val mfaRequired: Boolean,
     var passwordHash: String = "",
+    var passwordSalt: String = "",
+    var passwordIterations: Int = 0,
+    var passwordAlgo: String = PasswordKdfService.LEGACY_SHA256_ALGO,
     var status: PlayerAccountStatus,
     var emailVerified: Boolean = false,
     var phoneVerified: Boolean = false,
@@ -122,6 +127,7 @@ data class VerificationCodeRecord(
     val tenantId: String,
     val channel: ContactVerificationChannel,
     val codeHash: String,
+    val salt: String = "",
     var status: ContactVerificationStatus,
     var attemptCount: Int = 0,
     val maxAttempts: Int = 3,
@@ -148,6 +154,7 @@ interface PlayerRegistrationStore {
     fun findById(tenantId: String, playerId: UUID): PlayerRegistrationRecord?
     fun findVerificationCode(tenantId: String, playerId: UUID, channel: ContactVerificationChannel): VerificationCodeRecord?
     fun currentVersion(tenantId: String, playerId: UUID): Long
+    fun updatePassword(record: PlayerRegistrationRecord) = Unit
 }
 
 class InMemoryPlayerRegistrationStore : PlayerRegistrationStore {
@@ -210,6 +217,10 @@ class InMemoryPlayerRegistrationStore : PlayerRegistrationStore {
 
     override fun currentVersion(tenantId: String, playerId: UUID): Long =
         players[playerId]?.version ?: 0L
+
+    override fun updatePassword(record: PlayerRegistrationRecord) {
+        players[record.playerId] = record
+    }
 }
 
 class JurisdictionRiskMfaPolicy(
@@ -234,6 +245,10 @@ class PlayerRegistrationService(
 
     fun register(command: RegisterPlayerCommand): RegisterPlayerResult = synchronized(store) {
         PlayerRegistrationVerificationBinding.checkBound()
+
+        if (command.rawPassword.isBlank() || command.rawPassword.length > 1024) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
 
         // 1. Validate tenant and correlation
         if (command.tenantId.isBlank() || command.correlationId.isBlank() || command.causationId.isBlank()) {
@@ -314,6 +329,7 @@ class PlayerRegistrationService(
         val mfaRequired = mfaPolicy.isMfaRequired(command.jurisdiction, command.riskScore)
         val playerId = UUID.randomUUID()
 
+        val password = PasswordKdfService.hashPassword(command.rawPassword)
         val record = PlayerRegistrationRecord(
             playerId = playerId,
             tenantId = command.tenantId,
@@ -324,7 +340,10 @@ class PlayerRegistrationService(
             jurisdiction = command.jurisdiction,
             riskScore = command.riskScore,
             mfaRequired = mfaRequired,
-            passwordHash = sha256(command.rawPassword.ifBlank { "DefaultPass123!" }),
+            passwordHash = password.hash,
+            passwordSalt = password.salt,
+            passwordIterations = password.iterations,
+            passwordAlgo = password.algo,
             status = PlayerAccountStatus.PENDING_VERIFICATION,
             emailVerified = false,
             phoneVerified = false,
@@ -334,12 +353,15 @@ class PlayerRegistrationService(
         )
 
         // 7. Generate verification tokens/codes (deterministic or random)
+        val emailChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, playerId, "REGISTRATION_VERIFY_EMAIL", codeTtl, now)
+        val phoneChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, playerId, "REGISTRATION_VERIFY_PHONE", codeTtl, now)
         val emailVerification = VerificationCodeRecord(
             verificationId = UUID.randomUUID(),
             playerId = playerId,
             tenantId = command.tenantId,
             channel = ContactVerificationChannel.EMAIL,
-            codeHash = sha256("EMAIL-123456"),
+            codeHash = emailChallenge.codeHash,
+            salt = emailChallenge.salt,
             status = ContactVerificationStatus.UNVERIFIED,
             attemptCount = 0,
             maxAttempts = 3,
@@ -350,7 +372,8 @@ class PlayerRegistrationService(
             playerId = playerId,
             tenantId = command.tenantId,
             channel = ContactVerificationChannel.PHONE,
-            codeHash = sha256("PHONE-654321"),
+            codeHash = phoneChallenge.codeHash,
+            salt = phoneChallenge.salt,
             status = ContactVerificationStatus.UNVERIFIED,
             attemptCount = 0,
             maxAttempts = 3,
@@ -436,7 +459,7 @@ class PlayerRegistrationService(
         }
 
         // 3. Verify code hash
-        val providedHash = sha256(command.verificationCode.trim())
+        val providedHash = UnpredictableChallengeService.hashChallengeCode(command.verificationCode.trim(), codeRecord.salt)
         if (providedHash != codeRecord.codeHash) {
             codeRecord.attemptCount++
             if (codeRecord.attemptCount >= codeRecord.maxAttempts) {

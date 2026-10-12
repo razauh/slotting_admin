@@ -20,6 +20,7 @@ data class ProviderOutcome(
     val rawResponseCode: String? = null,
     val safeReason: String? = null,
     val evidence: Map<String, String> = emptyMap(),
+    val verifiedStatus: VerifiedProviderStatus? = null,
     val isAmbiguous: Boolean = (status == ProviderOutcomeStatus.UNKNOWN_AMBIGUOUS),
     val retryable: Boolean = (status == ProviderOutcomeStatus.UNKNOWN_AMBIGUOUS || status == ProviderOutcomeStatus.UNAVAILABLE),
     val occurredAt: Instant = Instant.now(),
@@ -37,6 +38,29 @@ data class ProviderOutcome(
             rawResponseCode = code,
             safeReason = "Transaction accepted by provider",
             evidence = evidence,
+            isAmbiguous = false,
+            retryable = false,
+        )
+
+        fun verifiedSettlement(
+            operationId: UUID,
+            providerReference: String,
+            amountMinorUnits: Long,
+            currency: String,
+            evidence: Map<String, String>,
+        ) = ProviderOutcome(
+            status = ProviderOutcomeStatus.ACCEPTED,
+            operationId = operationId,
+            providerReference = providerReference,
+            rawResponseCode = "SETTLED",
+            safeReason = "Provider settlement status verified",
+            evidence = evidence,
+            verifiedStatus = VerifiedProviderStatus(
+                providerReference = providerReference,
+                amountMinorUnits = amountMinorUnits,
+                currency = currency,
+                signatureVerified = true,
+            ),
             isAmbiguous = false,
             retryable = false,
         )
@@ -122,6 +146,13 @@ data class ProviderOutcome(
     }
 }
 
+data class VerifiedProviderStatus(
+    val providerReference: String,
+    val amountMinorUnits: Long,
+    val currency: String,
+    val signatureVerified: Boolean,
+)
+
 data class ProviderDepositCommand(
     val tenantId: String,
     val operationId: UUID,
@@ -157,6 +188,8 @@ data class ProviderStatusQuery(
     val providerId: String,
     val providerReference: String? = null,
     val idempotencyKey: String,
+    val expectedAmountMinorUnits: Long? = null,
+    val expectedCurrency: String? = null,
 )
 
 data class ProviderCancelCommand(

@@ -477,6 +477,73 @@ class DurableDepositWorkflowContractTest {
         assertEquals(reconcileResult.ledgerTransactionReference, secondReconcile.ledgerTransactionReference)
     }
 
+    @Test
+    fun `stub accepted status without verified evidence cannot settle`() {
+        val methodStore = InMemoryPaymentMethodStore()
+        val audit = AuditEvent(UUID.randomUUID(), UUID.randomUUID(), "tenant-pk-1", "INIT", now, "c", "ca")
+        val outbox = OutboxEvent(UUID.randomUUID(), audit.resultId, "tenant-pk-1", "INIT", now)
+        methodStore.save(PaymentMethodResult(audit.resultId, sampleMethod, now, "ev"), "fp", "idem-stub", PaymentMethodAction.REGISTER, "init", "admin", audit, outbox)
+        val workflowStore = InMemoryDepositWorkflowStore()
+        val ledgerStore = InMemoryLedgerJournalStore()
+        val alerts = InMemoryDepositReconciliationAlertSink()
+        val fake = AdversarialTestPaymentAdapter(simulationMode = AdversarialSimulationMode.TIMEOUT_AFTER_DISPATCH)
+        val stubAdapter = object : PaymentProviderPort by fake {
+            override fun queryStatus(query: ProviderStatusQuery, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.accepted(query.operationId, query.providerReference ?: "stub-ref", "PAID")
+        }
+        val service = DurableDepositWorkflowService(
+            workflowStore = workflowStore,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            ledgerPostingService = LedgerPostingService(ledgerStore, clock = clock),
+            providerPorts = mapOf("ADVERSARIAL_TEST" to stubAdapter),
+            reconciliationAlerts = alerts,
+            clock = clock,
+        )
+        val created = service.createIntent(sampleCreateCommand())
+        val result = service.reconcile(DepositReconciliationCommand("tenant-pk-1", created.intentId, adminPrincipal, "sess-valid"))
+        assertEquals(DepositIntentStatus.AMBIGUOUS_RECONCILING, result.status)
+        assertTrue(ledgerStore.findAllLegsForTenant("tenant-pk-1").isEmpty())
+        assertEquals(1, alerts.alerts.size)
+    }
+
+    @Test
+    fun `verified status with mismatched amount is quarantined without posting`() {
+        val methodStore = InMemoryPaymentMethodStore()
+        val audit = AuditEvent(UUID.randomUUID(), UUID.randomUUID(), "tenant-pk-1", "INIT", now, "c", "ca")
+        val outbox = OutboxEvent(UUID.randomUUID(), audit.resultId, "tenant-pk-1", "INIT", now)
+        methodStore.save(PaymentMethodResult(audit.resultId, sampleMethod, now, "ev"), "fp", "idem-mismatch", PaymentMethodAction.REGISTER, "init", "admin", audit, outbox)
+        val workflowStore = InMemoryDepositWorkflowStore()
+        val ledgerStore = InMemoryLedgerJournalStore()
+        val alerts = InMemoryDepositReconciliationAlertSink()
+        val fake = AdversarialTestPaymentAdapter(simulationMode = AdversarialSimulationMode.TIMEOUT_AFTER_DISPATCH)
+        val mismatchingAdapter = object : PaymentProviderPort by fake {
+            override fun queryStatus(query: ProviderStatusQuery, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.verifiedSettlement(
+                    operationId = query.operationId,
+                    providerReference = "provider-ref-verified",
+                    amountMinorUnits = (query.expectedAmountMinorUnits ?: 0) + 1,
+                    currency = query.expectedCurrency ?: "PKR",
+                    evidence = mapOf("fixture" to "signed"),
+                )
+        }
+        val service = DurableDepositWorkflowService(
+            workflowStore = workflowStore,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            ledgerPostingService = LedgerPostingService(ledgerStore, clock = clock),
+            providerPorts = mapOf("ADVERSARIAL_TEST" to mismatchingAdapter),
+            reconciliationAlerts = alerts,
+            clock = clock,
+        )
+        val created = service.createIntent(sampleCreateCommand())
+        val result = service.reconcile(DepositReconciliationCommand("tenant-pk-1", created.intentId, adminPrincipal, "sess-valid"))
+        assertEquals(DepositIntentStatus.QUARANTINED, result.status)
+        assertEquals(DepositIntentStatus.QUARANTINED, workflowStore.findIntent("tenant-pk-1", created.intentId)?.status)
+        assertTrue(ledgerStore.findAllLegsForTenant("tenant-pk-1").isEmpty())
+        assertEquals(1, alerts.alerts.size)
+    }
+
     // =========================================================================
     // 7. Concurrent Callback Handling
     // =========================================================================

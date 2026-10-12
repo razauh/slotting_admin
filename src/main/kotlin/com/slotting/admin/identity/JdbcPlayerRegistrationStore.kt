@@ -49,10 +49,10 @@ class JdbcPlayerRegistrationStore(
             record.playerId,
             record.tenantId,
             record.emailHash,
-            record.passwordHash.ifBlank { "N/A" },
-            "pbkdf2_sha256",
-            "salt",
-            10000,
+            record.passwordHash,
+            record.passwordAlgo,
+            record.passwordSalt,
+            record.passwordIterations,
             record.status.name,
             record.version,
             record.createdAt,
@@ -75,7 +75,7 @@ class JdbcPlayerRegistrationStore(
                 code.playerId,
                 "REGISTRATION_VERIFY_${code.channel.name}",
                 code.codeHash,
-                "salt",
+                code.salt,
                 code.maxAttempts - code.attemptCount,
                 code.maxAttempts,
                 code.expiresAt,
@@ -143,6 +143,7 @@ class JdbcPlayerRegistrationStore(
                 tenantId = rs.getString("tenant_id"),
                 channel = channel,
                 codeHash = rs.getString("code_hash"),
+                salt = rs.getString("salt"),
                 status = if (rs.getTimestamp("consumed_at") != null) ContactVerificationStatus.VERIFIED else ContactVerificationStatus.UNVERIFIED,
                 attemptCount = rs.getInt("max_attempts") - rs.getInt("attempts_remaining"),
                 maxAttempts = rs.getInt("max_attempts"),
@@ -155,6 +156,20 @@ class JdbcPlayerRegistrationStore(
     override fun currentVersion(tenantId: String, playerId: UUID): Long {
         val sql = "select coalesce(version, 1) from player_credential where tenant_id = ? and player_id = ?"
         return jdbc.queryForObject(sql, Long::class.java, tenantId, playerId) ?: 1L
+    }
+
+    @Transactional
+    override fun updatePassword(record: PlayerRegistrationRecord) {
+        jdbc.update(
+            "update player_credential set password_hash = ?, password_algo = ?, password_salt = ?, iterations = ?, updated_at = ? where tenant_id = ? and player_id = ?",
+            record.passwordHash,
+            record.passwordAlgo,
+            record.passwordSalt,
+            record.passwordIterations,
+            record.updatedAt,
+            record.tenantId,
+            record.playerId,
+        )
     }
 
     private fun ResultSet.toRegistrationRecord(tenantId: String): PlayerRegistrationRecord {
@@ -175,7 +190,10 @@ class JdbcPlayerRegistrationStore(
             jurisdiction = "DEFAULT",
             riskScore = 0.0,
             mfaRequired = false,
-            passwordHash = getString("password_hash"),
+                passwordHash = getString("password_hash"),
+            passwordSalt = getString("password_salt"),
+            passwordIterations = getInt("iterations"),
+            passwordAlgo = getString("password_algo"),
             status = status,
             emailVerified = true,
             phoneVerified = false,

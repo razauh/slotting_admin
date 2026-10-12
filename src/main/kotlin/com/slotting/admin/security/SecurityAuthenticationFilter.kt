@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+import java.time.Instant
 
 /**
  * Authoritative production security filter (TC-040, BE-002, XREP-001).
@@ -75,12 +76,18 @@ class SecurityAuthenticationFilter(
                     adminSessionDirectory.find(tenantId, adminId, adminSessionId)
                 }.getOrNull()
 
-                if (status != null && status.active) {
+                if (status != null &&
+                    status.active &&
+                    status.expiresAt.isAfter(Instant.now()) &&
+                    status.mfaVerified &&
+                    status.mfaExpiresAt?.isAfter(Instant.now()) == true &&
+                    status.roles.isNotEmpty()
+                ) {
                     principal = AuthenticatedPrincipal(
                         id = adminId,
                         tenantId = tenantId,
                         kind = PrincipalKind.ADMIN,
-                        roles = setOf(AdminRole.SUPER_ADMIN),
+                        roles = status.roles,
                     )
                 }
             }

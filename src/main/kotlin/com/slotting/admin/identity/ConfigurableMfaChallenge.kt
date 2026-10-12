@@ -4,6 +4,7 @@ import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
+import com.slotting.admin.auth.UnpredictableChallengeService
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -77,6 +78,7 @@ data class PlayerMfaChallengeRecord(
     val playerId: UUID,
     val factorType: MfaFactorType,
     val codeHash: String,
+    val salt: String,
     var status: MfaChallengeStatus,
     var attemptCount: Int = 0,
     val maxAttempts: Int = 3,
@@ -452,12 +454,14 @@ class ConfigurableMfaChallengeService(
         val rule = getEffectiveRule(command.tenantId, player.jurisdiction)
         val ttl = Duration.ofSeconds(rule.challengeTtlSeconds)
 
+        val issuedChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, command.playerId, "CONFIGURABLE_MFA", ttl, now)
         val challengeRecord = PlayerMfaChallengeRecord(
             challengeId = challengeId,
             tenantId = command.tenantId,
             playerId = command.playerId,
             factorType = factorToUse,
-            codeHash = sha256("MFA-654321"),
+            codeHash = issuedChallenge.codeHash,
+            salt = issuedChallenge.salt,
             status = MfaChallengeStatus.ISSUED,
             attemptCount = 0,
             maxAttempts = rule.maxAttempts,
@@ -541,7 +545,7 @@ class ConfigurableMfaChallengeService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
-        val givenCodeHash = sha256(command.code.trim())
+        val givenCodeHash = UnpredictableChallengeService.hashChallengeCode(command.code.trim(), challenge.salt)
         if (givenCodeHash != challenge.codeHash) {
             challenge.attemptCount++
             if (challenge.attemptCount >= challenge.maxAttempts) {

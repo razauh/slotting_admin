@@ -99,7 +99,7 @@ interface MfaVerifier {
 interface AuthenticationStore {
     fun findByIdempotency(tenantId: String, key: String): Pair<String, AuthenticationResult>?
     fun currentVersion(tenantId: String, principalId: String): Long
-    fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent)
+    fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, roles: Set<AdminRole>, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent)
 }
 
 interface AlertSink { fun alert(event: AuditEvent) }
@@ -153,7 +153,7 @@ class AdminMfaAuthenticator(
         )
         val audit = AuditEvent(UUID.randomUUID(), resultId, principal.tenantId, "ADMIN_MFA_ACCEPTED", now, command.correlationId, command.causationId)
         val outbox = OutboxEvent(UUID.randomUUID(), resultId, principal.tenantId, "ADMIN_MFA_ACCEPTED", now)
-        store.save(result, principal.tenantId, principal.id, command.sessionId, command.idempotencyKey, fingerprint(command), audit, outbox)
+        store.save(result, principal.tenantId, principal.id, command.sessionId, setOf(command.requestedRole), command.idempotencyKey, fingerprint(command), audit, outbox)
         if (command.breakGlass) alerts.alert(audit.copy(type = "ADMIN_BREAK_GLASS_STARTED"))
         return result
     }

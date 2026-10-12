@@ -20,7 +20,7 @@ class PayFastAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = false,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = false,
         supportsRefund = false,
         supportsWebhookVerification = true,
@@ -79,15 +79,7 @@ class PayFastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "PF-${query.operationId}",
-            code = "SUCCESS",
-            evidence = mapOf("provider" to providerId)
-        )
+        return ProviderOutcome.unavailable(query.operationId, "PayFast status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(

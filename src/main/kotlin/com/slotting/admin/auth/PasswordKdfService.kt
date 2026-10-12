@@ -12,12 +12,14 @@ import javax.crypto.spec.PBEKeySpec
 object PasswordKdfService {
 
     const val PBKDF2_ALGO = "pbkdf2_sha256"
+    const val PEPPERED_PBKDF2_ALGO = "pbkdf2_sha256_peppered"
     const val LEGACY_SHA256_ALGO = "sha256_legacy"
     const val DEFAULT_ITERATIONS = 100_000
     const val KEY_LENGTH_BITS = 256
     const val SALT_LENGTH_BYTES = 16
 
     private val secureRandom = SecureRandom()
+    private val passwordPepper = System.getenv("SLOTTING_PASSWORD_PEPPER")
 
     private val FORBIDDEN_PASSWORDS = setOf(
         "DefaultPass123!",
@@ -40,19 +42,20 @@ object PasswordKdfService {
 
     fun hashPassword(password: String, iterations: Int = DEFAULT_ITERATIONS): HashedPassword {
         require(password.isNotBlank()) { "Password cannot be blank" }
+        require(!passwordPepper.isNullOrBlank()) { "SLOTTING_PASSWORD_PEPPER must be configured" }
         require(password !in FORBIDDEN_PASSWORDS) { "Password cannot be a known default or trivial password" }
 
         val saltBytes = ByteArray(SALT_LENGTH_BYTES).also { secureRandom.nextBytes(it) }
         val saltHex = bytesToHex(saltBytes)
 
-        val hashBytes = pbkdf2(password.toCharArray(), saltBytes, iterations, KEY_LENGTH_BITS)
+        val hashBytes = pbkdf2((password + passwordPepper).toCharArray(), saltBytes, iterations, KEY_LENGTH_BITS)
         val hashHex = bytesToHex(hashBytes)
 
         return HashedPassword(
             hash = hashHex,
             salt = saltHex,
             iterations = iterations,
-            algo = PBKDF2_ALGO
+            algo = PEPPERED_PBKDF2_ALGO
         )
     }
 
@@ -75,15 +78,31 @@ object PasswordKdfService {
                 val matches = MessageDigest.isEqual(storedHash.toByteArray(Charsets.UTF_8), computedHex.toByteArray(Charsets.UTF_8))
                 VerificationResult(valid = matches, needsRehash = iterations < DEFAULT_ITERATIONS)
             }
+            PEPPERED_PBKDF2_ALGO -> {
+                if (passwordPepper.isNullOrBlank()) return VerificationResult(valid = false)
+                val saltBytes = hexToBytes(salt)
+                val computedBytes = pbkdf2((password + passwordPepper).toCharArray(), saltBytes, iterations, KEY_LENGTH_BITS)
+                val computedHex = bytesToHex(computedBytes)
+                val matches = MessageDigest.isEqual(storedHash.toByteArray(Charsets.UTF_8), computedHex.toByteArray(Charsets.UTF_8))
+                VerificationResult(valid = matches, needsRehash = iterations < DEFAULT_ITERATIONS)
+            }
             LEGACY_SHA256_ALGO -> {
                 // Legacy unsalted SHA-256 check
                 val digest = MessageDigest.getInstance("SHA-256")
                 val computedHex = bytesToHex(digest.digest(password.toByteArray(Charsets.UTF_8)))
                 val matches = MessageDigest.isEqual(storedHash.lowercase().toByteArray(Charsets.UTF_8), computedHex.lowercase().toByteArray(Charsets.UTF_8))
+                performDummyVerification(password)
                 VerificationResult(valid = matches, needsRehash = true)
             }
             else -> VerificationResult(valid = false)
         }
+    }
+
+    fun performDummyVerification(password: String) {
+        val salt = ByteArray(SALT_LENGTH_BYTES)
+        val input = if (passwordPepper.isNullOrBlank()) password else password + passwordPepper
+        val computed = pbkdf2(input.toCharArray(), salt, DEFAULT_ITERATIONS, KEY_LENGTH_BITS)
+        MessageDigest.isEqual(computed, ByteArray(computed.size))
     }
 
     private fun pbkdf2(chars: CharArray, salt: ByteArray, iterations: Int, keyLengthBits: Int): ByteArray {

@@ -150,10 +150,11 @@ class AdversarialTestPaymentAdapter(
             )
         }
         return when (simulationMode) {
-            AdversarialSimulationMode.NORMAL_SUCCESS -> ProviderOutcome.accepted(
+            AdversarialSimulationMode.NORMAL_SUCCESS -> ProviderOutcome.verifiedSettlement(
                 operationId = query.operationId,
                 providerReference = query.providerReference ?: "prov-ref-${query.operationId}",
-                code = "SUCCESS",
+                amountMinorUnits = query.expectedAmountMinorUnits ?: 0,
+                currency = query.expectedCurrency ?: "",
                 evidence = mapOf("inquiry" to "true")
             )
             AdversarialSimulationMode.EXPLICIT_DECLINE -> ProviderOutcome.declined(

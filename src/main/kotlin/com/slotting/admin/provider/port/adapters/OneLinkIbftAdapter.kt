@@ -19,7 +19,7 @@ class OneLinkIbftAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = false,
         supportsPayout = true,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = false,
         supportsRefund = false,
         supportsWebhookVerification = false,
@@ -79,15 +79,7 @@ class OneLinkIbftAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "IBFT-STAN-${query.operationId}",
-            code = "TRANSFER_SETTLED",
-            evidence = mapOf("provider" to providerId)
-        )
+        return ProviderOutcome.unavailable(query.operationId, "OneLink IBFT status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(

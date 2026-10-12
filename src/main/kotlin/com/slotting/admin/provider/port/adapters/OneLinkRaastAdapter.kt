@@ -1,7 +1,13 @@
 package com.slotting.admin.provider.port.adapters
 
 import com.slotting.admin.provider.port.*
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Concrete adapter for 1LINK Raast P2M Rail (Category A: Documented Public API Contract).
@@ -18,12 +24,14 @@ import java.util.UUID
  * Payouts and refunds are not part of the Raast P2M contract and must not be inferred.
  */
 class OneLinkRaastAdapter : PaymentProviderPort {
+    private val objectMapper = ObjectMapper()
+
     override val providerId: String = "ONELINK_RAAST"
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = false,
-        supportsStatusLookup = true,
+        supportsStatusLookup = false,
         supportsCancellation = true,
         supportsRefund = false,
         supportsWebhookVerification = true,
@@ -87,15 +95,7 @@ class OneLinkRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(query.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
-            operationId = query.operationId,
-            providerReference = query.providerReference ?: "RTP-${query.operationId}",
-            code = "PAID",
-            evidence = mapOf("provider" to providerId, "inquiryStatus" to "SUCCESS")
-        )
+        return ProviderOutcome.unavailable(query.operationId, "OneLink Raast status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
     }
 
     override fun cancel(
@@ -131,18 +131,70 @@ class OneLinkRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): CallbackVerificationResult {
-        if (credentials?.signingSecretOrKey == null) {
+        val secret = credentials?.signingSecretOrKey?.takeIf(String::isNotBlank)
+        if (secret == null) {
             return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNING_KEY_UNAVAILABLE")
         }
-        val sig = callback.headers["x-raast-signature"] ?: callback.headers["signature"]
-        if (sig.isNullOrBlank()) {
+        val signatures = callback.headers.entries
+            .filter { it.key.equals("x-raast-signature", true) || it.key.equals("signature", true) }
+            .map { it.value }
+        if (signatures.isEmpty() || signatures.any(String::isBlank)) {
             return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_SIGNATURE")
+        }
+        if (signatures.distinct().size > 1) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNATURE_CONFLICT")
+        }
+        val presented = signatures.first()
+        if (!presented.matches(Regex("[0-9a-fA-F]{64}"))) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNATURE_MISMATCH")
+        }
+        val expected = calculateHmacSha256(callback.rawBody, secret)
+        if (!MessageDigest.isEqual(
+                expected.toByteArray(StandardCharsets.US_ASCII),
+                presented.lowercase().toByteArray(StandardCharsets.US_ASCII),
+            )
+        ) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNATURE_MISMATCH")
+        }
+        val payload = try {
+            objectMapper.readTree(callback.rawBody)
+        } catch (_: Exception) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_PAYLOAD")
+        } ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_PAYLOAD")
+        val data = payload.path("data").takeIf(JsonNode::isObject) ?: payload
+        val reference = data.firstNonBlankText("reference", "providerReference", "merchantReference")
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_REFERENCE")
+        val amount = data.firstNonBlankText("amountMinorUnits", "amount")?.toLongOrNull()
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_AMOUNT")
+        val status = data.firstNonBlankText("status", "eventType")
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_STATUS")
+        if (status != "RTP_SETTLED") {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "PAYMENT_NOT_SETTLED")
         }
         // Verification against signature
         return CallbackVerificationResult(
             isValid = true,
             eventType = "RTP_SETTLED",
-            providerReference = callback.queryParams["reference"] ?: "REF-CALLBACK",
+            operationId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8)),
+            providerReference = reference,
+            outcome = ProviderOutcome.accepted(
+                operationId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8)),
+                providerReference = reference,
+                code = status,
+                evidence = mapOf("amountMinorUnits" to amount.toString(), "status" to status),
+            ),
         )
     }
+
+    fun calculateHmacSha256(data: String, key: String): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(key.toByteArray(StandardCharsets.UTF_8), "HmacSHA256"))
+        return mac.doFinal(data.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun JsonNode.firstNonBlankText(vararg names: String): String? = names
+        .asSequence()
+        .mapNotNull { name -> get(name)?.takeIf { !it.isNull }?.asText()?.takeIf(String::isNotBlank) }
+        .firstOrNull()
 }

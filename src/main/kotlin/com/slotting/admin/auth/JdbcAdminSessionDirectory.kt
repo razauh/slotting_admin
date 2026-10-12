@@ -17,7 +17,7 @@ class JdbcAdminSessionDirectory(
 
     override fun find(tenantId: String, principalId: String, sessionId: String): AdminSessionStatus? {
         val sql = """
-            select state, expires_at 
+            select state, expires_at, roles
             from admin_mfa_authentication 
             where tenant_id = ? and principal_id = ? and session_id = ? 
             order by authenticated_at desc 
@@ -27,6 +27,13 @@ class JdbcAdminSessionDirectory(
         val results = jdbc.query(sql, { rs, _ ->
             val state = rs.getString("state")
             val expiresAt = rs.getTimestamp("expires_at").toInstant()
+            val roles = runCatching {
+                rs.getString("roles")
+                    .split(',')
+                    .filter(String::isNotBlank)
+                    .map(AdminRole::valueOf)
+                    .toSet()
+            }.getOrNull() ?: return@query null
             val now = Instant.now(clock)
             val active = (state == "AUTHENTICATED" && now.isBefore(expiresAt))
             AdminSessionStatus(
@@ -35,6 +42,7 @@ class JdbcAdminSessionDirectory(
                 expiresAt = expiresAt,
                 mfaVerified = (state == "AUTHENTICATED"),
                 mfaExpiresAt = expiresAt,
+                roles = roles,
             )
         }, tenantId, principalId, sessionId)
 

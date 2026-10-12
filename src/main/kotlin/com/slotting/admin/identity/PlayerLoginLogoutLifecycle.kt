@@ -1,5 +1,7 @@
 package com.slotting.admin.identity
 
+import com.slotting.admin.auth.PasswordKdfService
+import com.slotting.admin.auth.UnpredictableChallengeService
 import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
@@ -130,6 +132,7 @@ data class MfaChallenge(
     val tenantId: String,
     val playerId: UUID,
     val expectedCodeHash: String,
+    val salt: String,
     val expiresAt: Instant,
     var consumed: Boolean = false
 )
@@ -263,10 +266,20 @@ class PlayerSessionService(
 
         // 2. Enumeration-safe credentials check:
         // If player does not exist OR password does not match, return safe INVALID rejection
-        val expectedPasswordHash = candidate?.passwordHash
-        val givenPasswordHash = sha256(command.rawPassword)
+        val passwordVerification = candidate?.let {
+            PasswordKdfService.verifyPassword(
+                password = command.rawPassword,
+                storedHash = it.passwordHash,
+                salt = it.passwordSalt,
+                iterations = it.passwordIterations,
+                algo = it.passwordAlgo,
+            )
+        }
+        if (candidate == null) {
+            PasswordKdfService.performDummyVerification(command.rawPassword)
+        }
 
-        if (candidate == null || expectedPasswordHash != givenPasswordHash) {
+        if (candidate == null || passwordVerification?.valid != true) {
             val failureEvent = AuditEvent(
                 eventId = UUID.randomUUID(),
                 resultId = resultId,
@@ -281,6 +294,15 @@ class PlayerSessionService(
                 sessionStore.audit.add(failureEvent)
             }
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
+
+        if (passwordVerification?.needsRehash == true && candidate != null) {
+            val upgraded = PasswordKdfService.hashPassword(command.rawPassword)
+            candidate.passwordHash = upgraded.hash
+            candidate.passwordSalt = upgraded.salt
+            candidate.passwordIterations = upgraded.iterations
+            candidate.passwordAlgo = upgraded.algo
+            registrationStore.updatePassword(candidate)
         }
 
         // 3. Unverified / Recovery Bypass Defense:
@@ -298,11 +320,13 @@ class PlayerSessionService(
         // If MFA is required (either by jurisdiction/risk config or player status is PENDING_MFA)
         if (candidate.mfaRequired || candidate.status == PlayerAccountStatus.PENDING_MFA) {
             val challengeId = UUID.randomUUID()
+            val issuedChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, candidate.playerId, "LOGIN_MFA", challengeTtl, now)
             val mfaChallenge = MfaChallenge(
                 challengeId = challengeId,
                 tenantId = command.tenantId,
                 playerId = candidate.playerId,
-                expectedCodeHash = sha256("MFA-654321"),
+                expectedCodeHash = issuedChallenge.codeHash,
+                salt = issuedChallenge.salt,
                 expiresAt = now.plus(challengeTtl),
                 consumed = false
             )
@@ -435,7 +459,7 @@ class PlayerSessionService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
-        val codeHash = sha256(command.mfaCode.trim())
+        val codeHash = UnpredictableChallengeService.hashChallengeCode(command.mfaCode.trim(), challenge.salt)
         if (codeHash != challenge.expectedCodeHash) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }

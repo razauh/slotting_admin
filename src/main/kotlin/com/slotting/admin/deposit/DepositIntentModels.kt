@@ -10,6 +10,7 @@ enum class DepositIntentStatus {
     PROVIDER_PENDING,
     SETTLED,
     FAILED,
+    QUARANTINED,
     EXPIRED,
     AMBIGUOUS_RECONCILING,
 }
@@ -127,3 +128,15 @@ data class DepositReconciliationResult(
     val actionTaken: String,
     val ledgerTransactionReference: String?,
 )
+
+interface DepositReconciliationAlertSink {
+    fun sendAlert(tenantId: String, intentId: UUID, reason: String, detail: String?)
+}
+
+class InMemoryDepositReconciliationAlertSink : DepositReconciliationAlertSink {
+    val alerts = mutableListOf<String>()
+
+    override fun sendAlert(tenantId: String, intentId: UUID, reason: String, detail: String?) {
+        alerts.add("$tenantId:$intentId:$reason:${detail.orEmpty()}")
+    }
+}
