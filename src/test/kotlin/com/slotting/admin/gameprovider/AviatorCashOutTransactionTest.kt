@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -48,6 +49,9 @@ import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class AviatorCashOutTransactionTest {
+
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
 
     companion object {
         @JvmStatic
@@ -103,6 +107,8 @@ class AviatorCashOutTransactionTest {
     private lateinit var registrationStore: JdbcPlayerRegistrationStore
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
+    private lateinit var fairnessStore: JdbcFairnessEvidenceStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
 
     class SimulatedFailpointException(message: String) : RuntimeException(message)
@@ -250,6 +256,9 @@ class AviatorCashOutTransactionTest {
         jdbc.update("delete from game_bet_settlement where tenant_id = ?", tenantId)
         jdbc.update("delete from game_accepted_bet where tenant_id = ?", tenantId)
         jdbc.update("delete from game_command_receipt where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_audit where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_reveal where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_commitment where tenant_id = ?", tenantId)
         jdbc.update("delete from game_cumulative_player_limit where tenant_id = ?", tenantId)
         jdbc.update("delete from game_authoritative_round where tenant_id = ?", tenantId)
         jdbc.update("delete from ledger_leg where tenant_id = ?", tenantId)
@@ -272,6 +281,8 @@ class AviatorCashOutTransactionTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessStore = JdbcFairnessEvidenceStore(jdbc)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -279,6 +290,7 @@ class AviatorCashOutTransactionTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -352,6 +364,14 @@ class AviatorCashOutTransactionTest {
                 phase = GameRoundPhase.BET_COUNTDOWN,
                 roundVersion = 1L,
                 currentMultiplier = BigDecimal("1.0000"),
+            )
+        )
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                publicSalt = "salt-$roundId",
             )
         )
     }
@@ -469,6 +489,7 @@ class AviatorCashOutTransactionTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
         )
         decorated.throwAfterSaveSettlement = true
         val txTemplate = TransactionTemplate(txManager)
@@ -645,6 +666,7 @@ class AviatorCashOutTransactionTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -716,6 +738,7 @@ class AviatorCashOutTransactionTest {
                 eligibilityStore = eligibilityStore,
                 adminPrincipal = adminPrincipal,
                 clock = clock,
+                fairnessAuthority = fairnessAuthority,
             )
             if (boundary == "LEDGER_POST") {
                 fpLedgerStore.failAfterSave = true
@@ -776,6 +799,7 @@ class AviatorCashOutTransactionTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
         val lifecycleService = DurableGameWagerAndSettlementService(
@@ -785,6 +809,7 @@ class AviatorCashOutTransactionTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 

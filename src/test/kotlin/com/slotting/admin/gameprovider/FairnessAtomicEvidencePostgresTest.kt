@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.dao.DeadlockLoserDataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -50,6 +51,9 @@ import kotlin.test.assertFalse
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class FairnessAtomicEvidencePostgresTest {
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
+
 
     companion object {
         @JvmStatic

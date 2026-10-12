@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -47,6 +48,8 @@ import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class AviatorLifecycleFencingTest {
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
 
     companion object {
         @JvmStatic
@@ -133,6 +136,12 @@ class AviatorLifecycleFencingTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(
+            store = fairnessStore,
+            clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
+            txManager = txManager,
+        )
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -140,12 +149,7 @@ class AviatorLifecycleFencingTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
-            txManager = txManager,
-        )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(
-            store = fairnessStore,
-            clock = clock,
-            envelope = FairnessSeedEnvelope.devDefault(),
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
         val walletService = AuthoritativeWalletService(
@@ -287,6 +291,15 @@ class AviatorLifecycleFencingTest {
         } finally {
             pool.shutdownNow()
         }
+
+        clock.advanceMillis(50)
+        val currentOwnerId = leaseStore.getLease(tenantId, gameId)?.ownerId
+        val stabilizedRound = when (currentOwnerId) {
+            alpha.ownerId -> alpha.tick(tenantId, gameId)
+            beta.ownerId -> beta.tick(tenantId, gameId)
+            else -> null
+        }
+        stabilizedRound?.let { versionsByRound[it.roundId] = maxOf(versionsByRound[it.roundId] ?: 0L, it.roundVersion) }
 
         assertTrue(failures.isEmpty(), "no orchestrator tick may fail the fencing contract: ${failures.map { it.message }}")
         assertTrue(roundsCreated() >= 3, "at least three full cycles must complete, saw ${roundsCreated()}")
@@ -637,7 +650,15 @@ class AviatorLifecycleFencingTest {
         seedFunds(startingBalance)
 
         val cashOutRound = "rnd-tc019-golden-cashout"
-        insertRound(cashOutRound)
+        insertRound(cashOutRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = cashOutRound,
+                publicSalt = "salt-$cashOutRound",
+            ),
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc019-golden-bet-1")).status)
         assertEquals(startingBalance - wagerMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
@@ -664,7 +685,15 @@ class AviatorLifecycleFencingTest {
 
         val lossRound = "rnd-tc019-golden-loss"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
-        insertRound(lossRound)
+        insertRound(lossRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = lossRound,
+                publicSalt = "salt-$lossRound",
+            ),
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc019-golden-bet-2")).status)
         val crashResult = gameService.settleRoundCrash(settleCommand(lossRound))
         assertEquals(1, crashResult.settledBetsCount)

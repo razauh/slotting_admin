@@ -77,6 +77,13 @@ jobs:
           echo "Verifying Flyway migration chain dynamically against ephemeral isolated PostgreSQL..."
           ./gradlew compileKotlin compileTestKotlin
 
+      - name: Verify Migration Safety Harness
+        env:
+          SLOTTING_ADMIN_DATABASE_URL: jdbc:postgresql://localhost:5432/slotting_admin_ci
+          SLOTTING_ADMIN_DATABASE_USERNAME: ci_runner
+          SLOTTING_ADMIN_DATABASE_PASSWORD: ci_test_password_ephemeral
+        run: bash .scripts/tc04-migration-safety.sh
+
       - name: Execute Test Suite
         env:
           SLOTTING_ADMIN_DATABASE_URL: jdbc:postgresql://localhost:5432/slotting_admin_ci

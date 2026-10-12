@@ -251,6 +251,16 @@ open class DurableDepositWorkflowService(
             processedAt = null,
         )
         val isNewInboxEvent = workflowStore.recordInboxEvent(inboxRecord)
+        if (!isNewInboxEvent) {
+            val existingInboxEvent = workflowStore.findInboxEvent(
+                command.tenantId,
+                command.providerId,
+                command.providerEventId,
+            ) ?: throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            if (existingInboxEvent.payloadHash != payloadHash) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            }
+        }
 
         // 4. Resolve associated deposit intent
         val candidateIntent = when {

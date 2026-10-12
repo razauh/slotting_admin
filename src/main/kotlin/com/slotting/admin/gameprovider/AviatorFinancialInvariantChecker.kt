@@ -74,6 +74,19 @@ class AviatorFinancialInvariantChecker(
             }
         }
 
+        val reservationReferences = bets.map { it.ledgerReservationRef }.toSet()
+        transactions.filter {
+            it.idempotencyKey.startsWith("bet:$tenantId:$gameId:$roundId:") &&
+                it.transactionReference !in reservationReferences
+        }.forEach { transaction ->
+            add(
+                violations,
+                "I6",
+                "ledger:${transaction.transactionReference}",
+                "wager reservation ledger effect has no accepted bet",
+            )
+        }
+
         val receipts = gameStore.findAllReceiptsForTenant(tenantId)
         receipts.groupBy { it.serverSequenceId }.filter { it.key > 0L && it.value.size > 1 }.forEach { (sequence, rows) ->
             add(violations, "I7", "sequence:$sequence", "command sequence is not unique")

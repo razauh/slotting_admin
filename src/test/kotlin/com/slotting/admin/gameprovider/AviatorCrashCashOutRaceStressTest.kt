@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -41,6 +42,9 @@ import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class AviatorCrashCashOutRaceStressTest {
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
+
 
     companion object {
         @JvmStatic
@@ -75,6 +79,7 @@ class AviatorCrashCashOutRaceStressTest {
     private lateinit var registrationStore: JdbcPlayerRegistrationStore
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
 
     class PausingCrashStore(
@@ -98,6 +103,7 @@ class AviatorCrashCashOutRaceStressTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(JdbcFairnessEvidenceStore(jdbc), clock)
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -105,6 +111,7 @@ class AviatorCrashCashOutRaceStressTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
         for (uuid in playerUuids) {
@@ -143,6 +150,8 @@ class AviatorCrashCashOutRaceStressTest {
         jdbc.update("delete from game_bet_settlement where tenant_id = ?", tenantId)
         jdbc.update("delete from game_accepted_bet where tenant_id = ?", tenantId)
         jdbc.update("delete from game_command_receipt where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_reveal where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_commitment where tenant_id = ?", tenantId)
         jdbc.update("delete from game_cumulative_player_limit where tenant_id = ?", tenantId)
         jdbc.update("delete from game_authoritative_round where tenant_id = ?", tenantId)
         jdbc.update("delete from ledger_leg where tenant_id = ?", tenantId)
@@ -188,6 +197,14 @@ class AviatorCrashCashOutRaceStressTest {
                 roundVersion = 1L,
                 currentMultiplier = BigDecimal("1.0000"),
             )
+        )
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                publicSalt = "salt-$roundId",
+            ),
         )
     }
 

@@ -22,7 +22,7 @@ begin
     select string_agg(event_id::text, ',' order by event_id)
     into duplicate_ids
     from (
-        select min(event_id) as event_id
+        select (array_agg(event_id order by event_id))[1] as event_id
         from game_event_journal
         group by tenant_id, game_id, round_id, round_version, event_name
         having count(*) > 1

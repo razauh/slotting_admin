@@ -2,7 +2,9 @@ package com.slotting.admin.infra
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import com.slotting.admin.gameprovider.AuthoritativeGameSnapshotAndEventService
 import com.slotting.admin.outbox.RedactedEventEnvelopeCodec
 import com.slotting.admin.worker.LeasedOutboxEventRecord
 import com.slotting.admin.worker.WorkerOutboxStatus
@@ -16,6 +18,9 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -40,6 +45,9 @@ class PostgresMigrationIntegrationTest {
     @Autowired
     private lateinit var outbox: LeasedOutboxStore
 
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
+
     @Test
     fun `clean install creates migration history and operational tables`() {
         val maxRank = jdbc.queryForObject("select max(installed_rank) from flyway_schema_history", Int::class.java)
@@ -55,6 +63,32 @@ class PostgresMigrationIntegrationTest {
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'ledger_leg'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'password_reset_token'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'lifecycle_attempt_journal'", Int::class.java))
+    }
+
+    @Test
+    fun `event journal migration enforces round version and unique event identity`() {
+        val nullable = jdbc.queryForObject(
+            "select is_nullable from information_schema.columns where table_schema = 'public' and table_name = 'game_event_journal' and column_name = 'round_version'",
+            String::class.java,
+        )
+        assertEquals("NO", nullable)
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "select count(*) from pg_constraint where conname = 'ck_game_event_journal_round_version_positive'",
+                Int::class.java,
+            ),
+        )
+
+        val tenantId = "tenant-tc032-v47-${UUID.randomUUID()}"
+        val roundId = "round-tc032-v47"
+        insertGameEvent(tenantId, UUID.randomUUID(), roundId, 1, 1)
+        assertFailsWith<DuplicateKeyException> {
+            insertGameEvent(tenantId, UUID.randomUUID(), roundId, 2, 1)
+        }
+        assertFailsWith<DataIntegrityViolationException> {
+            insertGameEvent(tenantId, UUID.randomUUID(), "$roundId-invalid", 3, 0)
+        }
     }
 
     @Test
@@ -103,5 +137,21 @@ class PostgresMigrationIntegrationTest {
         correlationId = "corr-tc002", causationId = "cause-tc002", idempotencyKey = UUID.randomUUID().toString(),
         status = WorkerOutboxStatus.PENDING, createdAt = Instant.now(),
     )
+
+    private fun insertGameEvent(tenantId: String, eventId: UUID, roundId: String, sequenceId: Long, roundVersion: Long) {
+        jdbc.update(
+            """
+            insert into game_event_journal (
+                event_id, tenant_id, game_id, round_id, sequence_id, event_name, round_version,
+                payload_json, target_scope, target_owner_id, timestamp_millis
+            ) values (?, ?, 'AVIATOR', ?, ?, 'ROUND_UPDATED', ?, '{}', 'BROADCAST', null, 1)
+            """.trimIndent(),
+            eventId,
+            tenantId,
+            roundId,
+            sequenceId,
+            roundVersion,
+        )
+    }
 
 }

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.dao.DeadlockLoserDataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -47,6 +48,8 @@ import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class AviatorCrashLockProofTest {
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
 
     companion object {
         @JvmStatic
@@ -78,6 +81,7 @@ class AviatorCrashLockProofTest {
 
     private lateinit var gameStore: JdbcDurableGameWagerAndSettlementStore
     private lateinit var ledgerStore: JdbcLedgerJournalStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var registrationStore: JdbcPlayerRegistrationStore
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
@@ -87,6 +91,7 @@ class AviatorCrashLockProofTest {
         clearTenantState()
         gameStore = JdbcDurableGameWagerAndSettlementStore(jdbc)
         ledgerStore = JdbcLedgerJournalStore(jdbc)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(JdbcFairnessEvidenceStore(jdbc), clock)
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
@@ -126,6 +131,8 @@ class AviatorCrashLockProofTest {
         jdbc.update("delete from game_bet_settlement where tenant_id = ?", tenantId)
         jdbc.update("delete from game_accepted_bet where tenant_id = ?", tenantId)
         jdbc.update("delete from game_fairness_audit where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_reveal where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_commitment where tenant_id = ?", tenantId)
         jdbc.update("delete from game_command_receipt where tenant_id = ?", tenantId)
         jdbc.update("delete from game_cumulative_player_limit where tenant_id = ?", tenantId)
         jdbc.update("delete from game_authoritative_round where tenant_id = ?", tenantId)
@@ -164,7 +171,8 @@ class AviatorCrashLockProofTest {
     private fun defaultService(store: DurableGameWagerAndSettlementStore = gameStore): DurableGameWagerAndSettlementService =
         DurableGameWagerAndSettlementService(
             store = store, ledgerService = ledgerService, registrationStore = registrationStore,
-            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock, txManager = txManager,
+            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock,
+            fairnessAuthority = fairnessAuthority, txManager = txManager,
         )
 
     private fun seedRound(roundId: String) {
@@ -172,6 +180,14 @@ class AviatorCrashLockProofTest {
         val service = defaultService()
         service.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId = tenantId, gameId = gameId, roundId = roundId, phase = GameRoundPhase.BET_COUNTDOWN, roundVersion = 1L, currentMultiplier = BigDecimal("1.0000"))
+        )
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                publicSalt = "salt-$roundId",
+            ),
         )
         playerUuids.forEachIndexed { index, uuid ->
             val ack = service.processCommand(

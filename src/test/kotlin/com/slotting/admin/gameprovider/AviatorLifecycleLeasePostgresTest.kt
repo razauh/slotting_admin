@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -49,6 +50,9 @@ import kotlin.test.assertTrue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class AviatorLifecycleLeasePostgresTest {
+    @MockBean
+    private lateinit var snapshotAndEventService: AuthoritativeGameSnapshotAndEventService
+
 
     companion object {
         @JvmStatic
@@ -93,6 +97,7 @@ class AviatorLifecycleLeasePostgresTest {
     private lateinit var ledgerService: LedgerPostingService
     private lateinit var gameService: DurableGameWagerAndSettlementService
     private lateinit var leaseStore: JdbcGameLifecycleLeaseStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
 
     @BeforeEach
     fun setUp() {
@@ -119,6 +124,7 @@ class AviatorLifecycleLeasePostgresTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(JdbcFairnessEvidenceStore(jdbc), clock)
         leaseStore = JdbcGameLifecycleLeaseStore(jdbc)
 
         gameService = DurableGameWagerAndSettlementService(
@@ -128,6 +134,7 @@ class AviatorLifecycleLeasePostgresTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -658,7 +665,7 @@ class AviatorLifecycleLeasePostgresTest {
         for (iteration in 0 until 100) {
             val roundId = "rnd-tc018-order-$iteration"
             closeActiveRounds()
-            insertRound(roundId)
+            insertRound(roundId, "BET_COUNTDOWN")
 
             trace.clear()
             lifecycleStore.eventLog.clear()
@@ -700,7 +707,15 @@ class AviatorLifecycleLeasePostgresTest {
         seedFunds(startingBalance)
 
         val cashOutRound = "rnd-tc018-golden-cashout"
-        insertRound(cashOutRound)
+        insertRound(cashOutRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = cashOutRound,
+                publicSalt = "salt-$cashOutRound",
+            ),
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc018-golden-bet-1")).status)
         gameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier)
@@ -723,7 +738,15 @@ class AviatorLifecycleLeasePostgresTest {
 
         val lossRound = "rnd-tc018-golden-loss"
         closeActiveRounds()
-        insertRound(lossRound)
+        insertRound(lossRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = lossRound,
+                publicSalt = "salt-$lossRound",
+            ),
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc018-golden-bet-2")).status)
         val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
