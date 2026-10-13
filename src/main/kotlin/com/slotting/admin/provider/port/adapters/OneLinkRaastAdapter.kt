@@ -165,24 +165,30 @@ class OneLinkRaastAdapter : PaymentProviderPort {
         val reference = data.firstNonBlankText("reference", "providerReference", "merchantReference")
             ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_REFERENCE")
         val amount = data.firstNonBlankText("amountMinorUnits", "amount")?.toLongOrNull()
-            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_AMOUNT")
+        val currency = data.firstNonBlankText("currency")
         val status = data.firstNonBlankText("status", "eventType")
-            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_STATUS")
-        if (status != "RTP_SETTLED") {
-            return CallbackVerificationResult(isValid = false, rejectionReason = "PAYMENT_NOT_SETTLED")
+        val evidence = buildMap {
+            amount?.let { put("amountMinorUnits", it.toString()) }
+            currency?.let { put("currency", it) }
+            status?.let { put("status", it) }
         }
-        // Verification against signature
+        val operationId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8))
+        val outcome = if (status == "RTP_SETTLED") {
+            ProviderOutcome.accepted(operationId, reference, status, evidence)
+        } else {
+            ProviderOutcome.failed(
+                operationId = operationId,
+                code = status ?: "MISSING_STATUS",
+                reason = "Provider callback does not confirm successful settlement",
+                evidence = evidence,
+            )
+        }
         return CallbackVerificationResult(
             isValid = true,
-            eventType = "RTP_SETTLED",
-            operationId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8)),
+            eventType = status,
+            operationId = operationId,
             providerReference = reference,
-            outcome = ProviderOutcome.accepted(
-                operationId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8)),
-                providerReference = reference,
-                code = status,
-                evidence = mapOf("amountMinorUnits" to amount.toString(), "status" to status),
-            ),
+            outcome = outcome,
         )
     }
 

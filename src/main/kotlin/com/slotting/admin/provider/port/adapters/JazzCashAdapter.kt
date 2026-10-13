@@ -145,28 +145,30 @@ class JazzCashAdapter : PaymentProviderPort {
         val providerReference = fields["pp_TxnRefNo"]?.takeIf(String::isNotBlank)
             ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_TRANSACTION_REFERENCE")
         val amountMinorUnits = fields["pp_Amount"]?.toLongOrNull()
-            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_AMOUNT")
         val currency = fields["pp_TxnCurrency"]?.takeIf(String::isNotBlank)
-            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_CURRENCY")
-        val responseCode = fields["pp_ResponseCode"]
-            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_RESPONSE_CODE")
-        if (responseCode != "000") {
-            return CallbackVerificationResult(isValid = false, rejectionReason = "PAYMENT_NOT_SUCCESSFUL")
+        val responseCode = fields["pp_ResponseCode"]?.takeIf(String::isNotBlank)
+        val evidence = buildMap {
+            amountMinorUnits?.let { put("amountMinorUnits", it.toString()) }
+            currency?.let { put("currency", it) }
+            responseCode?.let { put("responseCode", it) }
+        }
+        val operationId = UUID.nameUUIDFromBytes(providerReference.toByteArray(StandardCharsets.UTF_8))
+        val outcome = if (responseCode == "000") {
+            ProviderOutcome.accepted(operationId, providerReference, responseCode, evidence)
+        } else {
+            ProviderOutcome.failed(
+                operationId = operationId,
+                code = responseCode ?: "MISSING_RESPONSE_CODE",
+                reason = "Provider callback does not confirm successful settlement",
+                evidence = evidence,
+            )
         }
         return CallbackVerificationResult(
             isValid = true,
             eventType = "PAYMENT_CONFIRMATION",
+            operationId = operationId,
             providerReference = providerReference,
-            outcome = ProviderOutcome.accepted(
-                operationId = UUID.nameUUIDFromBytes(providerReference.toByteArray(StandardCharsets.UTF_8)),
-                providerReference = providerReference,
-                code = responseCode,
-                evidence = mapOf(
-                    "amountMinorUnits" to amountMinorUnits.toString(),
-                    "currency" to currency,
-                    "responseCode" to responseCode,
-                ),
-            ),
+            outcome = outcome,
         )
     }
 

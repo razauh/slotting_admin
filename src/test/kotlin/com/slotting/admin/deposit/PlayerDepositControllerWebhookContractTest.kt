@@ -29,8 +29,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -211,22 +209,10 @@ class PlayerDepositControllerWebhookContractTest {
         assertEquals(409, conflictResponse.status)
         assertTrue(conflictResponse.contentAsString.contains("CALLBACK_EVENT_CONFLICT"))
 
-        val missingIdFirstResponse = deliver(rawBody, eventHeader = null)
-        assertEquals(200, missingIdFirstResponse.status, missingIdFirstResponse.contentAsString)
-        assertTrue(mapper.readTree(missingIdFirstResponse.contentAsString).get("alreadyProcessed").asBoolean())
-        val fallbackEventId = "body-sha256:" + MessageDigest.getInstance("SHA-256")
-            .digest("$providerId\n$rawBody".toByteArray(StandardCharsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
-        val fallbackInboxEvent = workflowStore.findInboxEvent(tenantId, providerId, fallbackEventId)
-        assertEquals(fallbackEventId, fallbackInboxEvent?.providerEventId)
-
-        val missingIdReplayResponse = deliver(rawBody, eventHeader = null)
-        assertEquals(200, missingIdReplayResponse.status, missingIdReplayResponse.contentAsString)
-        assertTrue(mapper.readTree(missingIdReplayResponse.contentAsString).get("alreadyProcessed").asBoolean())
-        assertEquals(
-            fallbackInboxEvent?.inboxId,
-            workflowStore.findInboxEvent(tenantId, providerId, fallbackEventId)?.inboxId,
-        )
+        assertEquals(400, deliver(rawBody, eventHeader = null).status)
+        assertEquals(400, deliver(rawBody, signature = null, eventHeader = null).status)
+        assertEquals(400, deliver(rawBody, eventHeader = "   ").status)
+        assertEquals(400, deliver(rawBody, eventHeader = "e".repeat(129)).status)
 
         assertEquals(1, ledgerStore.findAllTransactionsForTenant(tenantId).size)
         assertEquals(

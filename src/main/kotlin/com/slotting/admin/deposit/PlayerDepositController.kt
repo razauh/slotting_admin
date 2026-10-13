@@ -8,8 +8,6 @@ import com.slotting.admin.provider.PaymentMethodUnavailableException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.util.UUID
 
 data class CreateDepositIntentRequest(
@@ -137,10 +135,15 @@ class PlayerDepositController(
         @RequestParam queryParams: Map<String, String>,
         @RequestBody rawBody: String,
     ): ResponseEntity<Any> {
-        val eventId = sequenceOf(headers["x-provider-event-id"], headers["x-event-id"])
+        val eventId = headers.entries.asSequence()
+            .filter { (name, _) -> name.equals("x-provider-event-id", true) || name.equals("x-event-id", true) }
+            .map { it.value }
             .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
             .firstOrNull()
-            ?: stablePayloadEventId(providerId, rawBody)
+            ?: return ResponseEntity.badRequest().body(mapOf("error" to "PROVIDER_EVENT_ID_REQUIRED"))
+        if (eventId.length > 128) {
+            return ResponseEntity.badRequest().body(mapOf("error" to "INVALID_PROVIDER_EVENT_ID"))
+        }
 
         val command = DepositCallbackCommand(
             tenantId = tenantId,
@@ -155,20 +158,14 @@ class PlayerDepositController(
             val result = workflowService.processCallback(command)
             ResponseEntity.ok(result)
         } catch (e: AuthenticationFailure.Rejected) {
-            if (e.code == AuthErrorCode.CONFLICT) {
-                ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "CALLBACK_EVENT_CONFLICT"))
-            } else {
-                ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to "SIGNATURE_VERIFICATION_FAILED"))
+            when (e.code) {
+                AuthErrorCode.CONFLICT -> ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "CALLBACK_EVENT_CONFLICT"))
+                AuthErrorCode.INVALID -> ResponseEntity.badRequest().body(mapOf("error" to "INVALID_PROVIDER_EVENT_ID"))
+                else -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to "SIGNATURE_VERIFICATION_FAILED"))
             }
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("error" to (e.message ?: "CALLBACK_ERROR")))
         }
-    }
-
-    private fun stablePayloadEventId(providerId: String, rawBody: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest("$providerId\n$rawBody".toByteArray(StandardCharsets.UTF_8))
-        return "body-sha256:" + digest.joinToString("") { "%02x".format(it) }
     }
 
     @PostMapping("/intents/{intentId}/reconcile")

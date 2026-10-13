@@ -13,11 +13,13 @@ import java.util.concurrent.ConcurrentHashMap
 interface DepositWorkflowStore {
     fun saveIntent(record: DepositIntentRecord): DepositIntentRecord
     fun findIntent(tenantId: String, intentId: UUID): DepositIntentRecord?
+    fun findIntentForUpdate(tenantId: String, intentId: UUID): DepositIntentRecord?
     fun findIntentByIdempotencyKey(tenantId: String, idempotencyKey: String): DepositIntentRecord?
     fun findIntentByProviderReference(tenantId: String, providerReference: String): DepositIntentRecord?
     fun updateIntent(record: DepositIntentRecord, expectedVersion: Long): DepositIntentRecord
     fun recordInboxEvent(inbox: DepositInboxRecord): Boolean
     fun findInboxEvent(tenantId: String, providerId: String, providerEventId: String): DepositInboxRecord?
+    fun claimInboxEvent(tenantId: String, providerId: String, providerEventId: String, expectedStatus: String, newStatus: String): Boolean
     fun updateInboxEvent(inbox: DepositInboxRecord)
     fun recordReconciliation(record: DepositReconciliationRecord)
 }
@@ -53,6 +55,10 @@ class InMemoryDepositWorkflowStore : DepositWorkflowStore {
     override fun findIntent(tenantId: String, intentId: UUID): DepositIntentRecord? {
         return intentsById[idKey(tenantId, intentId)]?.copy()
     }
+
+    @Synchronized
+    override fun findIntentForUpdate(tenantId: String, intentId: UUID): DepositIntentRecord? =
+        findIntent(tenantId, intentId)
 
     @Synchronized
     override fun findIntentByIdempotencyKey(tenantId: String, idempotencyKey: String): DepositIntentRecord? {
@@ -93,6 +99,21 @@ class InMemoryDepositWorkflowStore : DepositWorkflowStore {
     @Synchronized
     override fun findInboxEvent(tenantId: String, providerId: String, providerEventId: String): DepositInboxRecord? {
         return inboxEvents[inboxKey(tenantId, providerId, providerEventId)]?.copy()
+    }
+
+    @Synchronized
+    override fun claimInboxEvent(
+        tenantId: String,
+        providerId: String,
+        providerEventId: String,
+        expectedStatus: String,
+        newStatus: String,
+    ): Boolean {
+        val key = inboxKey(tenantId, providerId, providerEventId)
+        val existing = inboxEvents[key] ?: return false
+        if (existing.status != expectedStatus) return false
+        inboxEvents[key] = existing.copy(status = newStatus)
+        return true
     }
 
     @Synchronized
@@ -195,6 +216,16 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
         ).firstOrNull()
     }
 
+    @Transactional
+    override fun findIntentForUpdate(tenantId: String, intentId: UUID): DepositIntentRecord? {
+        return jdbc.query(
+            "SELECT * FROM admin_deposit_intent WHERE tenant_id = ? AND intent_id = ? FOR UPDATE",
+            { rs, _ -> rs.toIntentRecord() },
+            tenantId,
+            intentId,
+        ).firstOrNull()
+    }
+
     override fun findIntentByIdempotencyKey(tenantId: String, idempotencyKey: String): DepositIntentRecord? {
         return jdbc.query(
             "SELECT * FROM admin_deposit_intent WHERE tenant_id = ? AND idempotency_key = ?",
@@ -285,6 +316,22 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
             providerEventId,
         ).firstOrNull()
     }
+
+    @Transactional
+    override fun claimInboxEvent(
+        tenantId: String,
+        providerId: String,
+        providerEventId: String,
+        expectedStatus: String,
+        newStatus: String,
+    ): Boolean = jdbc.update(
+        "UPDATE admin_deposit_inbox SET status = ? WHERE tenant_id = ? AND provider_id = ? AND provider_event_id = ? AND status = ?",
+        newStatus,
+        tenantId,
+        providerId,
+        providerEventId,
+        expectedStatus,
+    ) == 1
 
     @Transactional
     override fun updateInboxEvent(inbox: DepositInboxRecord) {

@@ -10,8 +10,12 @@ import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.identity.ServerEligibilityStore
 import com.slotting.admin.ledger.JournalEntryDraft
 import com.slotting.admin.ledger.JournalEntryDirection
+import com.slotting.admin.ledger.AccountLockTimeoutException
+import com.slotting.admin.ledger.InsufficientAccountBalanceException
 import com.slotting.admin.ledger.LedgerPostingService
 import com.slotting.admin.ledger.PostTransactionCommand
+import io.micrometer.core.instrument.MeterRegistry
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -47,7 +51,9 @@ class DurableGameWagerAndSettlementService(
     private val fairnessAuthority: ProvablyFairOutcomeAuthority? = null,
     private val houseMaxRoundExposure: Long = DEFAULT_HOUSE_MAX_ROUND_EXPOSURE,
     val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
+    private val meterRegistry: MeterRegistry? = null,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
     companion object {
@@ -538,9 +544,23 @@ class DurableGameWagerAndSettlementService(
             )
         }
 
-        // Solvency Check against Authoritative Double-Entry Ledger
-        val playerBalance = ledgerService.store.findBalance(command.tenantId, "PLAYER:$playerId", command.currency)
+        val playerAccount = "PLAYER:$playerId"
+        if (!ledgerService.store.lockAccount(command.tenantId, playerAccount, command.currency)) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.LOCK_TIMEOUT,
+                message = "Account balance is temporarily busy; retry the bet",
+                roundVersion = round.roundVersion,
+                fp = fp,
+                retryable = true,
+            )
+        }
+
+        val playerBalance = ledgerService.store.findBalance(command.tenantId, playerAccount, command.currency)
         if (playerBalance < wagerMinor) {
+            recordBetOverdraftBlocked(command, playerAccount, playerBalance, wagerMinor)
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -573,6 +593,28 @@ class DurableGameWagerAndSettlementService(
                     causationId = command.causationId,
                     requireNonNegativeAccounts = true,
                 )
+            )
+        } catch (e: InsufficientAccountBalanceException) {
+            recordBetOverdraftBlocked(command, playerAccount, playerBalance, wagerMinor)
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.INSUFFICIENT_BALANCE,
+                message = "Available balance is less than the requested wager",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        } catch (e: AccountLockTimeoutException) {
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.LOCK_TIMEOUT,
+                message = "Account balance is temporarily busy; retry the bet",
+                roundVersion = round.roundVersion,
+                fp = fp,
+                retryable = true,
             )
         } catch (e: Exception) {
             val partiallyPosted = try {
@@ -994,6 +1036,7 @@ class DurableGameWagerAndSettlementService(
         message: String,
         roundVersion: Long,
         fp: String,
+        retryable: Boolean = false,
     ): AviatorCommandAckResult {
         val now = clock.instant()
         val seq = store.nextSequenceId(command.tenantId)
@@ -1016,13 +1059,31 @@ class DurableGameWagerAndSettlementService(
             causationId = command.causationId,
             rejection = AviatorCommandRejection(
                 code = code,
-                retryable = false,
+                retryable = retryable,
                 safeMessage = message,
             ),
             evidenceReference = sha256("${command.tenantId}:${command.commandId}:$code:${now.toEpochMilli()}"),
         )
         recordReceipt(command, ownerId, gameId, fp, ack, roundVersion)
         return ack
+    }
+
+    private fun recordBetOverdraftBlocked(
+        command: AviatorRestCommand,
+        accountReference: String,
+        balanceMinor: Long,
+        wagerMinor: Long,
+    ) {
+        logger.warn(
+            "bet_overdraft_blocked tenantId={} accountReference={} currency={} balanceMinor={} wagerMinor={}",
+            command.tenantId,
+            accountReference,
+            command.currency,
+            balanceMinor,
+            wagerMinor,
+        )
+        meterRegistry?.counter("game.bet_overdraft_blocked_total", "currency", command.currency)?.increment()
+        meterRegistry?.counter("game.negative_balance_alert_total", "currency", command.currency)?.increment()
     }
 
     private fun ledgerPrincipal(tenantId: String): AuthenticatedPrincipal = adminPrincipal.copy(tenantId = tenantId)

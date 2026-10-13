@@ -392,6 +392,85 @@ class DurableDepositWorkflowContractTest {
         assertEquals(DepositIntentStatus.PROVIDER_PENDING, intent?.status)
     }
 
+    @Test
+    fun `callback rejects missing oversized or whitespace event identifiers before provider lookup`() {
+        val service = DurableDepositWorkflowService(
+            workflowStore = InMemoryDepositWorkflowStore(),
+            paymentMethodStore = InMemoryPaymentMethodStore(),
+            sessions = sessionDir,
+            ledgerPostingService = LedgerPostingService(InMemoryLedgerJournalStore(), clock = clock),
+            providerPorts = emptyMap(),
+            clock = clock,
+        )
+        listOf("", "   ", "e".repeat(129)).forEach { eventId ->
+            val failure = assertFailsWith<AuthenticationFailure.Rejected> {
+                service.processCallback(
+                    DepositCallbackCommand(
+                        tenantId = "tenant-pk-1",
+                        providerId = "UNCONFIGURED",
+                        providerEventId = eventId,
+                        rawBody = "{}",
+                    )
+                )
+            }
+            assertEquals(AuthErrorCode.INVALID, failure.code)
+        }
+    }
+
+    @Test
+    fun `signed callback amount status currency and missing evidence mismatches quarantine without credit`() {
+        val vectors = listOf(
+            Triple("partial", "\"amount\":25000,\"currency\":\"PKR\",\"status\":\"paid\"", "CALLBACK_AMOUNT_MISMATCH"),
+            Triple("failed", "\"amount\":50000,\"currency\":\"PKR\",\"status\":\"failed\"", "CALLBACK_STATUS_NOT_SUCCESS"),
+            Triple("currency", "\"amount\":50000,\"currency\":\"USD\",\"status\":\"paid\"", "CALLBACK_CURRENCY_MISMATCH"),
+            Triple("missing", "\"currency\":\"PKR\",\"status\":\"paid\"", "CALLBACK_AMOUNT_MISSING_OR_INVALID"),
+        )
+
+        vectors.forEach { (name, fields, expectedReason) ->
+            val methodStore = InMemoryPaymentMethodStore()
+            val audit = AuditEvent(UUID.randomUUID(), UUID.randomUUID(), "tenant-pk-1", "INIT", now, "c", "ca")
+            val outbox = OutboxEvent(UUID.randomUUID(), audit.resultId, "tenant-pk-1", "INIT", now)
+            val method = sampleMethod.copy(methodId = "SAFEPAY", providerId = "SAFEPAY_RAAST")
+            methodStore.save(PaymentMethodResult(audit.resultId, method, now, "ev"), "fp", "idem-$name", PaymentMethodAction.REGISTER, "init", "admin", audit, outbox)
+            val workflowStore = InMemoryDepositWorkflowStore()
+            val ledgerStore = InMemoryLedgerJournalStore()
+            val alerts = InMemoryDepositReconciliationAlertSink()
+            val adapter = SafepayRaastAdapter()
+            val service = DurableDepositWorkflowService(
+                workflowStore = workflowStore,
+                paymentMethodStore = methodStore,
+                sessions = sessionDir,
+                ledgerPostingService = LedgerPostingService(ledgerStore, clock = clock),
+                providerPorts = mapOf("SAFEPAY_RAAST" to adapter),
+                credentialsResolver = { _, _ -> sampleCredentials },
+                configResolver = { _, _ -> sampleConfig.copy(providerId = "SAFEPAY_RAAST") },
+                clock = clock,
+                reconciliationAlerts = alerts,
+            )
+            val created = service.createIntent(sampleCreateCommand(methodId = "SAFEPAY", idempotencyKey = "create-$name"))
+            val body = """{"data":{"tracker":"${created.providerReference}",$fields}}"""
+            val callback = DepositCallbackCommand(
+                tenantId = "tenant-pk-1",
+                providerId = "SAFEPAY_RAAST",
+                providerEventId = "evt-$name",
+                rawBody = body,
+                headers = mapOf("x-sfpy-signature" to adapter.calculateHmacSha256(body, sampleCredentials.signingSecretOrKey!!)),
+            )
+
+            val result = service.processCallback(callback)
+            val stored = workflowStore.findIntent("tenant-pk-1", created.intentId)
+            val reconciliation = workflowStore.getReconciliations().single()
+            assertEquals(DepositIntentStatus.QUARANTINED, result.status)
+            assertEquals(DepositIntentStatus.QUARANTINED, stored?.status)
+            assertTrue(ledgerStore.findAllLegsForTenant("tenant-pk-1").isEmpty())
+            assertEquals(1, alerts.alerts.size)
+            assertTrue(reconciliation.notes.orEmpty().contains(expectedReason))
+            assertTrue(reconciliation.notes.orEmpty().contains("expectedAmount=50000"))
+            assertEquals(DepositIntentStatus.QUARANTINED, service.processCallback(callback).status)
+            assertTrue(ledgerStore.findAllLegsForTenant("tenant-pk-1").isEmpty())
+        }
+    }
+
     // =========================================================================
     // 5. Client Return URL Rejection (Android / browser return never settles)
     // =========================================================================

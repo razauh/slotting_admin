@@ -97,13 +97,12 @@ class OneLinkCallbackVerificationContractTest {
     }
 
     @Test
-    fun unsettledStatusAndMissingReferenceAreRejected() {
+    fun signedUnsettledStatusIsReturnedForQuarantineAndMissingReferenceIsRejected() {
         val unsettled = signedFixture(body(status = "RTP_PENDING"))
         val missingReference = signedFixture(body(reference = ""))
-        assertEquals(
-            "PAYMENT_NOT_SETTLED",
-            adapter.verifyCallback(WebhookSignatureFixtures.oneLinkCallback(unsettled), config(), credentials()).rejectionReason,
-        )
+        val result = adapter.verifyCallback(WebhookSignatureFixtures.oneLinkCallback(unsettled), config(), credentials())
+        assertTrue(result.isValid)
+        assertEquals("RTP_PENDING", result.outcome?.evidence?.get("status"))
         assertEquals(
             "MISSING_REFERENCE",
             adapter.verifyCallback(WebhookSignatureFixtures.oneLinkCallback(missingReference), config(), credentials()).rejectionReason,
@@ -128,8 +127,8 @@ class OneLinkCallbackVerificationContractTest {
         val mismatch = runCatching {
             mismatchService.processCallback(command(signedFixture(), "event-amount-mismatch"))
         }
-        assertTrue(mismatch.isFailure)
-        assertEquals(DepositIntentStatus.PROVIDER_PENDING, mismatchStore.findIntent(tenantId, intentId)?.status)
+        assertEquals(DepositIntentStatus.QUARANTINED, mismatch.getOrThrow().status)
+        assertEquals(DepositIntentStatus.QUARANTINED, mismatchStore.findIntent(tenantId, intentId)?.status)
         assertEquals(0, mismatchLedger.findAllLegsForTenant(tenantId).size)
         assertEquals(DepositIntentStatus.SETTLED, store.findIntent(tenantId, intentId)?.status)
     }
@@ -184,7 +183,7 @@ class OneLinkCallbackVerificationContractTest {
         reference: String = providerReference,
         amount: Long = 50_000L,
         status: String = "RTP_SETTLED",
-    ) = """{"reference":"$reference","amountMinorUnits":$amount,"status":"$status"}"""
+    ) = """{"reference":"$reference","amountMinorUnits":$amount,"currency":"PKR","status":"$status"}"""
 
     private fun payload(signature: String?) = ProviderCallbackPayload(
         providerId = "ONELINK_RAAST",

@@ -19,9 +19,11 @@ import com.slotting.admin.ledger.LedgerPostingException
 import com.slotting.admin.ledger.LedgerPostingService
 import com.slotting.admin.ledger.PostingResult
 import com.slotting.admin.ledger.PostTransactionCommand
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.OutboxEvent
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
@@ -57,10 +59,27 @@ class AviatorPlaceBetTransactionTest {
 
 
     companion object {
+        private val databaseUrl = System.getenv("SLOTTING_ADMIN_DATABASE_URL")
+            ?: "jdbc:postgresql://127.0.0.1:5432/slotting_admin_ci"
+        private val isolatedSchema = PostgresIntegrationSupport.createIsolatedSchema(
+            "tc04_${UUID.randomUUID().toString().replace("-", "").take(12)}",
+        )
+
         @JvmStatic
         @DynamicPropertySource
         fun postgresProperties(registry: DynamicPropertyRegistry) {
-            PostgresIntegrationSupport.configureProperties(registry)
+            val separator = if (databaseUrl.contains('?')) '&' else '?'
+            registry.add("spring.datasource.url") { "$databaseUrl${separator}currentSchema=${isolatedSchema.schemaName}" }
+            registry.add("spring.datasource.username") { System.getenv("SLOTTING_ADMIN_DATABASE_USERNAME") ?: "ci_runner" }
+            registry.add("spring.datasource.password") { System.getenv("SLOTTING_ADMIN_DATABASE_PASSWORD") ?: "ci_test_password_ephemeral" }
+            registry.add("spring.flyway.enabled") { "true" }
+            registry.add("spring.datasource.hikari.maximum-pool-size") { "40" }
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun dropIsolatedSchema() {
+            isolatedSchema.close()
         }
     }
 
@@ -97,6 +116,7 @@ class AviatorPlaceBetTransactionTest {
     private lateinit var registrationStore: JdbcPlayerRegistrationStore
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
+    private lateinit var meterRegistry: SimpleMeterRegistry
     private lateinit var fairnessStore: JdbcFairnessEvidenceStore
     private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
@@ -304,6 +324,7 @@ class AviatorPlaceBetTransactionTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        meterRegistry = SimpleMeterRegistry()
         fairnessStore = JdbcFairnessEvidenceStore(jdbc)
         fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
         gameService = DurableGameWagerAndSettlementService(
@@ -314,6 +335,7 @@ class AviatorPlaceBetTransactionTest {
             adminPrincipal = adminPrincipal,
             clock = clock,
             txManager = txManager,
+            meterRegistry = meterRegistry,
         )
 
         jdbc.update(
@@ -411,6 +433,19 @@ class AviatorPlaceBetTransactionTest {
             tenantId,
             idempotencyKey,
         ) ?: 0
+
+    private fun placeBetCommand(commandId: String, roundId: String, handId: String, wagerMinor: Long) =
+        AviatorRestCommand(
+            tenantId = tenantId,
+            principal = playerPrincipal,
+            commandId = commandId,
+            roundId = roundId,
+            handId = handId,
+            action = "PLACE_BET",
+            wagerMinor = wagerMinor,
+            currency = currency,
+            correlationId = "corr-$commandId",
+        )
 
     private fun rootMessage(throwable: Throwable): String {
         val builder = StringBuilder()
@@ -528,6 +563,173 @@ class AviatorPlaceBetTransactionTest {
             assertEquals(1, betCount, "iteration $iteration must persist exactly one bet")
         }
         pool.shutdown()
+    }
+
+    @Test
+    fun twoConcurrentBetsAboveBalanceReserveAtMostBalanceAndRejectLoserAsInsufficient() {
+        seedFunds(1_000L)
+        val roundId = "rnd-tc13-two-bet-race"
+        createRound(roundId)
+        val commands = listOf(
+            placeBetCommand("cmd-tc13-two-a", roundId, "hand-a", 900L),
+            placeBetCommand("cmd-tc13-two-b", roundId, "hand-b", 900L),
+        )
+        val gate = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(commands.size)
+        val results = try {
+            val futures = commands.map { command ->
+                pool.submit<AviatorCommandAckResult> {
+                    gate.await()
+                    gameService.processCommand(command)
+                }
+            }
+            gate.countDown()
+            futures.map { it.get(30, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(5, TimeUnit.SECONDS)
+        }
+
+        val accepted = results.filter { it.status == AviatorCommandAckStatus.ACCEPTED }
+        val rejected = results.filter { it.status == AviatorCommandAckStatus.REJECTED }
+        assertEquals(1, accepted.size)
+        assertEquals(1, rejected.size)
+        assertEquals(AviatorCommandRejectionCode.INSUFFICIENT_BALANCE, rejected.single().rejection?.code)
+        val rejectedReceipt = gameStore.findReceipt(tenantId, rejected.single().commandId)
+        assertEquals("REJECTED", rejectedReceipt?.status)
+        assertTrue(rejectedReceipt?.responseJson?.contains("INSUFFICIENT_BALANCE") == true)
+        assertEquals(900L, accepted.single().result?.wagerMinor)
+        assertEquals(100L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+        assertEquals(1.0, meterRegistry.get("game.bet_overdraft_blocked_total").tag("currency", currency).counter().count())
+        assertEquals(1.0, meterRegistry.get("game.negative_balance_alert_total").tag("currency", currency).counter().count())
+        assertEquals(1, commands.sumOf { command ->
+            ledgerTransactionCountForKey(
+                AviatorCommandKeys.placeBetKey(tenantId, gameId, roundId, playerIdStr, command.handId),
+            )
+        })
+    }
+
+    @Test
+    fun concurrentBetsEqualToBalanceAllowOnlyOneReservation() {
+        seedFunds(1_000L)
+        val roundId = "rnd-tc13-exact-balance"
+        createRound(roundId)
+        val commands = listOf(
+            placeBetCommand("cmd-tc13-exact-a", roundId, "hand-a", 1_000L),
+            placeBetCommand("cmd-tc13-exact-b", roundId, "hand-b", 1_000L),
+        )
+        val gate = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(commands.size)
+        val results = try {
+            val futures = commands.map { command ->
+                pool.submit<AviatorCommandAckResult> {
+                    gate.await()
+                    gameService.processCommand(command)
+                }
+            }
+            gate.countDown()
+            futures.map { it.get(30, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(5, TimeUnit.SECONDS)
+        }
+
+        assertEquals(1, results.count { it.status == AviatorCommandAckStatus.ACCEPTED })
+        val rejected = results.single { it.status == AviatorCommandAckStatus.REJECTED }
+        assertEquals(AviatorCommandRejectionCode.INSUFFICIENT_BALANCE, rejected.rejection?.code)
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+        assertEquals(1, commands.sumOf { command ->
+            ledgerTransactionCountForKey(
+                AviatorCommandKeys.placeBetKey(tenantId, gameId, roundId, playerIdStr, command.handId),
+            )
+        })
+    }
+
+    @Test
+    fun thirtyTwoConcurrentBetsNeverOverdrawAndKeepLedgerBalanced() {
+        seedFunds(1_000L)
+        val roundId = "rnd-tc13-storm"
+        createRound(roundId)
+        val commands = (0 until 32).map { index ->
+            placeBetCommand("cmd-tc13-storm-$index", roundId, "hand-$index", 100L)
+        }
+        val gate = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(commands.size)
+        val results = try {
+            val futures = commands.map { command ->
+                pool.submit<AviatorCommandAckResult> {
+                    gate.await()
+                    gameService.processCommand(command)
+                }
+            }
+            gate.countDown()
+            futures.map { it.get(45, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(5, TimeUnit.SECONDS)
+        }
+
+        assertEquals(10, results.count { it.status == AviatorCommandAckStatus.ACCEPTED })
+        val rejected = results.filter { it.status == AviatorCommandAckStatus.REJECTED }
+        assertEquals(22, rejected.size)
+        assertTrue(rejected.all { it.rejection?.code == AviatorCommandRejectionCode.INSUFFICIENT_BALANCE })
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+        assertEquals(22.0, meterRegistry.get("game.bet_overdraft_blocked_total").tag("currency", currency).counter().count())
+        assertEquals(22.0, meterRegistry.get("game.negative_balance_alert_total").tag("currency", currency).counter().count())
+        val totals = jdbc.queryForObject(
+            "select sum(case when direction = 'DEBIT' then amount_minor_units else 0 end), sum(case when direction = 'CREDIT' then amount_minor_units else 0 end) from ledger_leg where tenant_id = ?",
+            { rs, _ -> rs.getLong(1) to rs.getLong(2) },
+            tenantId,
+        )!!
+        assertEquals(totals.first, totals.second)
+        assertEquals(2_000L, totals.first)
+    }
+
+    @Test
+    fun sequentialBetsWithinBalanceStillSucceed() {
+        seedFunds(1_000L)
+        val roundId = "rnd-tc13-sequential"
+        createRound(roundId)
+
+        val first = gameService.processCommand(placeBetCommand("cmd-tc13-sequential-a", roundId, "hand-a", 600L))
+        val second = gameService.processCommand(placeBetCommand("cmd-tc13-sequential-b", roundId, "hand-b", 400L))
+
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, first.status)
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, second.status)
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
+    }
+
+    @Test
+    fun accountLockTimeoutReturnsRetryableRejectionWithoutPosting() {
+        seedFunds(1_000L)
+        val roundId = "rnd-tc13-lock-timeout"
+        createRound(roundId)
+        val timedOutStore = object : LedgerJournalStore by ledgerStore {
+            override fun lockAccount(tenantId: String, accountReference: String, currencyCode: String) = false
+        }
+        val timedOutService = DurableGameWagerAndSettlementService(
+            store = gameStore,
+            ledgerService = LedgerPostingService(store = timedOutStore, clock = clock),
+            registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore,
+            adminPrincipal = adminPrincipal,
+            clock = clock,
+            txManager = txManager,
+            meterRegistry = meterRegistry,
+        )
+
+        val command = placeBetCommand("cmd-tc13-lock-timeout", roundId, "hand-timeout", 100L)
+        val result = timedOutService.processCommand(command)
+
+        assertEquals(AviatorCommandRejectionCode.LOCK_TIMEOUT, result.rejection?.code)
+        assertTrue(result.rejection?.retryable == true)
+        assertEquals(
+            0,
+            ledgerTransactionCountForKey(
+                AviatorCommandKeys.placeBetKey(tenantId, gameId, roundId, playerIdStr, command.handId),
+            ),
+        )
+        assertEquals(1_000L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
     }
 
     @Test

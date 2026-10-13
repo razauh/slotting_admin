@@ -11,6 +11,7 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.LoggerFactory
+import org.springframework.transaction.annotation.Transactional
 
 open class DurableDepositWorkflowService(
     private val workflowStore: DepositWorkflowStore,
@@ -213,7 +214,12 @@ open class DurableDepositWorkflowService(
         )
     }
 
+    @Transactional
     open fun processCallback(command: DepositCallbackCommand): DepositCallbackResult {
+        val providerEventId = command.providerEventId.trim()
+        if (providerEventId.isEmpty() || providerEventId.length > 128) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
         // 1. Locate provider port
         val port = providerPorts[command.providerId]
             ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
@@ -239,32 +245,6 @@ open class DurableDepositWorkflowService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
 
-        // 3. Deduplicate in inbox
-        val payloadHash = sha256(command.rawBody)
-        val inboxRecord = DepositInboxRecord(
-            inboxId = UUID.randomUUID(),
-            tenantId = command.tenantId,
-            providerId = command.providerId,
-            providerEventId = command.providerEventId,
-            intentId = verification.operationId,
-            status = "RECEIVED",
-            signatureVerified = true,
-            payloadHash = payloadHash,
-            receivedAt = clock.instant(),
-            processedAt = null,
-        )
-        val isNewInboxEvent = workflowStore.recordInboxEvent(inboxRecord)
-        if (!isNewInboxEvent) {
-            val existingInboxEvent = workflowStore.findInboxEvent(
-                command.tenantId,
-                command.providerId,
-                command.providerEventId,
-            ) ?: throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            if (existingInboxEvent.payloadHash != payloadHash) {
-                throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
-            }
-        }
-
         // 4. Resolve associated deposit intent
         val candidateIntent = when {
             verification.providerReference != null ->
@@ -275,30 +255,146 @@ open class DurableDepositWorkflowService(
             else -> null
         } ?: throw IllegalStateException("Could not match callback to an existing deposit intent")
 
-        if (command.providerId == "JAZZCASH" || command.providerId == "ONELINK_RAAST") {
-            val verifiedEvidence = verification.outcome?.evidence.orEmpty()
-            val verifiedAmount = verifiedEvidence["amountMinorUnits"]?.toLongOrNull()
-            val verifiedCurrency = verifiedEvidence["currency"]
-            val amountMismatch = verifiedAmount != candidateIntent.amountMinorUnits
-            val currencyMismatch = command.providerId == "JAZZCASH" && verifiedCurrency != candidateIntent.currencyCode
-            if (amountMismatch || currencyMismatch) {
-                throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        // 3. Deduplicate in inbox
+        val payloadIdentity = buildString {
+            append(command.rawBody)
+            command.queryParams.toSortedMap().forEach { (key, value) ->
+                append('\n').append(key.length).append(':').append(key).append(value.length).append(':').append(value)
+            }
+        }
+        val payloadHash = sha256(payloadIdentity)
+        val inboxRecord = DepositInboxRecord(
+            inboxId = UUID.randomUUID(),
+            tenantId = command.tenantId,
+            providerId = command.providerId,
+            providerEventId = providerEventId,
+            intentId = candidateIntent.intentId,
+            status = "PROCESSING",
+            signatureVerified = true,
+            payloadHash = payloadHash,
+            receivedAt = clock.instant(),
+            processedAt = null,
+        )
+        val isNewInboxEvent = workflowStore.recordInboxEvent(inboxRecord)
+        var ownsInboxClaim = isNewInboxEvent
+        if (!isNewInboxEvent) {
+            val existingInboxEvent = workflowStore.findInboxEvent(
+                command.tenantId,
+                command.providerId,
+                providerEventId,
+            ) ?: throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            if (existingInboxEvent.payloadHash != payloadHash || existingInboxEvent.intentId != candidateIntent.intentId) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            }
+            ownsInboxClaim = when (existingInboxEvent.status) {
+                "PROCESSED", "QUARANTINED" -> false
+                "RECEIVED" -> workflowStore.claimInboxEvent(
+                    command.tenantId,
+                    command.providerId,
+                    providerEventId,
+                    "RECEIVED",
+                    "PROCESSING",
+                )
+                else -> throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            }
+            if (!ownsInboxClaim && existingInboxEvent.status == "RECEIVED") {
+                val latest = workflowStore.findInboxEvent(command.tenantId, command.providerId, providerEventId)
+                    ?: throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+                if (latest.status !in setOf("PROCESSED", "QUARANTINED")) {
+                    throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+                }
             }
         }
 
         // 5. Concurrency-safe, exactly-once ledger credit under per-intent lock
         synchronized(getOrCreateLock(candidateIntent.intentId)) {
-            val currentIntent = workflowStore.findIntent(candidateIntent.tenantId, candidateIntent.intentId)
-                ?: candidateIntent
+            val currentIntent = workflowStore.findIntentForUpdate(candidateIntent.tenantId, candidateIntent.intentId)
+                ?: throw IllegalStateException("Deposit intent ${candidateIntent.intentId} disappeared during callback processing")
+
+            if (!ownsInboxClaim) {
+                logger.info(
+                    "deposit_callback_replay provider={} eventId={} intentId={} status={} ledgerReference={}",
+                    command.providerId,
+                    providerEventId,
+                    currentIntent.intentId,
+                    currentIntent.status,
+                    currentIntent.ledgerTransactionReference,
+                )
+                return DepositCallbackResult(
+                    intentId = currentIntent.intentId,
+                    providerTransactionId = currentIntent.providerReference,
+                    status = currentIntent.status,
+                    alreadyProcessed = true,
+                    ledgerTransactionReference = currentIntent.ledgerTransactionReference,
+                )
+            }
 
             // If already settled, idempotent return with existing ledger reference
             if (currentIntent.status == DepositIntentStatus.SETTLED) {
+                workflowStore.updateInboxEvent(inboxRecord.copy(status = "PROCESSED", processedAt = clock.instant()))
                 return DepositCallbackResult(
                     intentId = currentIntent.intentId,
                     providerTransactionId = currentIntent.providerReference,
                     status = DepositIntentStatus.SETTLED,
                     alreadyProcessed = true,
                     ledgerTransactionReference = currentIntent.ledgerTransactionReference,
+                )
+            }
+
+            if (currentIntent.status == DepositIntentStatus.QUARANTINED) {
+                workflowStore.updateInboxEvent(inboxRecord.copy(status = "QUARANTINED", processedAt = clock.instant()))
+                return DepositCallbackResult(
+                    intentId = currentIntent.intentId,
+                    providerTransactionId = currentIntent.providerReference,
+                    status = DepositIntentStatus.QUARANTINED,
+                    alreadyProcessed = true,
+                    ledgerTransactionReference = currentIntent.ledgerTransactionReference,
+                )
+            }
+
+            val evidence = verification.outcome?.evidence.orEmpty()
+            val receivedAmount = evidence["amountMinorUnits"]?.toLongOrNull()
+            val receivedCurrency = evidence["currency"]
+            val receivedStatus = evidence["status"] ?: evidence["responseCode"] ?: verification.outcome?.rawResponseCode
+            val successStatuses = setOf("PAID", "SUCCESS", "SUCCEEDED", "SETTLED", "RTP_SETTLED", "000")
+            val reason = when {
+                receivedStatus.isNullOrBlank() || !successStatuses.contains(receivedStatus.uppercase()) -> "CALLBACK_STATUS_NOT_SUCCESS"
+                receivedAmount == null || receivedAmount <= 0L -> "CALLBACK_AMOUNT_MISSING_OR_INVALID"
+                receivedAmount != currentIntent.amountMinorUnits -> "CALLBACK_AMOUNT_MISMATCH"
+                receivedCurrency.isNullOrBlank() -> "CALLBACK_CURRENCY_MISSING"
+                !receivedCurrency.equals(currentIntent.currencyCode, ignoreCase = true) -> "CALLBACK_CURRENCY_MISMATCH"
+                else -> null
+            }
+            if (reason != null) {
+                val detail = "expectedAmount=${currentIntent.amountMinorUnits},receivedAmount=${receivedAmount ?: "missing"},expectedCurrency=${currentIntent.currencyCode},receivedCurrency=${receivedCurrency ?: "missing"},receivedStatus=${receivedStatus ?: "missing"}"
+                val quarantined = currentIntent.copy(
+                    status = DepositIntentStatus.QUARANTINED,
+                    failureReason = "$reason:$detail",
+                    serverVersion = currentIntent.serverVersion + 1,
+                    updatedAt = clock.instant(),
+                )
+                workflowStore.updateIntent(quarantined, expectedVersion = currentIntent.serverVersion)
+                workflowStore.recordReconciliation(
+                    DepositReconciliationRecord(
+                        reconciliationId = UUID.randomUUID(),
+                        tenantId = currentIntent.tenantId,
+                        intentId = currentIntent.intentId,
+                        actionType = "CALLBACK_QUARANTINED",
+                        previousStatus = currentIntent.status,
+                        newStatus = DepositIntentStatus.QUARANTINED,
+                        performedBy = "provider:${command.providerId}",
+                        occurredAt = clock.instant(),
+                        notes = "$reason:$detail",
+                    )
+                )
+                reconciliationAlerts.sendAlert(currentIntent.tenantId, currentIntent.intentId, reason, detail)
+                workflowStore.updateInboxEvent(inboxRecord.copy(status = "QUARANTINED", processedAt = clock.instant()))
+                return DepositCallbackResult(
+                    intentId = quarantined.intentId,
+                    providerTransactionId = quarantined.providerReference,
+                    status = DepositIntentStatus.QUARANTINED,
+                    alreadyProcessed = false,
+                    ledgerTransactionReference = null,
                 )
             }
 

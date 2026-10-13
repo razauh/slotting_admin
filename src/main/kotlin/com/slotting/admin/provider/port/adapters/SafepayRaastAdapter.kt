@@ -1,6 +1,8 @@
 package com.slotting.admin.provider.port.adapters
 
 import com.slotting.admin.provider.port.*
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -16,6 +18,7 @@ import javax.crypto.spec.SecretKeySpec
  * - Webhook HMAC-SHA256 signature verification (`x-sfpy-signature`)
  */
 class SafepayRaastAdapter : PaymentProviderPort {
+    private val objectMapper = ObjectMapper()
     override val providerId: String = "SAFEPAY_RAAST"
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
@@ -152,24 +155,48 @@ class SafepayRaastAdapter : PaymentProviderPort {
             return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_SIGNATURE")
         }
 
-        // Parse tracker / reference from json body if present
-        val trackerMatch = Regex("\"tracker\"\\s*:\\s*\"([^\"]+)\"").find(callback.rawBody)
-        val tracker = trackerMatch?.groupValues?.get(1) ?: "track_callback"
-
-        val outcome = ProviderOutcome.accepted(
-            operationId = UUID.randomUUID(),
-            providerReference = tracker,
-            code = "PAID",
-            evidence = mapOf("signatureVerified" to "true")
-        )
+        val payload = try {
+            objectMapper.readTree(callback.rawBody)
+        } catch (_: Exception) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_PAYLOAD")
+        } ?: return CallbackVerificationResult(isValid = false, rejectionReason = "INVALID_PAYLOAD")
+        val data = payload.path("data").takeIf(JsonNode::isObject) ?: payload
+        val tracker = data.firstNonBlankText("tracker", "reference", "providerReference")
+            ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_REFERENCE")
+        val evidence = buildMap {
+            data.firstNonBlankText("amountMinorUnits", "amount")?.let { put("amountMinorUnits", it) }
+            data.firstNonBlankText("currency")?.let { put("currency", it) }
+            data.firstNonBlankText("status", "eventType")?.let { put("status", it) }
+        }
+        val status = evidence["status"]
+        val outcome = if (status?.uppercase()?.let { it in setOf("PAID", "SUCCESS", "SUCCEEDED", "SETTLED") } == true) {
+            ProviderOutcome.accepted(
+                operationId = UUID.nameUUIDFromBytes(tracker.toByteArray(Charsets.UTF_8)),
+                providerReference = tracker,
+                code = status,
+                evidence = evidence,
+            )
+        } else {
+            ProviderOutcome.failed(
+                operationId = UUID.nameUUIDFromBytes(tracker.toByteArray(Charsets.UTF_8)),
+                code = status ?: "MISSING_STATUS",
+                reason = "Provider callback does not confirm successful settlement",
+                evidence = evidence,
+            )
+        }
 
         return CallbackVerificationResult(
             isValid = true,
-            eventType = "PAYMENT_SUCCEEDED",
+            eventType = status,
             providerReference = tracker,
             outcome = outcome,
         )
     }
+
+    private fun JsonNode.firstNonBlankText(vararg names: String): String? = names
+        .asSequence()
+        .mapNotNull { name -> get(name)?.takeIf { !it.isNull }?.asText()?.takeIf(String::isNotBlank) }
+        .firstOrNull()
 
     fun calculateHmacSha256(data: String, key: String): String {
         val mac = Mac.getInstance("HmacSHA256")

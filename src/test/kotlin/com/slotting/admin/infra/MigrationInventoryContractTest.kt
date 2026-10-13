@@ -67,7 +67,10 @@ class MigrationInventoryContractTest {
             "V46__persisted_flight_clock_and_phase_deadlines.sql",
             "V47__atomic_event_round_version_identity.sql",
             "V48__persisted_lifecycle_configuration.sql",
-            "V49__durable_lifecycle_attempt_journal.sql"
+            "V49__durable_lifecycle_attempt_journal.sql",
+            "V50__persist_admin_session_roles.sql",
+            "V51__mark_legacy_player_password_verifiers.sql",
+            "V52__durable_deposit_callback_replay.sql",
         )
 
         val actualSet = actualFiles.toSet()

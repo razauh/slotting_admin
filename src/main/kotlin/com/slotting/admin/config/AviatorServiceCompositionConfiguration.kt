@@ -9,6 +9,8 @@ import com.slotting.admin.gameprovider.ProvablyFairOutcomeAuthority
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.identity.ServerEligibilityStore
 import com.slotting.admin.ledger.LedgerPostingService
+import io.micrometer.core.instrument.MeterRegistry
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -45,6 +47,7 @@ class AviatorServiceCompositionConfiguration {
         fairnessAuthority: ProvablyFairOutcomeAuthority,
         clock: Clock,
         transactionManager: PlatformTransactionManager,
+        meterRegistry: ObjectProvider<MeterRegistry>,
     ): DurableGameWagerAndSettlementService = DurableGameWagerAndSettlementService(
         store = store,
         ledgerService = ledgerPostingService,
@@ -54,5 +57,6 @@ class AviatorServiceCompositionConfiguration {
         clock = clock,
         fairnessAuthority = fairnessAuthority,
         txManager = transactionManager,
+        meterRegistry = meterRegistry.getIfAvailable(),
     )
 }

@@ -84,7 +84,7 @@ class JazzCashCallbackVerificationContractTest {
     }
 
     @Test
-    fun definitiveFailureResponseAndMissingSecretAreRejected() {
+    fun definitiveFailureResponseIsReturnedForQuarantineAndMissingSecretIsRejected() {
         val failedPayment = signedFields(responseCode = "124")
         val failedResult = adapter.verifyCallback(
             ProviderCallbackPayload("JAZZCASH", "", emptyMap(), failedPayment),
@@ -96,34 +96,37 @@ class JazzCashCallbackVerificationContractTest {
             config(),
             ProviderCredentials(signingSecretOrKey = null),
         )
-        assertEquals("PAYMENT_NOT_SUCCESSFUL", failedResult.rejectionReason)
+        assertTrue(failedResult.isValid)
+        assertEquals("124", failedResult.outcome?.evidence?.get("responseCode"))
         assertEquals("SIGNING_KEY_UNAVAILABLE", missingSecret.rejectionReason)
     }
 
     @Test
     fun verifiedAmountAndCurrencyMustMatchIntentAndReplayCreditsOnlyOnce() {
-        val (service, workflowStore, ledgerStore) = serviceFixture()
+        val (amountService, amountWorkflowStore, amountLedgerStore) = serviceFixture()
         val mismatchedAmount = signedFields().toMutableMap().apply {
             this["pp_Amount"] = "50001"
             this["pp_SecureHash"] = adapter.calculateSecureHash(this, secret)
         }
         val invalidAmount = runCatching {
-            service.processCallback(command(mismatchedAmount, "evt-bad-amount"))
+            amountService.processCallback(command(mismatchedAmount, "evt-bad-amount"))
         }
-        assertTrue(invalidAmount.isFailure)
-        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
-        assertEquals(DepositIntentStatus.PROVIDER_PENDING, workflowStore.findIntent(tenantId, intentId)?.status)
+        assertEquals(DepositIntentStatus.QUARANTINED, invalidAmount.getOrThrow().status)
+        assertEquals(0, amountLedgerStore.findAllLegsForTenant(tenantId).size)
+        assertEquals(DepositIntentStatus.QUARANTINED, amountWorkflowStore.findIntent(tenantId, intentId)?.status)
 
+        val (currencyService, _, currencyLedgerStore) = serviceFixture()
         val mismatchedCurrency = signedFields().toMutableMap().apply {
             this["pp_TxnCurrency"] = "USD"
             this["pp_SecureHash"] = adapter.calculateSecureHash(this, secret)
         }
         val invalidCurrency = runCatching {
-            service.processCallback(command(mismatchedCurrency, "evt-bad-currency"))
+            currencyService.processCallback(command(mismatchedCurrency, "evt-bad-currency"))
         }
-        assertTrue(invalidCurrency.isFailure)
-        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
+        assertEquals(DepositIntentStatus.QUARANTINED, invalidCurrency.getOrThrow().status)
+        assertEquals(0, currencyLedgerStore.findAllLegsForTenant(tenantId).size)
 
+        val (service, _, ledgerStore) = serviceFixture()
         val signed = signedFields()
         val first = service.processCallback(command(signed, "evt-valid"))
         val replay = service.processCallback(command(signed, "evt-valid"))

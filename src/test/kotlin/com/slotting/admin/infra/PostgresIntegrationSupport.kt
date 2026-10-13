@@ -81,7 +81,6 @@ object PostgresIntegrationSupport {
             jdbc.update("delete from game_cumulative_player_limit")
             jdbc.update("delete from game_authoritative_round")
             jdbc.update("delete from game_lifecycle_lease")
-            jdbc.update("delete from flyway_schema_history where version = '49'")
         } catch (e: Exception) {
         }
     }
