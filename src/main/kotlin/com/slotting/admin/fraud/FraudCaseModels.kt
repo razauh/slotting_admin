@@ -83,6 +83,8 @@ data class FraudCaseActionRecord(
 )
 
 data class OpenOrMergeCaseCommand(
+    val principal: AuthenticatedPrincipal?,
+    val sessionId: String,
     val tenantId: String,
     val subjectReference: String,
     val decisionReference: String,

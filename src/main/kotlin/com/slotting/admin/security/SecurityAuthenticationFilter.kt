@@ -30,15 +30,12 @@ class SecurityAuthenticationFilter(
     companion object {
         const val AUTHENTICATED_PRINCIPAL_ATTR = "authenticatedPrincipal"
 
-        private val PUBLIC_PATHS = listOf(
+        private val PUBLIC_EXACT_PATHS = setOf(
             "/auth/token",
             "/auth/revoke",
             "/auth/logout",
             "/actuator",
             "/error",
-        )
-
-        private val PUBLIC_EXACT_PATHS = setOf(
             "/api/bet-limits",
         )
     }
@@ -117,9 +114,6 @@ class SecurityAuthenticationFilter(
     }
 
     private fun isPublicPath(uri: String): Boolean {
-        if (uri in PUBLIC_EXACT_PATHS) return true
-        return PUBLIC_PATHS.any { publicPath ->
-            uri == publicPath || uri.startsWith("$publicPath/")
-        }
+        return uri in PUBLIC_EXACT_PATHS
     }
 }

@@ -15,7 +15,7 @@ data class PasswordResetRateLimitConfig(
 data class PasswordResetConfig(
     val publicOrigin: String = "https://auth.slotting.com",
     val tokenTtl: Duration = Duration.ofSeconds(90),
-    val hmacSecret: String = "secure-password-reset-pepper-32-bytes-minimum-entropy",
+    val hmacSecret: String = System.getenv("SLOTTING_RESET_HMAC_PEPPER") ?: "",
     val emailFrom: String = "security@auth.slotting.com",
     val maxActiveTokensPerPlayer: Int = 3,
     val isProduction: Boolean = false,
@@ -44,11 +44,9 @@ data class PasswordResetConfig(
         require(!tokenTtl.isNegative && !tokenTtl.isZero && tokenTtl <= Duration.ofHours(24)) {
             "tokenTtl must be positive and not exceed 24 hours"
         }
-        if (isProduction) {
-            require(hmacSecret.isNotBlank()) { "hmacSecret must not be blank in production" }
-            require(hmacSecret.length >= 32) { "hmacSecret must have at least 256 bits of entropy (>= 32 chars)" }
-            val forbiddenSecrets = setOf("default-secret", "secret", "change-me", "password", "12345678", "admin123")
-            require(hmacSecret.lowercase() !in forbiddenSecrets) { "hmacSecret must not use insecure default value" }
-        }
+        require(hmacSecret.isNotBlank()) { "hmacSecret must be configured" }
+        require(hmacSecret.length >= 32) { "hmacSecret must have at least 256 bits of entropy (>= 32 chars)" }
+        val forbiddenSecrets = setOf("default-secret", "secret", "change-me", "password", "12345678", "admin123")
+        require(hmacSecret.lowercase() !in forbiddenSecrets) { "hmacSecret must not use insecure default value" }
     }
 }

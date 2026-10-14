@@ -22,6 +22,7 @@ class FraudCaseService(
 
     @Synchronized
     fun openOrMergeCase(command: OpenOrMergeCaseCommand): FraudCaseRecord {
+        requireFraudOperator(command.principal, command.tenantId, command.sessionId)
         val now = clock.instant()
 
         val existingActive = caseStore.findActiveCaseForSubject(command.tenantId, command.subjectReference)
@@ -119,32 +120,10 @@ class FraudCaseService(
     @Synchronized
     fun operateCase(command: OperateFraudCaseCommand): FraudCaseRecord {
         val now = clock.instant()
-
         // 1. Principal & Tenant checks
-        val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
-        if (principal.kind != PrincipalKind.ADMIN || principal.tenantId != command.tenantId) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        }
-
         // 2. Permission check: FRAUD_CASE_MANAGE required
-        if (!policy.isPermitted(principal, AdminPermission.FRAUD_CASE_MANAGE)) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        }
-
         // 3. Session & Current MFA check
-        val session = try {
-            sessions.find(command.tenantId, principal.id, command.sessionId)
-        } catch (_: Exception) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
-        } ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-
-        if (!session.active || session.expiresAt.isBefore(now)) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        }
-
-        if (!session.mfaVerified || (session.mfaExpiresAt != null && session.mfaExpiresAt.isBefore(now))) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        }
+        val principal = requireFraudOperator(command.principal, command.tenantId, command.sessionId)
 
         // 4. Case lookup
         val caseRecord = caseStore.findCaseByReference(command.tenantId, command.caseReference)
@@ -325,6 +304,35 @@ class FraudCaseService(
         if (second == principal.id) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
+    }
+
+    private fun requireFraudOperator(
+        principal: AuthenticatedPrincipal?,
+        tenantId: String,
+        sessionId: String,
+    ): AuthenticatedPrincipal {
+        val caller = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
+        if (caller.kind != PrincipalKind.ADMIN || caller.tenantId != tenantId) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        if (!policy.isPermitted(caller, AdminPermission.FRAUD_CASE_MANAGE)) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
+        val now = clock.instant()
+        val session = try {
+            sessions.find(tenantId, caller.id, sessionId)
+        } catch (_: Exception) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
+        } ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+
+        if (!session.active || session.expiresAt.isBefore(now)) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        if (!session.mfaVerified || (session.mfaExpiresAt != null && session.mfaExpiresAt.isBefore(now))) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        return caller
     }
 
     private data class Septuple<A, B, C, D, E, F, G>(

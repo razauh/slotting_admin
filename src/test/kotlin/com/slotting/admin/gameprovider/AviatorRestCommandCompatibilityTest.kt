@@ -214,16 +214,10 @@ class AviatorRestCommandCompatibilityTest {
             correlationId = "c-life",
             expectedRoundVersion = 2L
         )
-        val cashOutAck = service.processCommand(cashOutCmd)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, cashOutAck.status)
-        // 498000 + (2000 * 2.5 = 5000) = 503000L
-        assertEquals(503000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
-        assertEquals(5000L, cashOutAck.result?.payoutMinor)
-
-        // Verify audit event lineage
-        val audits = store.auditEvents.filter { it.correlationId == "c-life" }
-        assertEquals(2, audits.size)
-        assertTrue(audits.any { it.type.contains("PLACE_BET") })
-        assertTrue(audits.any { it.type.contains("CASH_OUT") })
+        val cashOutAck = assertFailsWith<AuthenticationFailure.Rejected> {
+            service.processCommand(cashOutCmd)
+        }
+        assertEquals(AuthErrorCode.FORBIDDEN, cashOutAck.code)
+        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
     }
 }

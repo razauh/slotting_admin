@@ -6,7 +6,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
@@ -38,6 +42,82 @@ class OAuth2OidcProtocolTest {
         authService = DurableAuthService(store = store, clock = clock)
         controller = OAuth2Controller(authService = authService)
         authController = AuthController(authService = authService)
+    }
+
+    private fun fetchRegistrationCsrfToken(tenantId: String, state: String, nonce: String, scope: String): String {
+        val resp = controller.authorize(
+            responseType = "code",
+            clientId = clientId,
+            redirectUri = redirectUri,
+            scope = scope,
+            state = state,
+            nonce = nonce,
+            codeChallenge = codeChallenge,
+            codeChallengeMethod = "S256",
+            prompt = null,
+            tenantId = tenantId,
+            autoUser = null,
+            request = MockHttpServletRequest()
+        )
+        assertEquals(HttpStatus.OK, resp.statusCode)
+        val html = resp.body as String
+        val match = Regex("""name="csrf_token" value="([^"]+)"""").find(html)
+        return requireNotNull(match?.groupValues?.getOrNull(1)) { "Server-hosted form must embed a single-use CSRF token" }
+    }
+
+    private fun registerWithToken(token: String, identifier: String, origin: String? = null) = controller.register(
+        csrfTokenParam = token,
+        clientId = clientId,
+        redirectUri = redirectUri,
+        scope = "openid profile",
+        state = "csrf-state-$identifier",
+        nonce = "csrf-nonce-$identifier",
+        codeChallenge = codeChallenge,
+        codeChallengeMethod = "S256",
+        tenantId = "csrf-tenant-$identifier",
+        identifier = identifier,
+        password = "SecurePassword123!",
+        origin = origin,
+    )
+
+    @Test
+    fun registrationWithoutCsrfTokenIsRejectedBeforeAccountCreation() {
+        val mockMvc = MockMvcBuilders.standaloneSetup(controller).build()
+        mockMvc.perform(
+            post("/oauth2/register")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("client_id", clientId)
+                .param("redirect_uri", redirectUri)
+                .param("state", "missing-csrf-state")
+                .param("nonce", "missing-csrf-nonce")
+                .param("code_challenge", codeChallenge)
+                .param("code_challenge_method", "S256")
+                .param("tenant_id", "missing-csrf-tenant")
+                .param("identifier", "missing-csrf@example.com")
+                .param("password", "SecurePassword123!"),
+        ).andExpect(status().isBadRequest)
+        assertTrue(store.credentials.isEmpty())
+    }
+
+    @Test
+    fun registrationRejectsInvalidCsrfAndCrossOriginBeforeAccountCreation() {
+        assertEquals(HttpStatus.BAD_REQUEST, registerWithToken("invalid-token", "invalid-csrf@example.com").statusCode)
+        val validToken = fetchRegistrationCsrfToken("csrf-cross-origin", "cross-state", "cross-nonce", "openid profile")
+        assertEquals(
+            HttpStatus.BAD_REQUEST,
+            registerWithToken(validToken, "cross-origin@example.com", "https://attacker.example").statusCode,
+        )
+        assertTrue(store.credentials.isEmpty())
+    }
+
+    @Test
+    fun registrationCsrfTokenIsSingleUse() {
+        val identifier = "single-use@example.com"
+        val token = fetchRegistrationCsrfToken("csrf-single-use", "single-state", "single-nonce", "openid profile")
+        assertEquals(HttpStatus.FOUND, registerWithToken(token, identifier, authService.oidcKeyService.issuer).statusCode)
+        val replay = registerWithToken(token, identifier)
+        assertEquals(HttpStatus.BAD_REQUEST, replay.statusCode)
+        assertEquals(1, store.credentials.size)
     }
 
     @Test
@@ -183,7 +263,7 @@ class OAuth2OidcProtocolTest {
 
         // 1. Register new player via POST /oauth2/register
         val regResp = controller.register(
-            csrfTokenParam = null,
+            csrfTokenParam = fetchRegistrationCsrfToken(tenantId, state, nonce, "openid profile wallet.read"),
             clientId = clientId,
             redirectUri = redirectUri,
             scope = "openid profile wallet.read",
@@ -193,7 +273,8 @@ class OAuth2OidcProtocolTest {
             codeChallengeMethod = "S256",
             tenantId = tenantId,
             identifier = "alice@example.com",
-            password = "SecurePassword123!"
+            password = "SecurePassword123!",
+            origin = null
         )
 
         assertEquals(HttpStatus.FOUND, regResp.statusCode)
@@ -288,7 +369,7 @@ class OAuth2OidcProtocolTest {
         val nonce = "nonce-rtk"
 
         val regResp = controller.register(
-            csrfTokenParam = null,
+            csrfTokenParam = fetchRegistrationCsrfToken(tenantId, state, nonce, "openid profile"),
             clientId = clientId,
             redirectUri = redirectUri,
             scope = "openid profile",
@@ -298,7 +379,8 @@ class OAuth2OidcProtocolTest {
             codeChallengeMethod = "S256",
             tenantId = tenantId,
             identifier = "bob@example.com",
-            password = "BobPassword456!"
+            password = "BobPassword456!",
+            origin = null
         )
         val location = regResp.headers.location!!.toString()
         val code = location.substringAfter("code=").substringBefore("&")

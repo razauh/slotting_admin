@@ -236,7 +236,9 @@ class PlayerRegistrationService(
     private val store: PlayerRegistrationStore,
     private val mfaPolicy: JurisdictionRiskMfaPolicy = JurisdictionRiskMfaPolicy(),
     private val clock: Clock = Clock.systemUTC(),
-    private val codeTtl: Duration = Duration.ofMinutes(15)
+    private val codeTtl: Duration = Duration.ofMinutes(15),
+    private val challengeGenerator: (String, UUID, String, Duration, Instant) -> UnpredictableChallengeService.IssuedChallenge =
+        UnpredictableChallengeService::generateChallenge,
 ) {
     companion object {
         private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
@@ -329,7 +331,11 @@ class PlayerRegistrationService(
         val mfaRequired = mfaPolicy.isMfaRequired(command.jurisdiction, command.riskScore)
         val playerId = UUID.randomUUID()
 
-        val password = PasswordKdfService.hashPassword(command.rawPassword)
+        val password = try {
+            PasswordKdfService.hashPassword(command.rawPassword)
+        } catch (_: IllegalArgumentException) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
         val record = PlayerRegistrationRecord(
             playerId = playerId,
             tenantId = command.tenantId,
@@ -353,8 +359,8 @@ class PlayerRegistrationService(
         )
 
         // 7. Generate verification tokens/codes (deterministic or random)
-        val emailChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, playerId, "REGISTRATION_VERIFY_EMAIL", codeTtl, now)
-        val phoneChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, playerId, "REGISTRATION_VERIFY_PHONE", codeTtl, now)
+        val emailChallenge = challengeGenerator(command.tenantId, playerId, "REGISTRATION_VERIFY_EMAIL", codeTtl, now)
+        val phoneChallenge = challengeGenerator(command.tenantId, playerId, "REGISTRATION_VERIFY_PHONE", codeTtl, now)
         val emailVerification = VerificationCodeRecord(
             verificationId = UUID.randomUUID(),
             playerId = playerId,

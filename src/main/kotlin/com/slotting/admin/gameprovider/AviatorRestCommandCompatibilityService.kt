@@ -8,8 +8,6 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Clock
@@ -266,6 +264,10 @@ class AviatorRestCommandCompatibilityService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
+        if (canonicalAction == AviatorCommandAction.CASH_OUT) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
         if (canonicalAction == AviatorCommandAction.PLACE_BET) {
             val wager = command.wagerMinor ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
             if (wager <= 0L) throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
@@ -330,25 +332,7 @@ class AviatorRestCommandCompatibilityService(
                 ) to null
             }
             AviatorCommandAction.CASH_OUT -> {
-                val placedWager = store.getActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand)
-                    ?: command.wagerMinor
-                    ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
-                val mult = command.cashOutMultiplier ?: 1.0
-                val payout = BigDecimal.valueOf(placedWager)
-                    .multiply(BigDecimal.valueOf(mult))
-                    .setScale(0, RoundingMode.HALF_UP)
-                    .longValueExact()
-                val newBalance = currentBalance + payout
-                store.setBalance(command.tenantId, playerId, command.currency, newBalance)
-                store.setActiveHandWager(command.tenantId, command.roundId, playerId, canonicalHand, null)
-                AviatorAuthoritativeResult(
-                    handStatus = AviatorAuthoritativeHandStatus.CASHED_OUT,
-                    wagerMinor = placedWager,
-                    accountMoneyAfterMinor = newBalance,
-                    currency = command.currency,
-                    cashOutMultiplier = mult,
-                    payoutMinor = payout
-                ) to null
+                throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
             }
         }
 

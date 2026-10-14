@@ -265,7 +265,7 @@ class OAuth2Controller(
 
     @PostMapping("/oauth2/register", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     fun register(
-        @RequestParam(name = "csrf_token", required = false) csrfTokenParam: String?,
+        @RequestParam(name = "csrf_token") csrfTokenParam: String,
         @RequestParam(name = "client_id") clientId: String,
         @RequestParam(name = "redirect_uri") redirectUri: String,
         @RequestParam(name = "scope", required = false, defaultValue = "openid profile") scope: String,
@@ -275,9 +275,10 @@ class OAuth2Controller(
         @RequestParam(name = "code_challenge_method", defaultValue = "S256") codeChallengeMethod: String,
         @RequestParam(name = "tenant_id", defaultValue = "default") tenantId: String,
         @RequestParam(name = "identifier") identifier: String,
-        @RequestParam(name = "password") password: String
+        @RequestParam(name = "password") password: String,
+        @RequestHeader(name = "Origin", required = false) origin: String?
     ): ResponseEntity<Any> {
-        if (csrfTokenParam != null && !validateCsrfToken(csrfTokenParam)) {
+        if (!validateCsrfToken(csrfTokenParam) || !isSameOrigin(origin)) {
             return badRequest("invalid_request", "Invalid or expired CSRF token")
         }
 
@@ -391,6 +392,15 @@ class OAuth2Controller(
             .contentType(MediaType.APPLICATION_JSON)
             .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
             .body(json)
+    }
+
+    private fun isSameOrigin(origin: String?): Boolean {
+        if (origin.isNullOrBlank()) return true
+        return runCatching {
+            URI(origin).scheme == authService.oidcKeyService.issuer.let { URI(it).scheme } &&
+                URI(origin).host == URI(authService.oidcKeyService.issuer).host &&
+                URI(origin).port == URI(authService.oidcKeyService.issuer).port
+        }.getOrDefault(false)
     }
 
     private fun generateCsrfToken(): String {

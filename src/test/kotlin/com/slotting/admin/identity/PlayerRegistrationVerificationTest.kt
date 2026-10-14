@@ -2,6 +2,7 @@ package com.slotting.admin.identity
 
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.UnpredictableChallengeService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -23,6 +24,26 @@ class PlayerRegistrationVerificationTest {
     private val now = Instant.parse("2026-09-18T12:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
 
+    private fun createService(store: InMemoryPlayerRegistrationStore) = PlayerRegistrationService(
+        store = store,
+        clock = clock,
+        challengeGenerator = { tenant, player, purpose, ttl, issuedAt ->
+            val code = "271828"
+            val salt = UUID.randomUUID().toString().replace("-", "")
+            UnpredictableChallengeService.IssuedChallenge(
+                challengeId = UUID.randomUUID(),
+                tenantId = tenant,
+                playerId = player,
+                purpose = purpose,
+                plaintextCode = code,
+                codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+                salt = salt,
+                expiresAt = issuedAt.plus(ttl),
+                createdAt = issuedAt,
+            )
+        },
+    )
+
     @BeforeEach
     fun setUp() {
         // PlayerRegistrationVerificationBinding.isBound is controlled per-test or in GREEN phase
@@ -39,6 +60,7 @@ class PlayerRegistrationVerificationTest {
         phone: String = "+15551234567",
         jurisdiction: String = "DEFAULT",
         riskScore: Double = 20.0,
+        rawPassword: String = "RegistrationPassword934!",
         idempotencyKey: String = "reg-idemp-001",
         correlationId: String = "corr-reg-001",
         causationId: String = "caus-reg-001",
@@ -49,6 +71,7 @@ class PlayerRegistrationVerificationTest {
         phone = phone,
         jurisdiction = jurisdiction,
         riskScore = riskScore,
+        rawPassword = rawPassword,
         idempotencyKey = idempotencyKey,
         correlationId = correlationId,
         causationId = causationId,
@@ -59,7 +82,7 @@ class PlayerRegistrationVerificationTest {
         tenantId: String = "tenant-casino-1",
         playerId: UUID,
         channel: ContactVerificationChannel = ContactVerificationChannel.EMAIL,
-        verificationCode: String = "EMAIL-123456",
+        verificationCode: String = "271828",
         idempotencyKey: String = "verify-idemp-001",
         correlationId: String = "corr-ver-001",
         causationId: String = "caus-ver-001",
@@ -82,7 +105,7 @@ class PlayerRegistrationVerificationTest {
     @Test
     fun `AUTH-001-01-T001 Implement player registration and contact verification produces the required authoritative outcome`() {
         val store = InMemoryPlayerRegistrationStore()
-        val service = PlayerRegistrationService(store = store, clock = clock)
+        val service = createService(store)
 
         // 1. Standard low-risk registration -> MFA not required by policy
         val regCmdLowRisk = validRegisterCommand(
@@ -122,7 +145,7 @@ class PlayerRegistrationVerificationTest {
         val verifyLowRisk = validVerifyCommand(
             playerId = regResultLowRisk.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "271828",
             idempotencyKey = "ver-low-risk"
         )
         val verifyResultLow = service.verifyContact(verifyLowRisk)
@@ -136,7 +159,7 @@ class PlayerRegistrationVerificationTest {
         val verifyHighRisk = validVerifyCommand(
             playerId = regResultHighRisk.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "271828",
             idempotencyKey = "ver-high-risk"
         )
         val verifyResultHigh = service.verifyContact(verifyHighRisk)
@@ -165,7 +188,7 @@ class PlayerRegistrationVerificationTest {
     @Test
     fun `AUTH-001-01-T002 Implement player registration and contact verification rejects invalid boundary unauthorized and stale input`() {
         val store = InMemoryPlayerRegistrationStore()
-        val service = PlayerRegistrationService(store = store, clock = clock)
+        val service = createService(store)
 
         // Blank tenant rejected
         assertFailsWith<AuthenticationFailure.Rejected> {
@@ -240,7 +263,7 @@ class PlayerRegistrationVerificationTest {
         assertFailsWith<AuthenticationFailure.Rejected> {
             service.verifyContact(validVerifyCommand(
                 playerId = originalResult.playerId,
-                verificationCode = "EMAIL-123456",
+                verificationCode = "271828",
                 idempotencyKey = "ver-after-locked"
             ))
         }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
@@ -271,7 +294,7 @@ class PlayerRegistrationVerificationTest {
     @Test
     fun `AUTH-001-01-T003 Implement player registration and contact verification survives concurrency duplicate delivery and dependency failure`() {
         val store = InMemoryPlayerRegistrationStore()
-        val service = PlayerRegistrationService(store = store, clock = clock)
+        val service = createService(store)
 
         val gate = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(2)
@@ -332,7 +355,7 @@ class PlayerRegistrationVerificationTest {
     @Test
     fun `AUTH-001-01-T004 Implement player registration and contact verification remains compatible recoverable observable and lifecycle-safe`() {
         val store = InMemoryPlayerRegistrationStore()
-        val service = PlayerRegistrationService(store = store, clock = clock)
+        val service = createService(store)
 
         // 1. Fail-closed assertion gate (expected RED failure: unverified/recovery bypass)
         PlayerRegistrationVerificationBinding.isBound = false

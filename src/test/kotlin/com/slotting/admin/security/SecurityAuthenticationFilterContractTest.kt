@@ -89,6 +89,14 @@ class SecurityAuthenticationFilterContractTest {
     }
 
     @Test
+    fun publicPathAllowlistDoesNotExposeNestedRoutes() {
+        val mockMvc = mockMvc { _, _, _ -> null }
+        mockMvc.perform(get("/auth/token/extra")).andExpect(status().isUnauthorized)
+        mockMvc.perform(get("/auth/unlisted")).andExpect(status().isUnauthorized)
+        mockMvc.perform(get("/actuator/health")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun validBearerTokenTakesPrecedenceOverAdminHeaders() {
         val authService = org.mockito.Mockito.mock(DurableAuthService::class.java)
         val bearerPrincipal = AuthenticatedPrincipal("bearer-user", tenantId, PrincipalKind.PLAYER, emptySet())

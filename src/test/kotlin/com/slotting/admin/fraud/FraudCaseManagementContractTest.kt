@@ -12,6 +12,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * TC-032 Contract Test Suite: Fraud Restrictions, Manual-Review Cases, and Disposition Lifecycle.
@@ -154,6 +155,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Scenario 1 - duplicate signal delivery is completely idempotent`() {
         val cmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-001",
@@ -179,6 +182,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Scenario 2 - subsequent risk decisions merge into existing active case instead of creating disjoint cases`() {
         val cmd1 = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-INITIAL",
@@ -194,6 +199,8 @@ class FraudCaseManagementContractTest {
 
         // New decision for same subject with higher severity
         val cmd2 = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-SECONDARY",
@@ -222,6 +229,8 @@ class FraudCaseManagementContractTest {
     fun `Scenario 3 - temporary fraud hold is applied with bounded UTC expiry`() {
         val holdDuration = Duration.ofDays(7)
         val openCmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-HOLD",
@@ -255,6 +264,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Scenario 4 - reviewer clears case, lifting active fraud restriction via audited disposition`() {
         val openCmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-TO-CLEAR",
@@ -318,6 +329,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Scenario 5 - escalation requires dual control for critical case disposition`() {
         val openCmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-CRITICAL",
@@ -409,6 +422,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Scenario 6 - concurrent claim race results in exactly one winner and conflict for others`() {
         val openCmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-RACE",
@@ -498,6 +513,8 @@ class FraudCaseManagementContractTest {
         // 2. Open fraud case with restriction
         service.openOrMergeCase(
             OpenOrMergeCaseCommand(
+                principal = securityAdmin,
+                sessionId = "sess-valid-1",
                 tenantId = tenantId,
                 subjectReference = subjectRef,
                 decisionReference = "DEC-BLOCK",
@@ -527,6 +544,8 @@ class FraudCaseManagementContractTest {
         // Open case with restriction
         service.openOrMergeCase(
             OpenOrMergeCaseCommand(
+                principal = securityAdmin,
+                sessionId = "sess-valid-1",
                 tenantId = tenantId,
                 subjectReference = subjectRef,
                 decisionReference = "DEC-MULTIDEV",
@@ -571,6 +590,8 @@ class FraudCaseManagementContractTest {
 
         service.openOrMergeCase(
             OpenOrMergeCaseCommand(
+                principal = securityAdmin,
+                sessionId = "sess-valid-1",
                 tenantId = tenantId,
                 subjectReference = subjectRef,
                 decisionReference = "DEC-DIRECT",
@@ -614,6 +635,8 @@ class FraudCaseManagementContractTest {
 
         service.openOrMergeCase(
             OpenOrMergeCaseCommand(
+                principal = securityAdmin,
+                sessionId = "sess-valid-1",
                 tenantId = tenantId,
                 subjectReference = subjectRef,
                 decisionReference = "DEC-CACHE",
@@ -644,6 +667,8 @@ class FraudCaseManagementContractTest {
     @Test
     fun `Unauthorized admin role cannot operate fraud cases`() {
         val openCmd = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-valid-1",
             tenantId = tenantId,
             subjectReference = subjectRef,
             decisionReference = "DEC-RBAC",
@@ -671,6 +696,130 @@ class FraudCaseManagementContractTest {
                     causationId = "cause-sup",
                 )
             )
+        }
+    }
+
+    @Test
+    fun `open without principal rejects before writing case or restriction`() {
+        val command = OpenOrMergeCaseCommand(
+            principal = null,
+            sessionId = "sess-valid-1",
+            tenantId = tenantId,
+            subjectReference = subjectRef,
+            decisionReference = "DEC-UNAUTHENTICATED",
+            severity = FraudCaseSeverity.HIGH,
+            detectedReasons = listOf("SUSPICIOUS_PATTERN"),
+            requiresRestriction = true,
+            idempotencyKey = "idem-unauthenticated",
+            correlationId = "corr-unauthenticated",
+            causationId = "cause-unauthenticated",
+        )
+
+        val failure = assertThrows(AuthenticationFailure.Rejected::class.java) {
+            service.openOrMergeCase(command)
+        }
+
+        assertEquals(AuthErrorCode.UNAUTHENTICATED, failure.code)
+        assertNull(caseStore.findActiveCaseForSubject(tenantId, subjectRef))
+        assertTrue(restrictionStore.findActiveRestrictions(tenantId, subjectRef, baseNow).isEmpty())
+    }
+
+    @Test
+    fun `open without fraud permission rejects before writing case or restriction`() {
+        val command = OpenOrMergeCaseCommand(
+            principal = supportAdmin,
+            sessionId = "sess-support-1",
+            tenantId = tenantId,
+            subjectReference = subjectRef,
+            decisionReference = "DEC-NO-PERMISSION",
+            severity = FraudCaseSeverity.HIGH,
+            detectedReasons = listOf("SUSPICIOUS_PATTERN"),
+            requiresRestriction = true,
+            idempotencyKey = "idem-no-permission",
+            correlationId = "corr-no-permission",
+            causationId = "cause-no-permission",
+        )
+
+        val failure = assertThrows(AuthenticationFailure.Rejected::class.java) {
+            service.openOrMergeCase(command)
+        }
+
+        assertEquals(AuthErrorCode.FORBIDDEN, failure.code)
+        assertNull(caseStore.findActiveCaseForSubject(tenantId, subjectRef))
+        assertTrue(restrictionStore.findActiveRestrictions(tenantId, subjectRef, baseNow).isEmpty())
+    }
+
+    @Test
+    fun `restriction bearing open rejects stale mfa before writing case or restriction`() {
+        sessionDirectory.register(
+            tenantId = tenantId,
+            principalId = securityAdmin.id,
+            sessionId = "sess-stale-mfa",
+            status = AdminSessionStatus(
+                active = true,
+                breakGlass = false,
+                expiresAt = baseNow.plus(Duration.ofHours(2)),
+                mfaVerified = true,
+                mfaExpiresAt = baseNow.minusSeconds(1),
+            ),
+        )
+        val command = OpenOrMergeCaseCommand(
+            principal = securityAdmin,
+            sessionId = "sess-stale-mfa",
+            tenantId = tenantId,
+            subjectReference = subjectRef,
+            decisionReference = "DEC-STALE-MFA",
+            severity = FraudCaseSeverity.HIGH,
+            detectedReasons = listOf("SUSPICIOUS_PATTERN"),
+            requiresRestriction = true,
+            idempotencyKey = "idem-stale-mfa",
+            correlationId = "corr-stale-mfa",
+            causationId = "cause-stale-mfa",
+        )
+
+        val failure = assertThrows(AuthenticationFailure.Rejected::class.java) {
+            service.openOrMergeCase(command)
+        }
+
+        assertEquals(AuthErrorCode.FORBIDDEN, failure.code)
+        assertNull(caseStore.findActiveCaseForSubject(tenantId, subjectRef))
+        assertTrue(restrictionStore.findActiveRestrictions(tenantId, subjectRef, baseNow).isEmpty())
+    }
+
+    @Test
+    fun `concurrent authorized merges retain one case and one restriction`() {
+        val workerCount = 16
+        val startGate = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(workerCount)
+        try {
+            val futures = (1..workerCount).map { index ->
+                pool.submit<FraudCaseRecord> {
+                    startGate.await()
+                    service.openOrMergeCase(
+                        OpenOrMergeCaseCommand(
+                            principal = securityAdmin,
+                            sessionId = "sess-valid-1",
+                            tenantId = tenantId,
+                            subjectReference = subjectRef,
+                            decisionReference = "DEC-CONCURRENT-$index",
+                            severity = FraudCaseSeverity.HIGH,
+                            detectedReasons = listOf("CONCURRENT_SIGNAL_$index"),
+                            requiresRestriction = true,
+                            idempotencyKey = "idem-concurrent-$index",
+                            correlationId = "corr-concurrent-$index",
+                            causationId = "cause-concurrent-$index",
+                        )
+                    )
+                }
+            }
+            startGate.countDown()
+            val mergedCases = futures.map { it.get(10, TimeUnit.SECONDS) }
+            assertTrue(mergedCases.all { it.caseId == mergedCases.first().caseId })
+            val finalCase = requireNotNull(caseStore.findActiveCaseForSubject(tenantId, subjectRef))
+            assertEquals(workerCount, finalCase.riskDecisionReferences.size)
+            assertEquals(1, restrictionStore.findActiveRestrictions(tenantId, subjectRef, baseNow).size)
+        } finally {
+            pool.shutdownNow()
         }
     }
 }

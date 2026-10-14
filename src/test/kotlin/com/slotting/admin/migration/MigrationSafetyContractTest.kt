@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.dao.DataAccessException
+import java.sql.SQLException
 import kotlin.test.assertFailsWith
 
 class MigrationSafetyContractTest {
@@ -93,7 +94,7 @@ class MigrationSafetyContractTest {
         MigrationSafetyHarness.open().use { harness ->
             harness.migrateTo(MigrationSafetyHarness.LEGACY_MIGRATION_VERSION)
 
-            assertFailsWith<DataAccessException> { harness.seedProductionLikeData(forceFailure = true) }
+            assertFailsWith<SQLException> { harness.seedProductionLikeData(forceFailure = true) }
 
             assertTrue(harness.legacyRowCounts().values.all { it == 0 })
             harness.assertCurrentVersion(MigrationSafetyHarness.LEGACY_MIGRATION_VERSION)
