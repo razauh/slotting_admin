@@ -5,6 +5,7 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.provider.PaymentMethodUnavailableException
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -33,6 +34,7 @@ data class IssueStepUpRequestPayload(
 @RequestMapping("/api/v1/tenants/{tenantId}/withdrawals")
 class PlayerWithdrawalController(
     private val withdrawalService: AuthoritativeWithdrawalService,
+    private val deviceTrustPolicy: FinancialDeviceTrustPolicy,
 ) {
 
     @PostMapping("/quotes")
@@ -155,8 +157,12 @@ class PlayerWithdrawalController(
     fun createWithdrawalRequest(
         @PathVariable tenantId: String,
         @RequestHeader(name = "X-Session-Id", required = false) sessionIdHeader: String?,
+        @RequestHeader(name = "X-Device-Id", required = false) deviceId: String?,
+        @RequestHeader(name = "X-Geo-Latitude", required = false) latitudeHeader: String?,
+        @RequestHeader(name = "X-Geo-Longitude", required = false) longitudeHeader: String?,
         @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal?,
         @RequestBody request: CreateWithdrawalRequestPayload,
+        servletRequest: HttpServletRequest,
     ): ResponseEntity<Any> {
         val principal = principalAttr ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
             mapOf("error" to "UNAUTHENTICATED")
@@ -169,6 +175,20 @@ class PlayerWithdrawalController(
             UUID.fromString(principal.id)
         } catch (_: Exception) {
             UUID.nameUUIDFromBytes(principal.id.toByteArray())
+        }
+
+        val trust = deviceTrustPolicy.authorize(
+            tenantId,
+            ownerId,
+            deviceId,
+            servletRequest.remoteAddr.orEmpty(),
+            latitudeHeader?.toDoubleOrNull(),
+            longitudeHeader?.toDoubleOrNull(),
+        )
+        if (!trust.allowed) {
+            return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED).body(
+                mapOf("error" to trust.reason, "signal" to "DEVICE", "deviceId" to trust.deviceId)
+            )
         }
 
         val command = CreateAuthoritativeWithdrawalRequestCommand(

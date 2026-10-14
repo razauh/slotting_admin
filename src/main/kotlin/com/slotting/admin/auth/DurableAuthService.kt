@@ -136,7 +136,9 @@ class DurableAuthService(
     fun registerPlayer(
         tenantId: String,
         identifier: String,
-        password: String
+        password: String,
+        status: String = "ACTIVE",
+        playerId: UUID = UUID.randomUUID()
     ): PlayerCredentialRecord {
         val existing = store.findCredential(tenantId, identifier)
         if (existing != null) {
@@ -145,14 +147,14 @@ class DurableAuthService(
         val hashed = PasswordKdfService.hashPassword(password)
         val now = Instant.now(clock)
         val cred = PlayerCredentialRecord(
-            playerId = UUID.randomUUID(),
+            playerId = playerId,
             tenantId = tenantId,
             identifier = identifier,
             passwordHash = hashed.hash,
             passwordSalt = hashed.salt,
             iterations = hashed.iterations,
             passwordAlgo = hashed.algo,
-            status = "ACTIVE",
+            status = status,
             createdAt = now,
             updatedAt = now
         )
@@ -162,6 +164,9 @@ class DurableAuthService(
 
     fun findCredential(tenantId: String, identifier: String): PlayerCredentialRecord? =
         store.findCredential(tenantId, identifier)
+
+    fun findCredentialByPlayerId(tenantId: String, playerId: UUID): PlayerCredentialRecord? =
+        store.findCredentialByPlayerId(tenantId, playerId)
 
     fun exchangeAuthorizationCode(
         grantType: String,

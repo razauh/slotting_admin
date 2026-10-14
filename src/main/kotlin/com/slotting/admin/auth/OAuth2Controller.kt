@@ -24,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @RestController
 class OAuth2Controller(
-    private val authService: DurableAuthService
+    private val authService: DurableAuthService,
+    private val registrationSybilControl: RegistrationSybilControl,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val secureRandom = SecureRandom()
@@ -276,14 +277,22 @@ class OAuth2Controller(
         @RequestParam(name = "tenant_id", defaultValue = "default") tenantId: String,
         @RequestParam(name = "identifier") identifier: String,
         @RequestParam(name = "password") password: String,
-        @RequestHeader(name = "Origin", required = false) origin: String?
+        @RequestHeader(name = "Origin", required = false) origin: String?,
+        @RequestParam(name = "device_fingerprint", required = false) deviceFingerprint: String?,
+        request: HttpServletRequest,
     ): ResponseEntity<Any> {
         if (!validateCsrfToken(csrfTokenParam) || !isSameOrigin(origin)) {
             return badRequest("invalid_request", "Invalid or expired CSRF token")
         }
 
-        val cred = try {
-            authService.registerPlayer(tenantId, identifier, password)
+        val assessment = try {
+            registrationSybilControl.register(
+                tenantId = tenantId,
+                identifier = identifier,
+                password = password,
+                deviceFingerprint = deviceFingerprint,
+                ipAddress = request.remoteAddr,
+            )
         } catch (e: Exception) {
             val csrfToken = generateCsrfToken()
             val html = renderLoginFormHtml(
@@ -304,6 +313,14 @@ class OAuth2Controller(
                 .body(html)
         }
 
+        if (assessment.heldForReview) {
+            val reason = "Registration received and is pending security review. You will be able to sign in after it is cleared."
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .contentType(MediaType.TEXT_HTML)
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body("<!doctype html><html><body><p>$reason</p></body></html>")
+        }
+
         val record = authService.createAuthorizationCode(
             clientId = clientId,
             redirectUri = redirectUri,
@@ -313,7 +330,7 @@ class OAuth2Controller(
             codeChallenge = codeChallenge,
             codeChallengeMethod = codeChallengeMethod,
             tenantId = tenantId,
-            playerId = cred.playerId
+            playerId = assessment.credential.playerId
         )
 
         val iss = authService.oidcKeyService.issuer
@@ -477,6 +494,7 @@ class OAuth2Controller(
                     <input type="hidden" name="code_challenge" value="$codeChallenge" />
                     <input type="hidden" name="code_challenge_method" value="$codeChallengeMethod" />
                     <input type="hidden" name="tenant_id" value="$tenantId" />
+                    <input type="hidden" id="device_fingerprint" name="device_fingerprint" value="" />
                     
                     <label for="identifier">Username or Email</label>
                     <input type="text" id="identifier" name="identifier" required autocomplete="username" />
@@ -491,6 +509,17 @@ class OAuth2Controller(
                     <button type="submit" formaction="/oauth2/register" class="btn-secondary">Create New Account</button>
                 </form>
             </div>
+            <script>
+                (() => {
+                    const key = "slotting_device_fingerprint";
+                    let fingerprint = localStorage.getItem(key);
+                    if (!fingerprint) {
+                        fingerprint = crypto.randomUUID();
+                        localStorage.setItem(key, fingerprint);
+                    }
+                    document.getElementById("device_fingerprint").value = fingerprint;
+                })();
+            </script>
         </body>
         </html>
         """.trimIndent()

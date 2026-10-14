@@ -146,6 +146,21 @@ class EnforceWafPolicyTest {
         assertTrue(evaluation.evidenceReference.isNotBlank())
     }
 
+    @Test
+    fun encodedPayloadVariantsAreBlockedAfterNormalization() {
+        val result = FakeWafProviderAdapter().inspect(
+            WafInspectionRequest(
+                tenantId = tenantId,
+                clientIp = "192.0.2.10",
+                uri = "/search?q=%25253cscript%25253ealert(1)%25253c%25252fscript%25253e",
+                method = "GET",
+                headers = emptyMap(),
+            )
+        )
+        assertFalse(result.isAllowed)
+        assertEquals("rule-xss-owasp", result.matchedRuleId)
+    }
+
     // =========================================================================
     // INFRA-003-02-T002: Negative, Boundary & Rejection Verification
     // =========================================================================

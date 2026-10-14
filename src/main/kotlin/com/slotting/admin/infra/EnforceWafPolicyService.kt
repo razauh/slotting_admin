@@ -6,6 +6,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.net.URLDecoder
 
 /**
  * Binding flag to enforce the protected risk assertion for INFRA-003-02:
@@ -87,6 +88,35 @@ data class WafInspectionResult(
     val isAllowed: Boolean,
 )
 
+object WafPayloadSignatures {
+    fun inspect(uri: String, body: String): WafInspectionResult {
+        val normalized = normalizePayload("$uri $body")
+        val ruleId = when {
+            Regex("\\bunion\\s+select\\b|\\bor\\s+1\\s*=\\s*1\\b|\\bselect\\b.{0,256}\\bfrom\\b|(?:'|%27)\\s*(?:--|#)").containsMatchIn(normalized) -> "rule-sqli-owasp"
+            Regex("<\\s*script\\b|javascript\\s*:|<\\s*svg\\b|on[a-z]{3,20}\\s*=").containsMatchIn(normalized) -> "rule-xss-owasp"
+            Regex("(?:;|&&|\\|\\|)\\s*(?:/bin/(?:sh|bash)|curl\\b|wget\\b|nc\\b|rm\\b|powershell\\b|cmd(?:\\.exe)?\\b)|`[^`]{1,160}`|\\$\\([^)]{1,160}\\)").containsMatchIn(normalized) -> "rule-rce-owasp"
+            else -> null
+        }
+        if (ruleId == null) return WafInspectionResult(WafAction.ALLOW, null, null, true)
+        val reason = when (ruleId) {
+            "rule-sqli-owasp" -> "SQL injection pattern detected"
+            "rule-xss-owasp" -> "Cross-site scripting pattern detected"
+            else -> "Remote code execution attempt detected"
+        }
+        return WafInspectionResult(WafAction.BLOCK, ruleId, reason, false)
+    }
+
+    private fun normalizePayload(value: String): String {
+        var normalized = value.lowercase()
+        repeat(4) {
+            val decoded = runCatching { URLDecoder.decode(normalized.replace("+", "%2b"), Charsets.UTF_8) }.getOrDefault(normalized)
+            if (decoded != normalized) normalized = decoded
+        }
+        return normalized.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
+            .replace("&#x3c;", "<").replace("&#x3e;", ">").replace("&#60;", "<").replace("&#62;", ">")
+    }
+}
+
 data class WafRulesetEntry(
     val rulesetId: String,
     val tenantId: String,
@@ -162,45 +192,7 @@ class FakeWafProviderAdapter : WafProviderPort {
             )
         }
 
-        val body = request.bodySnippet?.lowercase() ?: ""
-        val uri = request.uri.lowercase()
-
-        // SQLi signature detection
-        if (body.contains(" union ") || body.contains(" or 1=1") || uri.contains("'--")) {
-            return WafInspectionResult(
-                action = WafAction.BLOCK,
-                matchedRuleId = "rule-sqli-owasp",
-                blockReason = "SQL injection pattern detected",
-                isAllowed = false,
-            )
-        }
-
-        // XSS signature detection
-        if (body.contains("<script>") || uri.contains("<script>")) {
-            return WafInspectionResult(
-                action = WafAction.BLOCK,
-                matchedRuleId = "rule-xss-owasp",
-                blockReason = "Cross-site scripting pattern detected",
-                isAllowed = false,
-            )
-        }
-
-        // RCE signature detection
-        if (body.contains("; rm -rf") || body.contains("/bin/sh")) {
-            return WafInspectionResult(
-                action = WafAction.BLOCK,
-                matchedRuleId = "rule-rce-owasp",
-                blockReason = "Remote code execution attempt detected",
-                isAllowed = false,
-            )
-        }
-
-        return WafInspectionResult(
-            action = WafAction.ALLOW,
-            matchedRuleId = null,
-            blockReason = null,
-            isAllowed = true,
-        )
+        return WafPayloadSignatures.inspect(request.uri, request.bodySnippet.orEmpty())
     }
 
     override fun syncRuleset(tenantId: String, rules: List<WafRule>): Boolean {
@@ -209,6 +201,7 @@ class FakeWafProviderAdapter : WafProviderPort {
         }
         return true
     }
+
 }
 
 /**

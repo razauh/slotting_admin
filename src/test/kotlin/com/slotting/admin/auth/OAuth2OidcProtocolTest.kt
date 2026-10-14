@@ -40,7 +40,7 @@ class OAuth2OidcProtocolTest {
         OAuthClientRegistry.reset()
         store = InMemoryDurableAuthStore()
         authService = DurableAuthService(store = store, clock = clock)
-        controller = OAuth2Controller(authService = authService)
+        controller = OAuth2Controller(authService = authService, registrationSybilControl = InMemoryRegistrationSybilControl(authService))
         authController = AuthController(authService = authService)
     }
 
@@ -65,7 +65,7 @@ class OAuth2OidcProtocolTest {
         return requireNotNull(match?.groupValues?.getOrNull(1)) { "Server-hosted form must embed a single-use CSRF token" }
     }
 
-    private fun registerWithToken(token: String, identifier: String, origin: String? = null) = controller.register(
+    private fun registerWithToken(token: String, identifier: String, origin: String? = null, deviceFingerprint: String = "device-$identifier", tenantId: String = "csrf-tenant-$identifier") = controller.register(
         csrfTokenParam = token,
         clientId = clientId,
         redirectUri = redirectUri,
@@ -74,10 +74,12 @@ class OAuth2OidcProtocolTest {
         nonce = "csrf-nonce-$identifier",
         codeChallenge = codeChallenge,
         codeChallengeMethod = "S256",
-        tenantId = "csrf-tenant-$identifier",
+        tenantId = tenantId,
         identifier = identifier,
         password = "SecurePassword123!",
         origin = origin,
+        deviceFingerprint = deviceFingerprint,
+        request = MockHttpServletRequest(),
     )
 
     @Test
@@ -97,6 +99,29 @@ class OAuth2OidcProtocolTest {
                 .param("password", "SecurePassword123!"),
         ).andExpect(status().isBadRequest)
         assertTrue(store.credentials.isEmpty())
+    }
+
+    @Test
+    fun reusedDeviceIsHeldWithoutCreatingAnAuthorizationCode() {
+        val firstToken = fetchRegistrationCsrfToken("reuse-first", "first-state", "first-nonce", "openid profile")
+        val first = registerWithToken(firstToken, "first-device-user@example.com", deviceFingerprint = "shared-device-fingerprint-0001", tenantId = "shared-device-tenant")
+        assertEquals(HttpStatus.FOUND, first.statusCode)
+
+        val secondToken = fetchRegistrationCsrfToken("reuse-second", "second-state", "second-nonce", "openid profile")
+        val second = registerWithToken(secondToken, "second-device-user@example.com", deviceFingerprint = "shared-device-fingerprint-0001", tenantId = "shared-device-tenant")
+        assertEquals(HttpStatus.ACCEPTED, second.statusCode)
+        assertFalse((second.body as String).contains("code="))
+        assertNull(authService.authenticatePlayer("shared-device-tenant", "second-device-user@example.com", "SecurePassword123!"))
+    }
+
+    @Test
+    fun sharedIpDoesNotHoldRegistrationsWithDistinctDevices() {
+        val firstToken = fetchRegistrationCsrfToken("shared-ip-first", "first-state", "first-nonce", "openid profile")
+        val first = registerWithToken(firstToken, "shared-ip-first@example.com", deviceFingerprint = "distinct-device-fingerprint-0001", tenantId = "shared-ip-tenant")
+        val secondToken = fetchRegistrationCsrfToken("shared-ip-second", "second-state", "second-nonce", "openid profile")
+        val second = registerWithToken(secondToken, "shared-ip-second@example.com", deviceFingerprint = "distinct-device-fingerprint-0002", tenantId = "shared-ip-tenant")
+        assertEquals(HttpStatus.FOUND, first.statusCode)
+        assertEquals(HttpStatus.FOUND, second.statusCode)
     }
 
     @Test
@@ -274,7 +299,9 @@ class OAuth2OidcProtocolTest {
             tenantId = tenantId,
             identifier = "alice@example.com",
             password = "SecurePassword123!",
-            origin = null
+            origin = null,
+            deviceFingerprint = "interactive-device-fingerprint-0001",
+            request = MockHttpServletRequest(),
         )
 
         assertEquals(HttpStatus.FOUND, regResp.statusCode)
@@ -380,7 +407,9 @@ class OAuth2OidcProtocolTest {
             tenantId = tenantId,
             identifier = "bob@example.com",
             password = "BobPassword456!",
-            origin = null
+            origin = null,
+            deviceFingerprint = "interactive-device-fingerprint-0002",
+            request = MockHttpServletRequest(),
         )
         val location = regResp.headers.location!!.toString()
         val code = location.substringAfter("code=").substringBefore("&")
@@ -463,4 +492,33 @@ class OAuth2OidcProtocolTest {
         assertTrue(bodyStr.contains("com.slotting.game"))
         assertTrue(bodyStr.contains("delegate_permission/common.handle_all_urls"))
     }
+}
+
+private class InMemoryRegistrationSybilControl(
+    private val authService: DurableAuthService,
+) : RegistrationSybilControl {
+    private val devices = mutableSetOf<String>()
+
+    @Synchronized
+    override fun register(
+        tenantId: String,
+        identifier: String,
+        password: String,
+        deviceFingerprint: String?,
+        ipAddress: String?,
+    ): RegistrationAssessment {
+        val key = deviceFingerprint?.let { "$tenantId:$it" }
+        val held = key == null || !devices.add(key)
+        val credential = authService.registerPlayer(
+            tenantId,
+            identifier,
+            password,
+            if (held) "PENDING_REVIEW" else "ACTIVE",
+        )
+        return RegistrationAssessment(credential, held)
+    }
+
+    override fun openReviews(tenantId: String): List<RegistrationReview> = emptyList()
+
+    override fun clearReview(tenantId: String, playerId: UUID, reviewerId: String, reason: String): Boolean = false
 }

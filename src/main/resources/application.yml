@@ -30,7 +30,11 @@ management:
 
 slotting:
   schema:
-    supported-version: 52
+    supported-version: 55
+  security:
+    device-cap: 5
+    max-travel-speed-kmh: 900
+    trusted-location-proxies: ${SLOTTING_TRUSTED_LOCATION_PROXIES:}
   fairness:
     reveal:
       require-finalized: true

@@ -285,7 +285,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
 
         val paymentMethodController = PlayerPaymentMethodController(paymentMethodQueryService)
         val depositController = PlayerDepositController(depositWorkflowService)
-        val withdrawalController = PlayerWithdrawalController(withdrawalService)
+        val withdrawalController = PlayerWithdrawalController(withdrawalService, AllowFinancialDeviceTrustPolicy)
         val walletController = PlayerWalletController(walletService)
 
         mockMvc = MockMvcBuilders.standaloneSetup(
@@ -635,4 +635,12 @@ class CashierAndWalletCrossRepoCertificationContractTest {
         assertTrue(node.has("unknownFutureFieldTop"))
         assertTrue(node.has("unknownMetadata"))
     }
+}
+
+private object AllowFinancialDeviceTrustPolicy : FinancialDeviceTrustPolicy {
+    override fun authorize(tenantId: String, playerId: UUID, deviceId: String?, clientIp: String, latitude: Double?, longitude: Double?) =
+        DeviceTrustDecision(true, "DEVICE_VERIFIED", deviceId.orEmpty())
+
+    override fun verify(tenantId: String, playerId: UUID, deviceId: String, password: String, clientIp: String) =
+        DeviceTrustDecision(true, "DEVICE_VERIFIED", deviceId)
 }
