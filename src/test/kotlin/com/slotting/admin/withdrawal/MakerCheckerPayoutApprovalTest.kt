@@ -243,6 +243,23 @@ class MakerCheckerPayoutApprovalTest {
         setupPlayerWallet(playerAId, availableMinorUnits = 50000L, pendingMinorUnits = 20000L)
         val reservation = createReservation(playerAId, amountMinorUnits = 20000L, state = WithdrawalReservationState.RESERVED)
 
+        assertFailsWith<UnauthorizedApprovalAccessException> {
+            service.proposePayout(
+                ProposePayoutApprovalCommand(
+                    principal = checkerAuditorPrincipal,
+                    tenantId = "tenant-payout-prod",
+                    ownerId = playerAId,
+                    reservationId = reservation.reservationId,
+                    makerNotes = "Auditor maker attempt",
+                    idempotencyKey = "prop-t002-auditor",
+                    correlationId = "corr-t002-auditor",
+                    causationId = "caus-t002-auditor",
+                )
+            )
+        }
+        assertNull(approvalStore.findByReservationId("tenant-payout-prod", reservation.reservationId))
+        assertTrue(observability.getMetrics().any { it.eventType == "maker_forbidden" })
+
         // 1. Propose payout successfully
         val proposeCmd = ProposePayoutApprovalCommand(
             principal = makerOperatorPrincipal,

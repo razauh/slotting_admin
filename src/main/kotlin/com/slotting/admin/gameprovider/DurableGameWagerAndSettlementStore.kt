@@ -559,7 +559,8 @@ open class JdbcDurableGameWagerAndSettlementStore(
     override fun findSettlement(tenantId: String, betId: UUID): GameBetSettlementRecord? {
         val sql = """
             select settlement_id, tenant_id, bet_id, owner_id, game_id, round_id, hand_id,
-                   outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference
+                   outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference,
+                   receive_time, crash_time
             from game_bet_settlement
             where tenant_id = ? and bet_id = ?
         """.trimIndent()
@@ -572,8 +573,9 @@ open class JdbcDurableGameWagerAndSettlementStore(
         val sql = """
             insert into game_bet_settlement (
                 settlement_id, tenant_id, bet_id, owner_id, game_id, round_id, hand_id,
-                outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference,
+                receive_time, crash_time
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -589,7 +591,9 @@ open class JdbcDurableGameWagerAndSettlementStore(
             settlement.payoutMinorUnits,
             settlement.ledgerSettlementRef,
             Timestamp.from(settlement.settledAt),
-            settlement.evidenceReference
+            settlement.evidenceReference,
+            Timestamp.from(settlement.receiveTime ?: settlement.settledAt),
+            settlement.crashTime?.let { Timestamp.from(it) },
         )
     }
 
@@ -791,7 +795,8 @@ open class JdbcDurableGameWagerAndSettlementStore(
     override fun findTopSettlements(tenantId: String, limit: Int): List<GameBetSettlementRecord> {
         val sql = """
             select settlement_id, tenant_id, bet_id, owner_id, game_id, round_id, hand_id,
-                   outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference
+                   outcome, multiplier, payout_minor_units, ledger_settlement_ref, settled_at, evidence_reference,
+                   receive_time, crash_time
             from game_bet_settlement
             where tenant_id = ? and outcome = 'PAYOUT_CASH_OUT'
             order by multiplier desc
@@ -863,6 +868,8 @@ open class JdbcDurableGameWagerAndSettlementStore(
             ledgerSettlementRef = rs.getString("ledger_settlement_ref"),
             settledAt = rs.getTimestamp("settled_at").toInstant(),
             evidenceReference = rs.getString("evidence_reference"),
+            receiveTime = rs.getTimestamp("receive_time")?.toInstant(),
+            crashTime = rs.getTimestamp("crash_time")?.toInstant(),
         )
     }
 

@@ -253,8 +253,11 @@ data class ProviderConfiguration(
     val baseUrl: String,
     val timeoutMs: Long = 5000L,
     val maxRetries: Int = 3,
+    val callbackIpAllowlist: Set<String> = emptySet(),
 ) {
     fun validateNetworkSafety() {
+        require(timeoutMs > 0L) { "Provider timeoutMs must be positive" }
+        require(maxRetries >= 0) { "Provider maxRetries cannot be negative" }
         val uri = try {
             URI.create(baseUrl)
         } catch (e: Exception) {

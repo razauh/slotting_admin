@@ -268,7 +268,7 @@ class MigrationSafetyHarness private constructor(
 
     companion object {
         const val LEGACY_MIGRATION_VERSION = "46"
-        const val CURRENT_MIGRATION_VERSION = "55"
+        const val CURRENT_MIGRATION_VERSION = "59"
         const val ROUND_VERSION_BACKFILL_VIOLATIONS = """
             select count(*)
             from game_event_journal

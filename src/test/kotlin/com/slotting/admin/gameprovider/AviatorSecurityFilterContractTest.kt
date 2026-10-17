@@ -91,7 +91,7 @@ class AviatorSecurityFilterContractTest {
         )
 
         val fairnessStore = InMemoryFairnessEvidenceStore()
-        val fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        val fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val eventJournalStore = InMemoryGameEventJournalStore()
 
         authStore = InMemoryDurableAuthStore()

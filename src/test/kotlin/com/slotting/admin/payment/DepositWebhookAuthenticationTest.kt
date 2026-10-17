@@ -120,6 +120,37 @@ class DepositWebhookAuthenticationTest {
     }
 
     @Test
+    fun `amountless signed webhook is quarantined and never authenticated`() {
+        val secretResolver = InMemoryDepositWebhookSecretResolver()
+        secretResolver.setSecret(tenantId, providerId, providerSecret)
+        val store = InMemoryDepositWebhookStore()
+        val alertSink = InMemoryDepositWebhookAlertSink()
+        val service = DepositWebhookAuthenticationService(secretResolver, store, alertSink, clock = clock)
+        val rawPayload = "{\"paymentReference\":\"dep-no-amount\",\"currency\":\"EUR\",\"status\":\"CAPTURED\"}"
+        val timestamp = now.epochSecond.toString()
+        val command = AuthenticateDepositWebhookCommand(
+            tenantId = tenantId,
+            providerId = providerId,
+            signatureHeader = computeHmac(providerSecret, "$timestamp.$rawPayload"),
+            timestampHeader = timestamp,
+            rawPayload = rawPayload,
+            idempotencyKey = "key-no-amount",
+            correlationId = "corr-no-amount",
+            causationId = "cause-no-amount",
+        )
+
+        val failure = assertFailsWith<AuthenticationFailure.Rejected> {
+            service.authenticateWebhook(command)
+        }
+
+        assertEquals(AuthErrorCode.INVALID, failure.code)
+        assertEquals(WebhookAuthStatus.QUARANTINED, store.listForensicRecords(tenantId).single().status)
+        assertEquals(WebhookQuarantineReason.MALFORMED_PAYLOAD, store.listForensicRecords(tenantId).single().quarantineReason)
+        assertTrue(store.getOutboxEvents().none { it.type == "DEPOSIT_WEBHOOK_AUTHENTICATED" })
+        assertTrue(alertSink.alerts.any { it.contains("webhook.amount.missing") })
+    }
+
+    @Test
     fun `PAYMENT-003-01-T002 — Authenticate deposit webhook raw bodies rejects invalid, boundary, unauthorized, and stale input`() {
         val secretResolver = InMemoryDepositWebhookSecretResolver()
         secretResolver.setSecret(tenantId, providerId, providerSecret)

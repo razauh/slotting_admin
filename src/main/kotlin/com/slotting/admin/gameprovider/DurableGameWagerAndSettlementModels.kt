@@ -83,6 +83,8 @@ data class GameBetSettlementRecord(
     val ledgerSettlementRef: String?,
     val settledAt: Instant,
     val evidenceReference: String,
+    val receiveTime: Instant? = null,
+    val crashTime: Instant? = null,
 )
 
 data class GameCommandReceiptRecord(

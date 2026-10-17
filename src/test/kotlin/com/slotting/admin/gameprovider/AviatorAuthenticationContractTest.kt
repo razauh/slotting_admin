@@ -81,7 +81,7 @@ class AviatorAuthenticationContractTest {
         )
 
         fairnessStore = InMemoryFairnessEvidenceStore()
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         eventJournalStore = InMemoryGameEventJournalStore()
 
         snapshotAndEventService = AuthoritativeGameSnapshotAndEventService(

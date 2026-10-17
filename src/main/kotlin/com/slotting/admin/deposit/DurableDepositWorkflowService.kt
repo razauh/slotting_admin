@@ -11,6 +11,7 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.LoggerFactory
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.transaction.annotation.Transactional
 
 open class DurableDepositWorkflowService(
@@ -19,10 +20,11 @@ open class DurableDepositWorkflowService(
     private val sessions: AdminSessionDirectory,
     private val ledgerPostingService: LedgerPostingService,
     private val providerPorts: Map<String, PaymentProviderPort> = emptyMap(),
-    private val credentialsResolver: (tenantId: String, providerId: String) -> ProviderCredentials? = { _, _ -> null },
+    private val credentialsResolver: ProviderCredentialsResolver = ProviderCredentialsResolver { _, _ -> null },
     private val configResolver: (tenantId: String, providerId: String) -> ProviderConfiguration? = { _, _ -> null },
     private val clock: Clock = Clock.systemUTC(),
     private val reconciliationAlerts: DepositReconciliationAlertSink = InMemoryDepositReconciliationAlertSink(),
+    private val meterRegistry: MeterRegistry? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val intentLocks = ConcurrentHashMap<UUID, Any>()
@@ -92,6 +94,11 @@ open class DurableDepositWorkflowService(
             amountMinorUnits = command.amountMinorUnits,
         )
 
+        val port = providerPorts[method.providerId]
+            ?: throw IllegalStateException("Payment provider port '${method.providerId}' is not configured")
+        val config = resolveProviderConfiguration(command.tenantId, method.providerId)
+        val credentials = resolveProviderCredentials(command.tenantId, method.providerId)
+
         val intentId = UUID.randomUUID()
         val now = clock.instant()
         val expiresAt = now.plus(Duration.ofMinutes(15))
@@ -122,17 +129,6 @@ open class DurableDepositWorkflowService(
         workflowStore.saveIntent(initialRecord)
 
         // 7. Dispatch to payment provider
-        val port = providerPorts[method.providerId]
-            ?: throw IllegalStateException("Payment provider port '${method.providerId}' is not configured")
-
-        val config = configResolver(command.tenantId, method.providerId)
-            ?: ProviderConfiguration(
-                providerId = method.providerId,
-                environment = ProviderEnvironment.SANDBOX,
-                baseUrl = "https://sandbox.api.test/v1",
-            )
-        val credentials = credentialsResolver(command.tenantId, method.providerId)
-
         val providerCmd = ProviderDepositCommand(
             tenantId = command.tenantId,
             operationId = intentId,
@@ -224,13 +220,11 @@ open class DurableDepositWorkflowService(
         val port = providerPorts[command.providerId]
             ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
 
-        val config = configResolver(command.tenantId, command.providerId)
-            ?: ProviderConfiguration(
-                providerId = command.providerId,
-                environment = ProviderEnvironment.SANDBOX,
-                baseUrl = "https://sandbox.api.test/v1",
-            )
-        val credentials = credentialsResolver(command.tenantId, command.providerId)
+        val config = resolveProviderConfiguration(command.tenantId, command.providerId)
+        if (config.callbackIpAllowlist.isNotEmpty() && command.sourceIp !in config.callbackIpAllowlist) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        val credentials = resolveProviderCredentials(command.tenantId, command.providerId)
 
         // 2. Cryptographically verify signature
         val payload = ProviderCallbackPayload(
@@ -497,13 +491,8 @@ open class DurableDepositWorkflowService(
             // 3. Query status from provider port
             val port = providerPorts[currentIntent.providerId]
 
-            val config = configResolver(command.tenantId, currentIntent.providerId)
-                ?: ProviderConfiguration(
-                    providerId = currentIntent.providerId,
-                    environment = ProviderEnvironment.SANDBOX,
-                    baseUrl = "https://sandbox.api.test/v1",
-                )
-            val credentials = credentialsResolver(command.tenantId, currentIntent.providerId)
+            val config = resolveProviderConfiguration(command.tenantId, currentIntent.providerId)
+            val credentials = resolveProviderCredentials(command.tenantId, currentIntent.providerId)
 
             val query = ProviderStatusQuery(
                 tenantId = command.tenantId,
@@ -720,6 +709,26 @@ open class DurableDepositWorkflowService(
             }
         }
     }
+
+    private fun resolveProviderConfiguration(tenantId: String, providerId: String): ProviderConfiguration {
+        val config = configResolver(tenantId, providerId)
+            ?: run {
+                logger.warn("deposit.config.missing tenantId={} providerId={}", tenantId, providerId)
+                meterRegistry?.counter("deposit_config_fail_closed_total")?.increment()
+                throw IllegalStateException("Provider configuration missing for tenant $tenantId")
+            }
+        require(config.providerId == providerId) { "Provider configuration does not match provider $providerId" }
+        config.validateNetworkSafety()
+        return config
+    }
+
+    private fun resolveProviderCredentials(tenantId: String, providerId: String): ProviderCredentials =
+        credentialsResolver.resolveCredentials(tenantId, providerId)
+            ?: run {
+                logger.warn("deposit.credentials.missing tenantId={} providerId={}", tenantId, providerId)
+                meterRegistry?.counter("deposit_credentials_fail_closed_total")?.increment()
+                throw IllegalStateException("Provider credentials missing for tenant $tenantId")
+            }
 
     /**
      * Rejects all attempts to settle an intent or credit balances via Android/browser return URL.

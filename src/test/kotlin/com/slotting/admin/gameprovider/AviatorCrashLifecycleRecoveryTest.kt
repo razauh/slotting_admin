@@ -212,7 +212,7 @@ class AviatorCrashLifecycleRecoveryTest {
             clock = testClock,
             txManager = txManager,
         )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = testClock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = testClock, envelope = FairnessSeedEnvelope.devDefault())
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = testClock)
         val walletService = AuthoritativeWalletService(store = walletStore, clock = testClock)
         snapshotService = AuthoritativeGameSnapshotAndEventService(
@@ -394,7 +394,7 @@ class AviatorCrashLifecycleRecoveryTest {
     @Test
     fun `GivenCommittedCrash_WhenRevealFails_ThenRestartDoesNotResettle`() {
         val revealStore = FailOnceRevealStore(fairnessStore)
-        val failingAuthority = ProvablyFairOutcomeAuthority(store = revealStore, clock = testClock)
+        val failingAuthority = ProvablyFairOutcomeAuthority(store = revealStore, clock = testClock, envelope = FairnessSeedEnvelope.devDefault())
         val orchestrator = newOrchestrator(gameService, failingAuthority)
         val flying = driveToFlyingWithBet(orchestrator, "cmd-tc012-reveal", 101L)
 
@@ -411,7 +411,7 @@ class AviatorCrashLifecycleRecoveryTest {
         assertEquals(settlementsAfterCrash, crashSettlementCount(), "failed follow-up must not resettle")
         assertEquals(ledgerAfterCrash, ledgerTransactionCount(), "failed follow-up must not move money")
 
-        val recovered = newOrchestrator(gameService, ProvablyFairOutcomeAuthority(store = revealStore, clock = testClock))
+        val recovered = newOrchestrator(gameService, ProvablyFairOutcomeAuthority(store = revealStore, clock = testClock, envelope = FairnessSeedEnvelope.devDefault()))
         val closed = recovered.tick(tenantId, gameId)
         assertEquals(GameRoundPhase.CLOSED, closed.phase)
         assertEquals(settlementsAfterCrash, crashSettlementCount(), "restart must not settle twice")

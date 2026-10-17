@@ -94,6 +94,7 @@ data class RoundRevealRecord(
     val verificationStatus: FairnessVerificationStatus,
     val verificationError: String? = null,
     val evidenceReference: String,
+    val fallbackMode: Boolean = false,
 )
 
 data class FairnessAuditRecord(

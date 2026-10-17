@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 class OAuth2Controller(
     private val authService: DurableAuthService,
     private val registrationSybilControl: RegistrationSybilControl,
+    private val loginThrottle: PasswordLoginThrottleService,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val secureRandom = SecureRandom()
@@ -213,8 +214,11 @@ class OAuth2Controller(
         }
 
         // Authenticate credentials securely via DurableAuthService
-        val cred = authService.authenticatePlayer(tenantId, identifier, password)
+        val clientIp = request.remoteAddr ?: "unknown"
+        val blocked = loginThrottle.isBlocked(tenantId, identifier, clientIp)
+        val cred = if (blocked) null else authService.authenticatePlayer(tenantId, identifier, password)
         if (cred == null) {
+            if (!blocked) loginThrottle.recordFailure(tenantId, identifier, clientIp)
             logger.warn("Failed login attempt for identifier '{}'", identifier)
             val csrfToken = generateCsrfToken()
             val html = renderLoginFormHtml(
@@ -234,6 +238,8 @@ class OAuth2Controller(
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .body(html)
         }
+
+        loginThrottle.recordSuccess(tenantId, identifier)
 
         // Issue authorization code bound to client, redirect_uri, PKCE challenge, state, and nonce
         val record = authService.createAuthorizationCode(

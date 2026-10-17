@@ -142,7 +142,7 @@ class AviatorRoundCreationPostgresTest {
             clock = clock,
             txManager = txManager,
         )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
         walletService = AuthoritativeWalletService(
             store = walletStore,
@@ -248,7 +248,7 @@ class AviatorRoundCreationPostgresTest {
             }
         }
 
-        val failingFairnessAuthority = ProvablyFairOutcomeAuthority(store = failingFairnessStore, clock = clock)
+        val failingFairnessAuthority = ProvablyFairOutcomeAuthority(store = failingFairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val testPort = ProductionAviatorLifecyclePort(
             gameService = gameService,
             fairnessAuthority = failingFairnessAuthority,
@@ -318,7 +318,7 @@ class AviatorRoundCreationPostgresTest {
                 clock = testClock,
                 txManager = txManager,
             ),
-            fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = testClock),
+            fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = testClock, envelope = FairnessSeedEnvelope.devDefault()),
             snapshotService = snapshotService,
             txManager = txManager,
         )
@@ -606,7 +606,7 @@ class AviatorRoundCreationPostgresTest {
                 throw RuntimeException("SIMULATED_FAILPOINT_AFTER_AUDIT_WRITE")
             }
         }
-        val failingAuthority = ProvablyFairOutcomeAuthority(store = failingFairnessStore, clock = clock)
+        val failingAuthority = ProvablyFairOutcomeAuthority(store = failingFairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val testPort = ProductionAviatorLifecyclePort(
             gameService = gameService,
             fairnessAuthority = failingAuthority,

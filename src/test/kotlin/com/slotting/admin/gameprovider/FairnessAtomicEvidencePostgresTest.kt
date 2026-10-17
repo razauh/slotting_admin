@@ -202,10 +202,10 @@ class FairnessAtomicEvidencePostgresTest {
     }
 
     private fun authority(store: FairnessEvidenceStore) =
-        ProvablyFairOutcomeAuthority(store = store, clock = clock, txManager = txManager)
+        ProvablyFairOutcomeAuthority(store = store, clock = clock, envelope = FairnessSeedEnvelope.devDefault(), txManager = txManager)
 
     private fun authorityWithFinalization(store: FairnessEvidenceStore, finalization: OutcomeFinalizationPort) =
-        ProvablyFairOutcomeAuthority(store = store, clock = clock, txManager = txManager, outcomeFinalization = finalization)
+        ProvablyFairOutcomeAuthority(store = store, clock = clock, envelope = FairnessSeedEnvelope.devDefault(), txManager = txManager, outcomeFinalization = finalization)
 
     private fun insertRound(roundId: String, phase: String = "SCHEDULED", game: String = gameId) {
         closeActiveRoundsFor(jdbc, tenantId, game, keepRoundId = roundId)

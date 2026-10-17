@@ -12,6 +12,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import com.slotting.admin.upload.UploadMimeSniffer
 
 /**
  * Traceability binding for SUPPORT-001-03: Secure support notes and attachments.
@@ -516,8 +517,7 @@ class SecureSupportNotesAttachmentsService(
             "image/webp",
             "text/plain",
             "text/csv",
-            "application/json",
-            "application/octet-stream"
+            "application/json"
         )
     }
 
@@ -713,6 +713,13 @@ class SecureSupportNotesAttachmentsService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
+        val declaredMimeType = UploadMimeSniffer.normalize(command.mimeType)
+        val sniffedMimeType = UploadMimeSniffer.sniff(command.contentBytes)
+        if (sniffedMimeType == null || sniffedMimeType !in ALLOWED_MIME_TYPES ||
+            (declaredMimeType != "application/octet-stream" && declaredMimeType != sniffedMimeType)) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
+
         // Validate prohibited dangerous extensions
         if (PROHIBITED_EXTENSIONS.any { command.fileName.endsWith(it, ignoreCase = true) }) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
@@ -783,7 +790,7 @@ class SecureSupportNotesAttachmentsService(
             caseId = command.caseId,
             tenantId = command.tenantId,
             fileName = command.fileName,
-            mimeType = command.mimeType,
+            mimeType = sniffedMimeType,
             fileSize = command.contentBytes.size.toLong(),
             sha256Hex = sha256Hex,
             scanStatus = SecureAttachmentScanStatus.CLEAN,

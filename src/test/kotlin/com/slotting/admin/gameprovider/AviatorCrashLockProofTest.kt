@@ -91,7 +91,7 @@ class AviatorCrashLockProofTest {
         clearTenantState()
         gameStore = JdbcDurableGameWagerAndSettlementStore(jdbc)
         ledgerStore = JdbcLedgerJournalStore(jdbc)
-        fairnessAuthority = ProvablyFairOutcomeAuthority(JdbcFairnessEvidenceStore(jdbc), clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(JdbcFairnessEvidenceStore(jdbc), clock, FairnessSeedEnvelope.devDefault())
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)

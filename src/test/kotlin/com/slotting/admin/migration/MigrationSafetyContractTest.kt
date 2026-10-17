@@ -23,7 +23,7 @@ class MigrationSafetyContractTest {
             assertEquals(before, harness.legacyRowCounts())
             assertEquals(0, harness.roundVersionBackfillViolationCount())
             assertTrue(harness.lifecycleAttemptJournalExists())
-            println("migration_verified version=49 rowCounts=$before")
+            println("migration_verified version=${MigrationSafetyHarness.CURRENT_MIGRATION_VERSION} rowCounts=$before")
         }
     }
 

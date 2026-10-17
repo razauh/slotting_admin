@@ -3,7 +3,6 @@ package com.slotting.admin.provider
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
-import com.slotting.admin.auth.PrincipalKind
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -36,12 +35,7 @@ class PlayerPaymentMethodController(
         }
 
         val sessionId = sessionIdHeader ?: "sess-default"
-        val principal = principalAttr ?: AuthenticatedPrincipal(
-            id = "anonymous",
-            tenantId = tenantId,
-            kind = PrincipalKind.PLAYER,
-            roles = emptySet(),
-        )
+        val principal = principalAttr ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("error" to "UNAUTHENTICATED"))
 
         return try {
             val query = PaymentMethodQuery(

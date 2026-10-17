@@ -29,6 +29,9 @@ data class AdminMfaCommand(
     val expectedVersion: Long,
     val mfaAssertion: String,
     val breakGlass: Boolean = false,
+    val secondApprover: AuthenticatedPrincipal? = null,
+    val secondApproverSessionId: String? = null,
+    val secondApproverMfaAssertion: String? = null,
 )
 
 data class AuthenticationResult(
@@ -39,6 +42,7 @@ data class AuthenticationResult(
     val expiresAt: Instant,
     val reasonCode: AuthErrorCode? = null,
     val evidenceReference: String,
+    val approverId: String? = null,
 )
 
 data class AuditEvent(
@@ -114,7 +118,9 @@ class AdminMfaAuthenticator(
     private val store: AuthenticationStore,
     private val alerts: AlertSink,
     private val clock: Clock = Clock.systemUTC(),
-    private val breakGlassDuration: Duration = Duration.ofMinutes(30),
+    private val breakGlassDuration: Duration = Duration.ofMinutes(5),
+    private val standardSessionDuration: Duration = Duration.ofHours(2),
+    private val roleChangePolicy: RoleChangePolicy = RoleChangePolicy(dualControlRequired = true),
 ) {
     @Synchronized
     fun authenticate(command: AdminMfaCommand): AuthenticationResult {
@@ -141,6 +147,25 @@ class AdminMfaAuthenticator(
         if (!verified) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
+        var approverId: String? = null
+        if (command.breakGlass) {
+            val approver = command.secondApprover ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            val approverSessionId = command.secondApproverSessionId?.takeIf { it.isNotBlank() }
+                ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            val approverAssertion = command.secondApproverMfaAssertion?.takeIf { it.isNotBlank() }
+                ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+            if (!roleChangePolicy.isAllowed(principal, approver.id) || approver.kind != PrincipalKind.ADMIN ||
+                approver.tenantId != principal.tenantId || command.requestedRole !in approver.roles) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            }
+            val approverVerified = try {
+                verifier.verify(approver.tenantId, approver.id, approverSessionId, approverAssertion)
+            } catch (_: Exception) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
+            }
+            if (!approverVerified) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            approverId = approver.id
+        }
         val now = Instant.now(clock)
         val resultId = UUID.randomUUID()
         val result = AuthenticationResult(
@@ -148,11 +173,13 @@ class AdminMfaAuthenticator(
             state = AuthenticationState.AUTHENTICATED,
             serverTime = now,
             serverVersion = command.expectedVersion + 1,
-            expiresAt = now.plus(if (command.breakGlass) breakGlassDuration else Duration.ofHours(8)),
+            expiresAt = now.plus(if (command.breakGlass) breakGlassDuration else standardSessionDuration),
             evidenceReference = "admin-auth:$resultId",
+            approverId = approverId,
         )
-        val audit = AuditEvent(UUID.randomUUID(), resultId, principal.tenantId, "ADMIN_MFA_ACCEPTED", now, command.correlationId, command.causationId)
-        val outbox = OutboxEvent(UUID.randomUUID(), resultId, principal.tenantId, "ADMIN_MFA_ACCEPTED", now)
+        val eventType = if (command.breakGlass) "ADMIN_BREAK_GLASS_DUAL_APPROVED" else "ADMIN_MFA_ACCEPTED"
+        val audit = AuditEvent(UUID.randomUUID(), resultId, principal.tenantId, eventType, now, command.correlationId, command.causationId)
+        val outbox = OutboxEvent(UUID.randomUUID(), resultId, principal.tenantId, eventType, now)
         store.save(result, principal.tenantId, principal.id, command.sessionId, setOf(command.requestedRole), command.idempotencyKey, fingerprint(command), audit, outbox)
         if (command.breakGlass) alerts.alert(audit.copy(type = "ADMIN_BREAK_GLASS_STARTED"))
         return result
@@ -165,6 +192,9 @@ class AdminMfaAuthenticator(
         command.sessionId,
         command.expectedVersion,
         command.breakGlass,
+        command.secondApprover?.id,
+        command.secondApproverSessionId,
+        command.secondApproverMfaAssertion?.let(::sha256),
         sha256(command.mfaAssertion),
     ).joinToString("|"))
 

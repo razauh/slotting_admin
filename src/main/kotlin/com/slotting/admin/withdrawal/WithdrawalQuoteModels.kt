@@ -6,6 +6,22 @@ import com.slotting.admin.auth.OutboxEvent
 import java.time.Instant
 import java.util.UUID
 
+object WithdrawalStepUpPolicy {
+    const val THRESHOLD_MINOR_UNITS = 10_000L
+
+    fun calculateFees(grossAmountMinorUnits: Long, fixedFeeMinorUnits: Long, percentageFeeBps: Long): WithdrawalFeeAmounts {
+        val variableFee = Math.multiplyExact(grossAmountMinorUnits, percentageFeeBps) / 10_000L
+        val totalFee = Math.addExact(fixedFeeMinorUnits, variableFee)
+        val netPayout = Math.subtractExact(grossAmountMinorUnits, totalFee)
+        if (grossAmountMinorUnits <= totalFee) {
+            throw InvalidFeeBoundaryException("Gross amount ($grossAmountMinorUnits) must be strictly greater than total fees ($totalFee)")
+        }
+        return WithdrawalFeeAmounts(variableFee, totalFee, netPayout)
+    }
+}
+
+data class WithdrawalFeeAmounts(val variableFeeMinorUnits: Long, val totalFeeMinorUnits: Long, val netPayoutMinorUnits: Long)
+
 // =============================================================================
 // Enums & Breakdowns
 // =============================================================================

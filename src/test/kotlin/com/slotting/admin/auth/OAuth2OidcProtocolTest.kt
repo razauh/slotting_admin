@@ -40,7 +40,7 @@ class OAuth2OidcProtocolTest {
         OAuthClientRegistry.reset()
         store = InMemoryDurableAuthStore()
         authService = DurableAuthService(store = store, clock = clock)
-        controller = OAuth2Controller(authService = authService, registrationSybilControl = InMemoryRegistrationSybilControl(authService))
+        controller = OAuth2Controller(authService = authService, registrationSybilControl = InMemoryRegistrationSybilControl(authService), loginThrottle = org.mockito.Mockito.mock(PasswordLoginThrottleService::class.java))
         authController = AuthController(authService = authService)
     }
 

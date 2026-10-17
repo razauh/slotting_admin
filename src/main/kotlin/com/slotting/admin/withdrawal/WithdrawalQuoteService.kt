@@ -31,7 +31,7 @@ class WithdrawalQuoteService(
     companion object {
         const val MIN_WITHDRAWAL_MINOR_UNITS = 1_000L // 10 EUR
         const val MAX_WITHDRAWAL_MINOR_UNITS = 500_000L // 5,000 EUR
-        const val STEP_UP_THRESHOLD_MINOR_UNITS = 200_000L // 2,000 EUR
+        const val STEP_UP_THRESHOLD_MINOR_UNITS = WithdrawalStepUpPolicy.THRESHOLD_MINOR_UNITS
     }
 
     // =========================================================================
@@ -203,7 +203,11 @@ class WithdrawalQuoteService(
 
         // 8. Fee and Rate Calculation
         val feeBreakdown = calculateFee(command.paymentMethod, command.grossAmountMinorUnits)
-        val netPayout = command.grossAmountMinorUnits - feeBreakdown.totalFeeMinorUnits
+        val netPayout = WithdrawalStepUpPolicy.calculateFees(
+            command.grossAmountMinorUnits,
+            feeBreakdown.fixedFeeMinorUnits,
+            feeBreakdown.percentageFeeBps,
+        ).netPayoutMinorUnits
 
         // 9. Step-Up Authentication Policy Check
         val stepUpRequired = command.grossAmountMinorUnits >= STEP_UP_THRESHOLD_MINOR_UNITS
@@ -330,13 +334,12 @@ class WithdrawalQuoteService(
             WithdrawalPaymentMethod.CRYPTO_USDT -> 200L to 100L   // 2.00 EUR + 1.00%
             WithdrawalPaymentMethod.CARD_OCT -> 250L to 150L      // 2.50 EUR + 1.50%
         }
-        val variable = (grossAmount * bps) / 10_000L
-        val total = fixed + variable
+        val amounts = WithdrawalStepUpPolicy.calculateFees(grossAmount, fixed, bps)
         return WithdrawalFeeBreakdown(
             fixedFeeMinorUnits = fixed,
             percentageFeeBps = bps,
-            calculatedVariableFeeMinorUnits = variable,
-            totalFeeMinorUnits = total
+            calculatedVariableFeeMinorUnits = amounts.variableFeeMinorUnits,
+            totalFeeMinorUnits = amounts.totalFeeMinorUnits
         )
     }
 

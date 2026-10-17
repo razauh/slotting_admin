@@ -155,10 +155,10 @@ class AviatorAlgorithmRegistryTest {
 
     private fun unitAuthority(): Pair<ProvablyFairOutcomeAuthority, InMemoryFairnessEvidenceStore> {
         val store = InMemoryFairnessEvidenceStore()
-        return ProvablyFairOutcomeAuthority(store = store, clock = clock) to store
+        return ProvablyFairOutcomeAuthority(store = store, clock = clock, envelope = FairnessSeedEnvelope.devDefault()) to store
     }
 
-    private fun authority() = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, txManager = txManager)
+    private fun authority() = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault(), txManager = txManager)
 
     private fun lifecycleProperties(algorithmVersion: String) =
         AviatorLifecycleConfiguration().aviatorLifecycleProperties(

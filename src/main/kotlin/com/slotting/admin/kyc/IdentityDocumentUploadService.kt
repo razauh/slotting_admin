@@ -7,6 +7,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import com.slotting.admin.upload.UploadMimeSniffer
 
 /**
  * Binding flag to enforce the protected risk assertion for KYC-002-01:
@@ -219,7 +220,7 @@ class IdentityDocumentUploadService(
     private val clock: Clock = Clock.systemUTC(),
     private val malwareScanner: MalwareScannerPort = object : MalwareScannerPort {
         override fun scan(fileBytes: ByteArray, filename: String): MalwareScanOutcome {
-            return MalwareScanOutcome(status = MalwareScanStatus.CLEAN)
+            return MalwareScanOutcome(status = MalwareScanStatus.SCAN_FAILED)
         }
     },
     private val encryptedStorage: EncryptedStoragePort = object : EncryptedStoragePort {
@@ -290,10 +291,6 @@ class IdentityDocumentUploadService(
         }
 
         // 6. MIME type validation
-        if (command.mimeType !in ALLOWED_MIME_TYPES) {
-            throw InvalidDocumentTypeException("MIME type ${command.mimeType} is not permitted. Allowed: $ALLOWED_MIME_TYPES")
-        }
-
         // 7. File size validation
         val size = command.fileBytes.size.toLong()
         if (size <= 0L) {
@@ -301,6 +298,12 @@ class IdentityDocumentUploadService(
         }
         if (size > maxFileSizeBytes) {
             throw InvalidFileSizeException("Document size $size exceeds maximum allowable size of $maxFileSizeBytes bytes")
+        }
+
+        val declaredMimeType = UploadMimeSniffer.normalize(command.mimeType)
+        val sniffedMimeType = UploadMimeSniffer.sniff(command.fileBytes)
+        if (declaredMimeType !in ALLOWED_MIME_TYPES || sniffedMimeType == null || declaredMimeType != sniffedMimeType) {
+            throw InvalidDocumentTypeException("Declared MIME type does not match an allowed file signature")
         }
 
         // 8. Malware scanning
@@ -321,7 +324,7 @@ class IdentityDocumentUploadService(
                     performedBy = principal.id,
                     reason = "Malware detected: ${scanOutcome.threatName ?: "Unknown threat"}",
                     sha256 = sha,
-                    mimeType = command.mimeType,
+                    mimeType = sniffedMimeType,
                     fileSize = size,
                     correlationId = command.correlationId,
                     causationId = command.causationId,
@@ -345,7 +348,7 @@ class IdentityDocumentUploadService(
                 userId = command.userId,
                 documentId = documentId,
                 fileBytes = command.fileBytes,
-                mimeType = command.mimeType,
+                mimeType = sniffedMimeType,
             )
         } catch (e: Exception) {
             throw DependencyFailureException("Encrypted storage failure: ${e.message}")
@@ -360,7 +363,7 @@ class IdentityDocumentUploadService(
             tenantId = command.tenantId,
             userId = command.userId,
             documentType = command.documentType,
-            mimeType = command.mimeType,
+            mimeType = sniffedMimeType,
             fileSizeBytes = size,
             sha256Checksum = sha256,
             storageKey = storageRef.storageKey,

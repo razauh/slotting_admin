@@ -666,6 +666,19 @@ class PaymentMethodQueryContractTest {
             principalAttr = playerPrincipal,
         )
         assertEquals(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, serviceUnavailableResponse.statusCode)
+
+        // 5. Missing principal -> 401 Unauthorized, no anonymous fallback
+        val unauthenticatedResponse = controller.getPaymentMethods(
+            tenantId = "tenant-pk-1",
+            transactionType = "DEPOSIT",
+            currency = null,
+            amountMinorUnits = null,
+            clientKnownVersion = null,
+            includeUnavailable = false,
+            sessionIdHeader = "sess-valid",
+            principalAttr = null,
+        )
+        assertEquals(org.springframework.http.HttpStatus.UNAUTHORIZED, unauthenticatedResponse.statusCode)
     }
 
     // =========================================================================

@@ -58,7 +58,7 @@ class SpribeProvablyFairCrashEngineTest {
     @BeforeEach
     fun setUp() {
         fairnessStore = InMemoryFairnessEvidenceStore()
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
 
         gameStore = InMemoryDurableGameWagerAndSettlementStore()
         ledgerStore = InMemoryLedgerJournalStore()

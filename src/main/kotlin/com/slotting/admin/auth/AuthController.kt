@@ -154,19 +154,16 @@ class AuthController(
                 causationId = req.causationId,
                 expectedVersion = req.expectedVersion,
                 mfaAssertion = req.mfaAssertion,
-                breakGlass = req.breakGlass
+                breakGlass = req.breakGlass,
+                secondApprover = req.secondApproverId?.let {
+                    AuthenticatedPrincipal(it, req.tenantId, PrincipalKind.ADMIN, setOf(AdminRole.valueOf(req.requestedRole)))
+                },
+                secondApproverSessionId = req.secondApproverSessionId,
+                secondApproverMfaAssertion = req.secondApproverMfaAssertion
             )
 
-            val authenticator = adminMfaAuthenticator
-            val result = authenticator?.authenticate(command)
-                ?: AuthenticationResult(
-                    resultId = UUID.randomUUID(),
-                    state = AuthenticationState.AUTHENTICATED,
-                    serverTime = Instant.now(),
-                    serverVersion = req.expectedVersion + 1,
-                    expiresAt = Instant.now().plusSeconds(1800),
-                    evidenceReference = "admin-auth:${UUID.randomUUID()}"
-                )
+            val result = adminMfaAuthenticator?.authenticate(command)
+                ?: throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
 
             val resp = AdminMfaStepUpResponseDto(
                 resultId = result.resultId.toString(),

@@ -6,6 +6,7 @@ import com.slotting.admin.provider.*
 import com.slotting.admin.provider.port.*
 import com.slotting.admin.provider.port.adapters.*
 import org.junit.jupiter.api.Test
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -147,7 +148,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to providerAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -183,7 +184,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -208,6 +209,33 @@ class DurableDepositWorkflowContractTest {
         }
     }
 
+    @Test
+    fun `missing provider configuration fails before intent persistence and emits a metric`() {
+        val methodStore = InMemoryPaymentMethodStore()
+        val audit = AuditEvent(UUID.randomUUID(), UUID.randomUUID(), "tenant-pk-1", "INIT", now, "c", "ca")
+        val outbox = OutboxEvent(UUID.randomUUID(), audit.resultId, "tenant-pk-1", "INIT", now)
+        methodStore.save(PaymentMethodResult(audit.resultId, sampleMethod, now, "ev"), "fp", "idem-config", PaymentMethodAction.REGISTER, "init", "admin", audit, outbox)
+        val workflowStore = InMemoryDepositWorkflowStore()
+        val meters = SimpleMeterRegistry()
+        val service = DurableDepositWorkflowService(
+            workflowStore = workflowStore,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            ledgerPostingService = LedgerPostingService(InMemoryLedgerJournalStore(), clock = clock),
+            providerPorts = mapOf("ADVERSARIAL_TEST" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, _ -> null },
+            clock = clock,
+            meterRegistry = meters,
+        )
+
+        val command = sampleCreateCommand()
+        assertFailsWith<IllegalStateException> { service.createIntent(command) }
+
+        assertNull(workflowStore.findIntentByIdempotencyKey("tenant-pk-1", command.idempotencyKey))
+        assertEquals(1.0, meters.counter("deposit_config_fail_closed_total").count())
+    }
+
     // =========================================================================
     // 2. Idempotency Replay
     // =========================================================================
@@ -228,7 +256,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -272,7 +300,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to adapter),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -311,7 +339,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("SAFEPAY_RAAST" to safepayAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -368,7 +396,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("SAFEPAY_RAAST" to SafepayRaastAdapter()),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -524,7 +552,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to adapter),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -576,6 +604,8 @@ class DurableDepositWorkflowContractTest {
             sessions = sessionDir,
             ledgerPostingService = LedgerPostingService(ledgerStore, clock = clock),
             providerPorts = mapOf("ADVERSARIAL_TEST" to stubAdapter),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             reconciliationAlerts = alerts,
             clock = clock,
         )
@@ -612,6 +642,8 @@ class DurableDepositWorkflowContractTest {
             sessions = sessionDir,
             ledgerPostingService = LedgerPostingService(ledgerStore, clock = clock),
             providerPorts = mapOf("ADVERSARIAL_TEST" to mismatchingAdapter),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             reconciliationAlerts = alerts,
             clock = clock,
         )
@@ -647,7 +679,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("SAFEPAY_RAAST" to safepayAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 
@@ -711,7 +743,7 @@ class DurableDepositWorkflowContractTest {
             ledgerPostingService = ledgerService,
             providerPorts = mapOf("ADVERSARIAL_TEST" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
-            configResolver = { _, _ -> sampleConfig },
+            configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
         )
 

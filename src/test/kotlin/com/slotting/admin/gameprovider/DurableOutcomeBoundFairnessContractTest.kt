@@ -18,6 +18,7 @@ import com.slotting.admin.ledger.LedgerPostingService
 import com.slotting.admin.ledger.PostTransactionCommand
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import java.io.File
 import java.math.BigDecimal
 import java.time.Clock
@@ -85,7 +86,8 @@ class DurableOutcomeBoundFairnessContractTest {
         fairnessStore = InMemoryFairnessEvidenceStore()
         fairnessAuthority = ProvablyFairOutcomeAuthority(
             store = fairnessStore,
-            clock = clock
+            clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
         )
 
         gameStore = InMemoryDurableGameWagerAndSettlementStore()
@@ -179,6 +181,28 @@ class DurableOutcomeBoundFairnessContractTest {
                 rulesVersion = "1.0.0"
             )
         )
+    }
+
+    @Test
+    fun `accepted client seed is persisted before derive and fallback mode survives reveal`() {
+        val roundId = "rnd-durable-seed-001"
+        val meters = SimpleMeterRegistry()
+        fairnessAuthority = ProvablyFairOutcomeAuthority(fairnessStore, clock, FairnessSeedEnvelope.devDefault(), meterRegistry = meters)
+        seedRoundWithFairness(roundId)
+
+        fairnessAuthority.notifyBetAccepted(tenantId, gameId, roundId, playerIdStr, "client-seed-accepted")
+
+        val commitment = fairnessStore.findCommitment(tenantId, gameId, roundId)
+        assertEquals("client-seed-accepted", commitment?.clientSeed1)
+        assertEquals(1.0, meters.find("fairness_collector_size").gauge()?.value())
+        fairnessAuthority.resolveClientSeeds(tenantId, gameId, roundId, requireNotNull(commitment))
+        assertEquals(1.0, meters.counter("fairness_fallback_rounds_total").count())
+        fairnessAuthority.deriveAuthoritativeOutcome(tenantId, gameId, roundId)
+        val reveal = fairnessAuthority.revealAndVerifyOutcome(
+            RevealOutcomeCommand(tenantId = tenantId, gameId = gameId, roundId = roundId)
+        )
+
+        assertTrue(reveal.fallbackMode)
     }
 
     // =========================================================================
@@ -385,7 +409,7 @@ class DurableOutcomeBoundFairnessContractTest {
         )
 
         // Simulate restart: construct new instances reading from the persistent store
-        val restartedAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        val restartedAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val restartedVerifier = IndependentFairnessVerifier(store = fairnessStore)
 
         val verifyAfterRestart = restartedVerifier.verifyHistoricalRound(

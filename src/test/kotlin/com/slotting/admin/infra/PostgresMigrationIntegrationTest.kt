@@ -52,7 +52,7 @@ class PostgresMigrationIntegrationTest {
     fun `clean install creates migration history and operational tables`() {
         val maxRank = jdbc.queryForObject("select max(installed_rank) from flyway_schema_history", Int::class.java)
         assertTrue(maxRank != null && maxRank >= 38)
-        assertEquals("52", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
+        assertEquals("59", jdbc.queryForObject("select version from flyway_schema_history order by installed_rank desc limit 1", String::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'notification_delivery_tracking'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'operational_siem_events'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'admin_event_envelope'", Int::class.java))
@@ -63,6 +63,8 @@ class PostgresMigrationIntegrationTest {
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'ledger_leg'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'password_reset_token'", Int::class.java))
         assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_name = 'lifecycle_attempt_journal'", Int::class.java))
+        assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.columns where table_name = 'game_bet_settlement' and column_name = 'receive_time'", Int::class.java))
+        assertEquals("NO", jdbc.queryForObject("select is_nullable from information_schema.columns where table_name = 'game_bet_settlement' and column_name = 'receive_time'", String::class.java))
     }
 
     @Test

@@ -202,10 +202,6 @@ class PasswordResetController(
     }
 
     private fun getClientIp(request: HttpServletRequest): String {
-        val forwarded = request.getHeader("X-Forwarded-For")
-        if (!forwarded.isNullOrBlank()) {
-            return forwarded.split(",").first().trim()
-        }
         return request.remoteAddr ?: "127.0.0.1"
     }
 

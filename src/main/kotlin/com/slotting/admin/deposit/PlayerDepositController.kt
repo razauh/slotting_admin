@@ -8,6 +8,7 @@ import com.slotting.admin.provider.PaymentMethodUnavailableException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import jakarta.servlet.http.HttpServletRequest
 import java.util.UUID
 
 data class CreateDepositIntentRequest(
@@ -38,12 +39,7 @@ class PlayerDepositController(
         val sessionId = sessionIdHeader ?: "sess-default"
         val correlationId = correlationIdHeader ?: UUID.randomUUID().toString()
         val causationId = causationIdHeader ?: UUID.randomUUID().toString()
-        val principal = principalAttr ?: AuthenticatedPrincipal(
-            id = "anonymous",
-            tenantId = tenantId,
-            kind = PrincipalKind.PLAYER,
-            roles = emptySet(),
-        )
+        val principal = principalAttr ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
         if (request.amountMinorUnits <= 0) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
@@ -134,6 +130,7 @@ class PlayerDepositController(
         @RequestHeader headers: Map<String, String>,
         @RequestParam queryParams: Map<String, String>,
         @RequestBody rawBody: String,
+        request: HttpServletRequest,
     ): ResponseEntity<Any> {
         val eventId = headers.entries.asSequence()
             .filter { (name, _) -> name.equals("x-provider-event-id", true) || name.equals("x-event-id", true) }
@@ -152,6 +149,7 @@ class PlayerDepositController(
             rawBody = rawBody,
             headers = headers,
             queryParams = queryParams,
+            sourceIp = request.remoteAddr,
         )
 
         return try {

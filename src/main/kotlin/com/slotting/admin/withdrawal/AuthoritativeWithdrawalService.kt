@@ -102,12 +102,13 @@ open class AuthoritativeWithdrawalService(
 
         // 9. Fee calculation & fee boundary check
         val fixedFee = method.feeFlatMinorUnits
-        val variableFee = Math.multiplyExact(command.grossAmountMinorUnits, method.feePercentageBps.toLong()) / 10000L
-        val totalFee = Math.addExact(fixedFee, variableFee)
-        if (command.grossAmountMinorUnits <= totalFee) {
-            throw InvalidFeeBoundaryException("Gross amount (${command.grossAmountMinorUnits}) must be strictly greater than total fees ($totalFee)")
-        }
-        val netPayout = Math.subtractExact(command.grossAmountMinorUnits, totalFee)
+        val feeAmounts = WithdrawalStepUpPolicy.calculateFees(
+            command.grossAmountMinorUnits,
+            fixedFee,
+            method.feePercentageBps.toLong(),
+        )
+        val totalFee = feeAmounts.totalFeeMinorUnits
+        val netPayout = feeAmounts.netPayoutMinorUnits
 
         // 10. Authoritative available balance check
         val available = withdrawalStore.getAuthoritativeBalance(command.tenantId, command.ownerId, command.currencyCode)
@@ -130,7 +131,7 @@ open class AuthoritativeWithdrawalService(
             percentageFeeBps = method.feePercentageBps.toLong(),
             totalFeeMinorUnits = totalFee,
             netPayoutMinorUnits = netPayout,
-            stepUpRequired = command.grossAmountMinorUnits >= 10_000L,
+            stepUpRequired = command.grossAmountMinorUnits >= WithdrawalStepUpPolicy.THRESHOLD_MINOR_UNITS,
             status = WithdrawalQuoteStatus.ACTIVE,
             quotedAt = now,
             expiresAt = now.plus(Duration.ofMinutes(15)),

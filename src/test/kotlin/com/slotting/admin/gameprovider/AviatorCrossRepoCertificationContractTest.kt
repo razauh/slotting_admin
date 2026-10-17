@@ -136,6 +136,7 @@ class AviatorCrossRepoCertificationContractTest {
         fairnessAuthority = ProvablyFairOutcomeAuthority(
             store = fairnessStore,
             clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
         )
 
         eventJournalStore = InMemoryGameEventJournalStore()

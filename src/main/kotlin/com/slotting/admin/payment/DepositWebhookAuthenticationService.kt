@@ -383,7 +383,19 @@ class DepositWebhookAuthenticationService(
         }
 
         // 8. Extraction of financial amounts for conservation check
-        val amountMinor = extractAmount(command.rawPayload) ?: 5000L
+        val amountMinor = extractAmount(command.rawPayload)
+        if (amountMinor == null || amountMinor <= 0L) {
+            recordQuarantine(
+                command = command,
+                payloadHash = payloadHash,
+                paymentReference = paymentReference,
+                reason = WebhookQuarantineReason.MALFORMED_PAYLOAD,
+                now = now,
+                detail = "Webhook amount is missing or invalid",
+            )
+            alertSink.sendAlert(command.tenantId, "webhook.amount.missing", "MALFORMED_PAYLOAD", payloadHash)
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
         val debitUnits = amountMinor
         val creditUnits = amountMinor
         val conserved = (debitUnits == creditUnits)

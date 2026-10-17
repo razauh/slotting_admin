@@ -1,4 +1,5 @@
 .gradle/
+.gradle-user-home/
 .gradle_user_home/
 build/
 __pycache__/
@@ -30,6 +31,8 @@ graphify-out/
 .verification_reports/
 .scripts/
 .logs/
+
+docs/migration-forward-fix-runbook.md
 
 # OS/editor files
 .DS_Store

@@ -148,6 +148,7 @@ class AviatorPersistedClockTest {
         fairnessAuthority = ProvablyFairOutcomeAuthority(
             store = fairnessStore,
             clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
             txManager = txManager,
         )
         eventJournalStore = JdbcGameEventJournalStore(jdbc)

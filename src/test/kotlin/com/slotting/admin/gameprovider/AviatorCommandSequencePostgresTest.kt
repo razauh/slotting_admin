@@ -154,7 +154,7 @@ class AviatorCommandSequencePostgresTest {
             clock = clock,
             txManager = txManager,
         )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
         walletService = AuthoritativeWalletService(
             store = walletStore,

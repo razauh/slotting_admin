@@ -44,6 +44,14 @@ enum class BonusGrantStatus {
     CANCELLED
 }
 
+enum class BonusGrantDecisionCode { PLAYER_CAP_EXCEEDED, ADMIN_CAP_EXCEEDED, APPROVAL_REQUIRED }
+
+class BonusGrantDecisionFailure(val decisionCode: BonusGrantDecisionCode) : RuntimeException()
+
+interface BonusGrantVelocityGuard {
+    fun reserve(tenantId: String, playerId: UUID, adminId: String, amountMinorUnits: Long, at: Instant)
+}
+
 enum class BucketType {
     CASH,
     BONUS,
@@ -246,7 +254,9 @@ class InMemoryBonusAlertSink : BonusAlertSink {
 class BonusGrantService(
     private val store: BonusGrantStore,
     private val alertSink: BonusAlertSink = InMemoryBonusAlertSink(),
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    private val velocityGuard: BonusGrantVelocityGuard? = null,
+    private val dualControlThresholdMinorUnits: Long = 10_000L,
 ) {
 
     private fun validateHeaders(
@@ -348,6 +358,22 @@ class BonusGrantService(
                 message = "Non-admin principal ${principal.id} attempted to grant bonus"
             )
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
+        if (command.bonusType == BonusGrantType.ADMIN_DISCRETIONARY) {
+            val guard = velocityGuard ?: throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
+            if (command.amountMinorUnits >= dualControlThresholdMinorUnits) {
+                alertSink.sendAlert(command.tenantId, "BONUS_GRANT_HELD_FOR_APPROVAL", "Discretionary grant requires a distinct checker")
+                throw BonusGrantDecisionFailure(BonusGrantDecisionCode.APPROVAL_REQUIRED)
+            }
+            try {
+                guard.reserve(command.tenantId, command.playerId, principal.id, command.amountMinorUnits, clock.instant())
+            } catch (failure: BonusGrantDecisionFailure) {
+                alertSink.sendAlert(command.tenantId, "BONUS_GRANT_CAPPED", "Discretionary grant velocity cap exceeded")
+                throw failure
+            } catch (_: Exception) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
+            }
         }
 
         // 5. Wallet lookup or initialization with version checking

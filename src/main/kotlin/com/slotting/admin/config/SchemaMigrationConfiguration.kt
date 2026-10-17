@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.util.concurrent.atomic.AtomicReference
+import io.micrometer.core.instrument.MeterRegistry
+import java.util.concurrent.TimeUnit
 
 data class SchemaMigrationStatus(
     val state: State,
@@ -24,12 +26,13 @@ data class SchemaMigrationStatus(
 }
 
 @ConfigurationProperties("slotting.schema")
-data class SchemaMigrationProperties(val supportedVersion: Int = 55)
+data class SchemaMigrationProperties(val supportedVersion: Int = 59)
 
 @Configuration
 @EnableConfigurationProperties(SchemaMigrationProperties::class)
 class SchemaMigrationConfiguration(
     private val properties: SchemaMigrationProperties,
+    private val meterRegistry: MeterRegistry? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val status = AtomicReference(SchemaMigrationStatus(SchemaMigrationStatus.State.NOT_STARTED, null, null, null))
@@ -45,6 +48,7 @@ class SchemaMigrationConfiguration(
             if (version?.toIntOrNull() != properties.supportedVersion) {
                 throw SchemaMigrationException("Schema version $version is not supported by this binary")
             }
+            meterRegistry?.timer("schema.migration.duration")?.record(durationMs, TimeUnit.MILLISECONDS)
             status.set(SchemaMigrationStatus(SchemaMigrationStatus.State.READY, version, durationMs, null))
             logger.info("schema_migration_succeeded schemaVersion={} durationMs={}", version, durationMs)
         } catch (failure: Throwable) {
@@ -53,6 +57,8 @@ class SchemaMigrationConfiguration(
                 ?.version?.version
                 ?: "unknown"
             val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+            meterRegistry?.timer("schema.migration.duration")?.record(durationMs, TimeUnit.MILLISECONDS)
+            meterRegistry?.counter("schema.migration_failed_total")?.increment()
             status.set(
                 SchemaMigrationStatus(
                     SchemaMigrationStatus.State.FAILED,

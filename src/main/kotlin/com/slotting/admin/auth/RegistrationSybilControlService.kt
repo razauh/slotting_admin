@@ -38,6 +38,10 @@ class RegistrationSybilControlService(
     private val clock: Clock = Clock.systemUTC(),
     private val signalPepper: String = System.getenv("SLOTTING_PASSWORD_PEPPER").orEmpty(),
 ) : RegistrationSybilControl {
+    companion object {
+        const val MAX_REGISTRATIONS_PER_IP_PER_HOUR = 10
+    }
+
     @Transactional
     override fun register(
         tenantId: String,
@@ -52,6 +56,9 @@ class RegistrationSybilControlService(
         if (deviceHash != null) {
             jdbc.query("select pg_advisory_xact_lock(hashtextextended(?, 0))", { rs, _ -> rs.getObject(1) }, "$tenantId:$deviceHash")
         }
+        if (ipHash != null) {
+            jdbc.query("select pg_advisory_xact_lock(hashtextextended(?, 0))", { rs, _ -> rs.getObject(1) }, "$tenantId:ip:$ipHash")
+        }
         val cutoff = Timestamp.from(now.minus(Duration.ofHours(1)))
         val priorRegistrations = if (deviceHash == null) 0 else jdbc.queryForObject(
             "select count(*) from registration_risk_signal where tenant_id = ? and device_hash = ? and created_at >= ?",
@@ -60,9 +67,17 @@ class RegistrationSybilControlService(
             deviceHash,
             cutoff,
         )?.toInt() ?: 0
+        val priorIpRegistrations = if (ipHash == null) 0 else jdbc.queryForObject(
+            "select count(*) from registration_risk_signal where tenant_id = ? and ip_hash = ? and created_at >= ?",
+            Long::class.java,
+            tenantId,
+            ipHash,
+            cutoff,
+        )?.toInt() ?: 0
         val reason = when {
             deviceHash == null -> "DEVICE_SIGNAL_MISSING"
             priorRegistrations > 0 -> "DEVICE_REUSE"
+            priorIpRegistrations >= MAX_REGISTRATIONS_PER_IP_PER_HOUR -> "IP_VELOCITY"
             else -> null
         }
         val playerId = UUID.randomUUID()

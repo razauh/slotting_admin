@@ -22,12 +22,24 @@ class AdminMfaAuthenticationTest {
         val result = authenticator(store, alerts).authenticate(command(breakGlass = true))
 
         assertEquals(AuthenticationState.AUTHENTICATED, result.state)
-        assertEquals(now.plusSeconds(1800), result.expiresAt)
+        assertEquals(now.plusSeconds(300), result.expiresAt)
         assertEquals(1, store.audit.size)
         assertEquals(1, store.outbox.size)
         assertEquals(setOf(AdminRole.SECURITY), store.rolesBySession["tenant-1:admin-1:session-1"])
         assertEquals("ADMIN_BREAK_GLASS_STARTED", alerts.events.single().type)
+        assertEquals("admin-2", result.approverId)
         assertTrue(result.evidenceReference.startsWith("admin-auth:"))
+    }
+
+    @Test
+    fun `break glass rejects missing and self approvers`() {
+        val service = authenticator(MemoryStore(), MemoryAlerts())
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.authenticate(command(breakGlass = true).copy(secondApprover = null))
+        }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.authenticate(command(breakGlass = true).copy(secondApprover = admin()))
+        }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
     }
 
     @Test
@@ -83,7 +95,13 @@ class AdminMfaAuthenticationTest {
         mfaAssertion: String = "opaque-proof",
         expectedVersion: Long = 0,
         breakGlass: Boolean = false,
-    ) = AdminMfaCommand(principal, AdminRole.SECURITY, "session-1", "key-1", "corr-1", "cause-1", expectedVersion, mfaAssertion, breakGlass)
+    ) = AdminMfaCommand(
+        principal, AdminRole.SECURITY, "session-1", "key-1", "corr-1", "cause-1", expectedVersion,
+        mfaAssertion, breakGlass,
+        if (breakGlass) AuthenticatedPrincipal("admin-2", "tenant-1", PrincipalKind.ADMIN, setOf(AdminRole.SECURITY)) else null,
+        if (breakGlass) "session-2" else null,
+        if (breakGlass) "opaque-proof" else null
+    )
 
     private fun admin() = AuthenticatedPrincipal("admin-1", "tenant-1", PrincipalKind.ADMIN, setOf(AdminRole.SECURITY))
     private fun player() = AuthenticatedPrincipal("player-1", "tenant-1", PrincipalKind.PLAYER, emptySet())

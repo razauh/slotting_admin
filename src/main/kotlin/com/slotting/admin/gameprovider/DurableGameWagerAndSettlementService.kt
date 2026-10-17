@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.aml.CashOutDetectionInput
+import com.slotting.admin.aml.PlayAbuseDetectionStore
 import com.slotting.admin.identity.PlayerAccountStatus
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.identity.ServerEligibilityStore
@@ -17,11 +19,16 @@ import com.slotting.admin.ledger.PostTransactionCommand
 import io.micrometer.core.instrument.MeterRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -52,6 +59,7 @@ class DurableGameWagerAndSettlementService(
     private val houseMaxRoundExposure: Long = DEFAULT_HOUSE_MAX_ROUND_EXPOSURE,
     val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
     private val meterRegistry: MeterRegistry? = null,
+    private val playAbuseDetectionStore: PlayAbuseDetectionStore? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
@@ -60,7 +68,22 @@ class DurableGameWagerAndSettlementService(
         val MAX_PAYOUT_PER_BET: BigDecimal = BigDecimal("100.00")
         val MAX_MULTIPLIER: BigDecimal = BigDecimal("100.00")
         const val DEFAULT_HOUSE_MAX_ROUND_EXPOSURE: Long = 100_000_000L
+        val CASHOUT_CRASH_GRACE: Duration = Duration.ZERO
         private val BETTING_OPEN_PHASES = setOf(GameRoundPhase.BET_COUNTDOWN)
+
+        fun cashoutCrashRejected(receiveTime: Instant, round: GameRoundRecord, grace: Duration): Boolean {
+            if (round.phase == GameRoundPhase.FLYING) return false
+            val crashedAt = round.crashedAt ?: return true
+            return !receiveTime.isBefore(crashedAt.plus(grace))
+        }
+    }
+
+    private fun legalPriorPhases(target: GameRoundPhase): Set<GameRoundPhase> = when (target) {
+        GameRoundPhase.BET_COUNTDOWN -> setOf(GameRoundPhase.SCHEDULED)
+        GameRoundPhase.FLYING -> setOf(GameRoundPhase.BET_COUNTDOWN)
+        GameRoundPhase.CRASHED -> setOf(GameRoundPhase.FLYING)
+        GameRoundPhase.CLOSED -> setOf(GameRoundPhase.CRASHED)
+        GameRoundPhase.SCHEDULED -> emptySet()
     }
 
     fun createOrUpdateRound(command: CreateOrUpdateRoundCommand): GameRoundRecord {
@@ -248,11 +271,85 @@ class DurableGameWagerAndSettlementService(
 
     fun processCommand(command: AviatorRestCommand): AviatorCommandAckResult {
         DurableGameWagerAndSettlementBinding.checkBound()
-        val action = { executeCommand(command) }
-        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        val receivedAt = clock.instant()
+        val manager = txManager ?: return executeCommand(command, receivedAt)
+        return try {
+            requireNotNull(org.springframework.transaction.support.TransactionTemplate(manager).execute {
+                executeCommand(command, receivedAt)
+            })
+        } catch (failure: Exception) {
+            if (!command.action.equals(AviatorCommandAction.PLACE_BET.name, ignoreCase = true) ||
+                failure is AuthenticationFailure ||
+                failure is CommandClaimConflictException ||
+                failure is CommandAlreadyClaimedException
+            ) {
+                throw failure
+            }
+            completeFailedPlaceBetReceipt(command, failure)
+        }
     }
 
-    private fun executeCommand(command: AviatorRestCommand): AviatorCommandAckResult {
+    private fun completeFailedPlaceBetReceipt(
+        command: AviatorRestCommand,
+        failure: Exception,
+    ): AviatorCommandAckResult {
+        logger.warn(
+            "receipt_atomic_rollback commandId={} stageFailure={}",
+            command.commandId,
+            failure::class.simpleName ?: "unknown",
+        )
+        meterRegistry?.counter("wager.receipt_atomic_rollback_total")?.increment()
+        val manager = requireNotNull(txManager)
+        val transaction = org.springframework.transaction.support.TransactionTemplate(manager).apply {
+            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        }
+        return requireNotNull(transaction.execute {
+            val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
+            if (principal.tenantId != command.tenantId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            val fingerprint = computeCommandFingerprint(command)
+            val existing = store.findReceipt(command.tenantId, command.commandId)
+            if (existing != null && existing.fingerprint != fingerprint) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
+            }
+            if (existing != null && existing.status != "PENDING") {
+                return@execute objectMapper.readValue(existing.responseJson, AviatorCommandAckResult::class.java)
+            }
+            if (existing == null) {
+                store.claimReceipt(
+                    GameCommandReceiptClaim(
+                        receiptId = UUID.randomUUID(),
+                        tenantId = command.tenantId,
+                        ownerId = principal.id,
+                        gameId = "AVIATOR",
+                        commandId = command.commandId,
+                        roundId = command.roundId,
+                        handId = command.handId,
+                        action = command.action.uppercase(),
+                        fingerprint = fingerprint,
+                        causationId = command.causationId,
+                        correlationId = command.correlationId,
+                        roundVersion = command.expectedRoundVersion ?: 1L,
+                        createdAt = clock.instant(),
+                    ),
+                )
+            }
+            val version = store.findRoundForShare(command.tenantId, "AVIATOR", command.roundId)?.roundVersion
+                ?: command.expectedRoundVersion
+                ?: 1L
+            recordAndReturnRejection(
+                command = command,
+                ownerId = principal.id,
+                gameId = "AVIATOR",
+                code = AviatorCommandRejectionCode.UNKNOWN,
+                message = "Bet could not be completed; retry with the same command id",
+                roundVersion = version,
+                fp = fingerprint,
+                retryable = true,
+            )
+        })
+    }
+
+    private fun executeCommand(command: AviatorRestCommand, receivedAt: Instant): AviatorCommandAckResult {
         // 1. Authentication & Tenant Authorization Check
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         if (principal.tenantId != command.tenantId) {
@@ -294,7 +391,11 @@ class DurableGameWagerAndSettlementService(
         }
 
         // 3. Resolve Round
-        val round = store.findRoundForShare(command.tenantId, gameId, command.roundId)
+        val round = (if (command.action.equals(AviatorCommandAction.CASH_OUT.name, ignoreCase = true)) {
+            store.findRoundForUpdate(command.tenantId, gameId, command.roundId)
+        } else {
+            store.findRoundForShare(command.tenantId, gameId, command.roundId)
+        })
             ?: run {
                 return recordAndReturnRejection(
                     command = command,
@@ -347,7 +448,7 @@ class DurableGameWagerAndSettlementService(
         return when (canonicalAction) {
             AviatorCommandAction.PLACE_BET -> handlePlaceBet(command, playerId, gameId, round, fp, todayStr)
             AviatorCommandAction.CANCEL_BET -> handleCancelBet(command, playerId, gameId, round, fp)
-            AviatorCommandAction.CASH_OUT -> handleCashOut(command, playerId, gameId, round, fp)
+            AviatorCommandAction.CASH_OUT -> handleCashOut(command, playerId, gameId, round, fp, receivedAt)
         }
     }
 
@@ -826,8 +927,9 @@ class DurableGameWagerAndSettlementService(
         gameId: String,
         round: GameRoundRecord,
         fp: String,
+        receivedAt: Instant,
     ): AviatorCommandAckResult {
-        val now = clock.instant()
+        val now = receivedAt
 
         // Phase check: cash-out is only valid during FLYING
         if (round.phase != GameRoundPhase.FLYING) {
@@ -899,7 +1001,11 @@ class DurableGameWagerAndSettlementService(
                 "Fairness commitment unavailable for cash-out",
             )
         val rulesVersion = commitment.rulesVersion
-        val authoritativeMultiplier = FlightClock.resolveAuthoritativeMultiplier(round, rulesVersion, clock)
+        val authoritativeMultiplier = FlightClock.resolveAuthoritativeMultiplier(
+            round,
+            rulesVersion,
+            Clock.fixed(receivedAt, ZoneOffset.UTC),
+        )
         val wagerBd = BigDecimal(bet.wagerMinorUnits)
         val calculatedPayout = wagerBd.multiply(authoritativeMultiplier).setScale(0, RoundingMode.FLOOR).toLong()
         val maxAllowedPayout = wagerBd.multiply(MAX_PAYOUT_PER_BET).setScale(0, RoundingMode.FLOOR).toLong()
@@ -915,6 +1021,41 @@ class DurableGameWagerAndSettlementService(
                 roundVersion = round.roundVersion,
                 fp = fp,
             )
+        }
+
+        val committedRound = store.findRoundForUpdate(command.tenantId, gameId, command.roundId)
+            ?: throw RoundVersionConflictException("Round ${command.roundId} disappeared during cash-out commit")
+        val crashTime = committedRound.crashedAt
+        val crashRejected = cashoutCrashRejected(receivedAt, committedRound, CASHOUT_CRASH_GRACE)
+        if (crashRejected) {
+            if (!store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.CASHED_OUT, GameBetStatus.ACCEPTED, now)) {
+                throw IllegalStateException("Cash-out arbitration could not restore bet ${bet.betId}")
+            }
+            logger.info(
+                "cashout.arbitrated receiveTime={} crashedAt={} decision=rejected graceMs={}",
+                receivedAt,
+                crashTime,
+                CASHOUT_CRASH_GRACE.toMillis(),
+            )
+            meterRegistry?.counter("cashout_arbitration_total", "decision", "rejected")?.increment()
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.ROUND_CLOSED,
+                message = "Round closed before cash-out was received",
+                roundVersion = committedRound.roundVersion,
+                fp = fp,
+            )
+        }
+        if (crashTime != null) {
+            logger.info(
+                "cashout.arbitrated receiveTime={} crashedAt={} decision=paid graceMs={}",
+                receivedAt,
+                crashTime,
+                CASHOUT_CRASH_GRACE.toMillis(),
+            )
+            meterRegistry?.counter("cashout_arbitration_total", "decision", "paid")?.increment()
         }
 
         val settlementId = UUID.randomUUID()
@@ -966,6 +1107,8 @@ class DurableGameWagerAndSettlementService(
                 ledgerSettlementRef = txRef,
                 settledAt = now,
                 evidenceReference = evidenceRef,
+                receiveTime = receivedAt,
+                crashTime = crashTime,
             )
         )
 
@@ -981,7 +1124,7 @@ class DurableGameWagerAndSettlementService(
             status = AviatorCommandAckStatus.ACCEPTED,
             timestampMillis = now.toEpochMilli(),
             sequenceId = seq,
-            revision = round.roundVersion,
+            revision = committedRound.roundVersion,
             causationId = command.causationId,
             result = AviatorAuthoritativeResult(
                 handStatus = AviatorAuthoritativeHandStatus.CASHED_OUT,
@@ -994,7 +1137,37 @@ class DurableGameWagerAndSettlementService(
             evidenceReference = evidenceRef,
         )
 
-        recordReceipt(command, playerId, gameId, fp, ack, round.roundVersion)
+        recordReceipt(command, playerId, gameId, fp, ack, committedRound.roundVersion)
+        val detectionInput = CashOutDetectionInput(
+            tenantId = command.tenantId,
+            playerId = playerId,
+            gameId = gameId,
+            roundId = command.roundId,
+            handId = command.handId,
+            eventId = settlementId,
+            occurredAt = now,
+        )
+        val evaluateAbuse = {
+            try {
+                playAbuseDetectionStore?.evaluateCashOut(detectionInput)?.forEach { alert ->
+                    logger.warn("play_abuse_alert tenantId={} playerId={} rule={} caseReference={}", command.tenantId, playerId, alert.rule, alert.caseReference)
+                    meterRegistry?.counter("aml.auto_alerts_total", "rule", alert.rule.name)?.increment()
+                }
+                if (playAbuseDetectionStore != null) meterRegistry?.counter("aml.evaluations_total")?.increment()
+            } catch (e: Exception) {
+                logger.error("play_abuse_detection_unavailable tenantId={} playerId={} gameId={}", command.tenantId, playerId, gameId, e)
+                meterRegistry?.counter("aml.evaluation_failures_total")?.increment()
+            }
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    evaluateAbuse()
+                }
+            })
+        } else {
+            evaluateAbuse()
+        }
         return ack
     }
 

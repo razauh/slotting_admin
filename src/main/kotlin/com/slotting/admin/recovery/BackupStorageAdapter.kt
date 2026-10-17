@@ -84,7 +84,7 @@ class S3CompatibleStorageAdapter(
                 bucketExists = false,
                 writeReadVerified = false,
                 objectLockVerified = false,
-                details = "Authentication failed with access key ${config.accessKeyId}",
+                details = "Authentication failed for the configured backup destination.",
             )
         }
         if (!simulatedBucketExists) {
@@ -102,12 +102,16 @@ class S3CompatibleStorageAdapter(
         // Test roundtrip write/read
         val testPath = "${config.pathPrefix}/.validation_probe_${System.currentTimeMillis()}"
         val testPayload = "BACKUP_STORAGE_VALIDATION_PROBE".toByteArray(StandardCharsets.UTF_8)
-        storeArtifact(testPath, testPayload)
+        storeArtifact(
+            testPath,
+            testPayload,
+            if (config.objectLockConfigured) mapOf("object-lock" to "true") else emptyMap(),
+        )
         val readBack = retrieveArtifact(testPath)
-        storage.remove(testPath)
-
         val writeReadOk = readBack.payload.contentEquals(testPayload)
-        val objectLockOk = !config.objectLockConfigured || simulatedObjectLockSupported
+        val objectLockOk = config.objectLockConfigured && simulatedObjectLockSupported && checkImmutability(testPath)
+        storage.remove(testPath)
+        lockedObjects.remove(testPath)
 
         val status = if (writeReadOk && objectLockOk) StorageReadiness.READY else StorageReadiness.DEGRADED
         return BackupStorageValidationResult(
@@ -151,7 +155,7 @@ class FilesystemStorageAdapter : BackupStorageAdapter {
 
     override fun validateDestination(config: BackupStorageConfig): BackupStorageValidationResult {
         return BackupStorageValidationResult(
-            status = StorageReadiness.READY,
+            status = StorageReadiness.DEGRADED,
             reachable = true,
             authSuccessful = true,
             bucketExists = true,

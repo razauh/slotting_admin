@@ -326,7 +326,7 @@ class AviatorPlaceBetTransactionTest {
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
         meterRegistry = SimpleMeterRegistry()
         fairnessStore = JdbcFairnessEvidenceStore(jdbc)
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -505,6 +505,40 @@ class AviatorPlaceBetTransactionTest {
             tenantId,
         )
         assertEquals(0, sequenceRow, "Sequence counter must roll back with the aborted place-bet")
+    }
+
+    @Test
+    fun failedPlaceBetRollsBackReservationAndPersistsRetryableRejectionReceipt() {
+        val startingBalance = 50000L
+        seedFunds(startingBalance)
+        val roundId = "rnd-tc030-rejected-receipt"
+        createRound(roundId)
+        val decorated = FailAfterLedgerBetStore(gameStore).apply { throwAfterSaveBet = true }
+        val decoratedService = DurableGameWagerAndSettlementService(
+            store = decorated,
+            ledgerService = ledgerService,
+            registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore,
+            adminPrincipal = adminPrincipal,
+            clock = clock,
+            fairnessAuthority = fairnessAuthority,
+            txManager = txManager,
+            meterRegistry = meterRegistry,
+        )
+        val command = placeBetCommand("cmd-tc030-rejected-receipt", roundId, "hand_primary", 60L)
+
+        val rejected = decoratedService.processCommand(command)
+        val replay = decoratedService.processCommand(command)
+        val placeBetKey = AviatorCommandKeys.placeBetKey(tenantId, gameId, roundId, playerIdStr, "hand_primary")
+
+        assertEquals(AviatorCommandAckStatus.REJECTED, rejected.status)
+        assertEquals(AviatorCommandRejectionCode.UNKNOWN, rejected.rejection?.code)
+        assertTrue(rejected.rejection?.retryable == true)
+        assertEquals(rejected, replay)
+        assertNull(gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary"))
+        assertEquals("REJECTED", gameStore.findReceipt(tenantId, command.commandId)?.status)
+        assertEquals(0, ledgerTransactionCountForKey(placeBetKey))
+        assertEquals(startingBalance, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
     }
 
     @Test
@@ -1032,7 +1066,7 @@ class AviatorPlaceBetTransactionTest {
             }
 
             val ledgerSvc = LedgerPostingService(store = ledgerFailpoint, clock = clock)
-            val fairnessAuth = ProvablyFairOutcomeAuthority(store = fairnessFailpoint, clock = clock)
+            val fairnessAuth = ProvablyFairOutcomeAuthority(store = fairnessFailpoint, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
             val service = DurableGameWagerAndSettlementService(
                 store = gameFailpoint,
                 ledgerService = ledgerSvc,

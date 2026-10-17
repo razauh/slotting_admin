@@ -192,7 +192,13 @@ data class AdminMfaStepUpRequestDto(
     @JsonProperty("expected_version")
     val expectedVersion: Long,
     @JsonProperty("break_glass")
-    val breakGlass: Boolean = false
+    val breakGlass: Boolean = false,
+    @JsonProperty("second_approver_id")
+    val secondApproverId: String? = null,
+    @JsonProperty("second_approver_session_id")
+    val secondApproverSessionId: String? = null,
+    @JsonProperty("second_approver_mfa_assertion")
+    val secondApproverMfaAssertion: String? = null
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

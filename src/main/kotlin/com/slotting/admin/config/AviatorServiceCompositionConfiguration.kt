@@ -2,6 +2,7 @@ package com.slotting.admin.config
 
 import com.slotting.admin.auth.AdminRole
 import com.slotting.admin.auth.AuthenticatedPrincipal
+import com.slotting.admin.aml.PlayAbuseDetectionStore
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.gameprovider.DurableGameWagerAndSettlementService
 import com.slotting.admin.gameprovider.DurableGameWagerAndSettlementStore
@@ -48,6 +49,7 @@ class AviatorServiceCompositionConfiguration {
         clock: Clock,
         transactionManager: PlatformTransactionManager,
         meterRegistry: ObjectProvider<MeterRegistry>,
+        playAbuseDetectionStore: PlayAbuseDetectionStore,
     ): DurableGameWagerAndSettlementService = DurableGameWagerAndSettlementService(
         store = store,
         ledgerService = ledgerPostingService,
@@ -58,5 +60,6 @@ class AviatorServiceCompositionConfiguration {
         fairnessAuthority = fairnessAuthority,
         txManager = transactionManager,
         meterRegistry = meterRegistry.getIfAvailable(),
+        playAbuseDetectionStore = playAbuseDetectionStore,
     )
 }

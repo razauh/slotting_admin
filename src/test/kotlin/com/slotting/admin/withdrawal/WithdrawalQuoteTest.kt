@@ -58,6 +58,20 @@ class WithdrawalQuoteTest {
         roles = setOf(AdminRole.SUPER_ADMIN)
     )
 
+    @Test
+    fun `shared withdrawal fee policy uses exact arithmetic and rejects fee overflow`() {
+        val fees = WithdrawalStepUpPolicy.calculateFees(50_000L, 100L, 50L)
+        assertEquals(250L, fees.variableFeeMinorUnits)
+        assertEquals(350L, fees.totalFeeMinorUnits)
+        assertEquals(49_650L, fees.netPayoutMinorUnits)
+        assertFailsWith<ArithmeticException> {
+            WithdrawalStepUpPolicy.calculateFees(Long.MAX_VALUE, 1L, 150L)
+        }
+        assertFailsWith<InvalidFeeBoundaryException> {
+            WithdrawalStepUpPolicy.calculateFees(100L, 100L, 0L)
+        }
+    }
+
     private lateinit var quoteStore: InMemoryWithdrawalQuoteStore
     private lateinit var bucketStore: InMemoryBalanceBucketsStore
     private lateinit var observability: InMemoryWithdrawalQuoteObservability
@@ -152,8 +166,8 @@ class WithdrawalQuoteTest {
         assertEquals(now, quote.quotedAt)
         assertEquals(now.plusSeconds(900L), quote.expiresAt)
         assertEquals(WithdrawalQuoteStatus.ACTIVE, quote.status)
-        assertFalse(quote.stepUpRequired) // 10_000 < 200_000 step-up threshold
-        assertNull(quote.stepUpChallengeType)
+        assertTrue(quote.stepUpRequired) // 10_000 < 200_000 step-up threshold
+        assertEquals("MFA_TOTP", quote.stepUpChallengeType)
         assertTrue(result.debitsEqualCredits)
         assertEquals(5L, result.serverVersion) // Server-checked version
         assertFalse(result.hasAndroidDbImpact)

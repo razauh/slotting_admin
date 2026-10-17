@@ -103,6 +103,7 @@ data class DepositCallbackCommand(
     val rawBody: String,
     val headers: Map<String, String> = emptyMap(),
     val queryParams: Map<String, String> = emptyMap(),
+    val sourceIp: String? = null,
 )
 
 data class DepositCallbackResult(

@@ -17,15 +17,15 @@ class JdbcAuthenticationStore(private val jdbc: JdbcTemplate) : AuthenticationSt
 
     override fun findByIdempotency(tenantId: String, key: String): Pair<String, AuthenticationResult>? =
         jdbc.query(
-            "select result_id, request_fingerprint, state, authenticated_at, expires_at, server_version from admin_mfa_authentication where tenant_id = ? and idempotency_key = ?",
+            "select result_id, request_fingerprint, state, authenticated_at, expires_at, server_version, approver_id from admin_mfa_authentication where tenant_id = ? and idempotency_key = ?",
             { rs, _ -> rs.toResult() }, tenantId, key,
         ).firstOrNull()
 
     @Transactional
     override fun save(result: AuthenticationResult, tenantId: String, principalId: String, sessionId: String, roles: Set<AdminRole>, idempotencyKey: String, requestFingerprint: String, audit: AuditEvent, outbox: OutboxEvent) {
         jdbc.update(
-            "insert into admin_mfa_authentication(result_id, tenant_id, principal_id, session_id, roles, state, server_version, authenticated_at, expires_at, idempotency_key, request_fingerprint, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            result.resultId, tenantId, principalId, sessionId, roles.map(AdminRole::name).sorted().joinToString(","), result.state.name, result.serverVersion, result.serverTime, result.expiresAt, idempotencyKey, requestFingerprint, audit.correlationId, audit.causationId,
+            "insert into admin_mfa_authentication(result_id, tenant_id, principal_id, session_id, roles, state, server_version, authenticated_at, expires_at, idempotency_key, request_fingerprint, correlation_id, causation_id, approver_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            result.resultId, tenantId, principalId, sessionId, roles.map(AdminRole::name).sorted().joinToString(","), result.state.name, result.serverVersion, result.serverTime, result.expiresAt, idempotencyKey, requestFingerprint, audit.correlationId, audit.causationId, result.approverId,
         )
         jdbc.update("insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)", result.resultId, tenantId, "ADMIN_MFA_AUTHENTICATION", result.serverTime)
         jdbc.update(
@@ -47,6 +47,7 @@ class JdbcAuthenticationStore(private val jdbc: JdbcTemplate) : AuthenticationSt
             getLong("server_version"),
             getTimestamp("expires_at").toInstant(),
             evidenceReference = "admin-auth:$id",
+            approverId = getString("approver_id"),
         )
         return getString("request_fingerprint") to result
     }

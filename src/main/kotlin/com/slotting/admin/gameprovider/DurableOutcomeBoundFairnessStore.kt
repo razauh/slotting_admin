@@ -308,7 +308,7 @@ open class JdbcFairnessEvidenceStore(
     override fun findReveal(tenantId: String, gameId: String, roundId: String): RoundRevealRecord? {
         val sql = """
             select reveal_id, commitment_id, tenant_id, game_id, round_id, revealed_secret_seed,
-                   derived_multiplier, revealed_at, verification_status, verification_error, evidence_reference
+                   derived_multiplier, revealed_at, verification_status, verification_error, evidence_reference, fallback_mode
             from game_fairness_reveal
             where tenant_id = ? and game_id = ? and round_id = ?
         """.trimIndent()
@@ -321,8 +321,8 @@ open class JdbcFairnessEvidenceStore(
         val sql = """
             insert into game_fairness_reveal (
                 reveal_id, commitment_id, tenant_id, game_id, round_id, revealed_secret_seed,
-                derived_multiplier, revealed_at, verification_status, verification_error, evidence_reference
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                derived_multiplier, revealed_at, verification_status, verification_error, evidence_reference, fallback_mode
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         jdbcTemplate.update(
             sql,
@@ -336,7 +336,8 @@ open class JdbcFairnessEvidenceStore(
             Timestamp.from(reveal.revealedAt),
             reveal.verificationStatus.name,
             reveal.verificationError,
-            reveal.evidenceReference
+            reveal.evidenceReference,
+            reveal.fallbackMode
         )
     }
 
@@ -416,6 +417,7 @@ open class JdbcFairnessEvidenceStore(
             verificationStatus = FairnessVerificationStatus.valueOf(rs.getString("verification_status")),
             verificationError = rs.getString("verification_error"),
             evidenceReference = rs.getString("evidence_reference"),
+            fallbackMode = rs.getBoolean("fallback_mode"),
         )
     }
 

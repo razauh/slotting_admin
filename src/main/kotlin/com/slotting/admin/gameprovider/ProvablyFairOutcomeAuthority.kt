@@ -11,6 +11,9 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import org.slf4j.LoggerFactory
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 
 /**
  * Gate to enforce TC-022: Outcome-bound fairness evidence.
@@ -34,10 +37,13 @@ class RoundEntropyCollector {
     private val distinctPlayers = LinkedHashMap<String, String>() // playerId -> clientSeed
 
     @Synchronized
-    fun addPlayerBet(playerId: String, clientSeed: String?) {
+    fun addPlayerBet(playerId: String, clientSeed: String?): Boolean {
+        if (distinctPlayers.containsKey(playerId)) return false
         if (distinctPlayers.size < 3 && !distinctPlayers.containsKey(playerId)) {
             distinctPlayers[playerId] = clientSeed?.trim().orEmpty()
+            return true
         }
+        return false
     }
 
     @Synchronized
@@ -58,12 +64,21 @@ class RoundEntropyCollector {
 class ProvablyFairOutcomeAuthority(
     val store: FairnessEvidenceStore,
     private val clock: Clock = Clock.systemUTC(),
-    private val envelope: FairnessSeedEnvelope = FairnessSeedEnvelope.devDefault(),
+    private val envelope: FairnessSeedEnvelope,
     private val txManager: PlatformTransactionManager? = null,
     private val outcomeFinalization: OutcomeFinalizationPort? = null,
+    private val meterRegistry: MeterRegistry? = null,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val secureRandom = SecureRandom()
-    private val entropyCollectors = ConcurrentHashMap<String, RoundEntropyCollector>()
+    private data class CollectorEntry(val collector: RoundEntropyCollector, val createdAt: Instant)
+    private val entropyCollectors = ConcurrentHashMap<String, CollectorEntry>()
+    private val collectorTtl = java.time.Duration.ofHours(1)
+    private val maxCollectors = 10_000
+
+    init {
+        meterRegistry?.let { Gauge.builder("fairness_collector_size", entropyCollectors) { it.size.toDouble() }.register(it) }
+    }
 
     private fun <T : Any> inTx(action: () -> T): T =
         txManager?.let { requireNotNull(TransactionTemplate(it).execute { action() }) } ?: action()
@@ -127,7 +142,11 @@ class ProvablyFairOutcomeAuthority(
                 )
             }
 
-            entropyCollectors[key(command.tenantId, command.gameId, command.roundId)] = RoundEntropyCollector()
+            evictExpiredCollectors()
+            if (entropyCollectors.size >= maxCollectors) {
+                entropyCollectors.entries.minByOrNull { it.value.createdAt }?.key?.let(entropyCollectors::remove)
+            }
+            entropyCollectors[key(command.tenantId, command.gameId, command.roundId)] = CollectorEntry(RoundEntropyCollector(), now)
             store.saveCommitment(commitment)
             store.saveAuditEvent(
                 FairnessAuditRecord(
@@ -174,10 +193,13 @@ class ProvablyFairOutcomeAuthority(
             }
 
             if (playerId != null) {
-                val collector = entropyCollectors.computeIfAbsent(key(tenantId, gameId, roundId)) {
-                    RoundEntropyCollector()
+                evictExpiredCollectors()
+                val collectorEntry = entropyCollectors.computeIfAbsent(key(tenantId, gameId, roundId)) {
+                    CollectorEntry(RoundEntropyCollector(), clock.instant())
                 }
-                collector.addPlayerBet(playerId, clientSeed)
+                val normalizedSeed = clientSeed?.trim()?.takeIf(String::isNotEmpty)
+                val isNewPlayer = collectorEntry.collector.addPlayerBet(playerId, normalizedSeed)
+                if (isNewPlayer && normalizedSeed != null) persistAcceptedSeed(tenantId, gameId, roundId, normalizedSeed)
             }
             Unit
         }
@@ -193,20 +215,45 @@ class ProvablyFairOutcomeAuthority(
         roundId: String,
         commitment: RoundCommitmentRecord
     ): Triple<String, String, String> {
-        if (!commitment.clientSeed1.isNullOrBlank() &&
-            !commitment.clientSeed2.isNullOrBlank() &&
-            !commitment.clientSeed3.isNullOrBlank()
-        ) {
-            return Triple(commitment.clientSeed1!!, commitment.clientSeed2!!, commitment.clientSeed3!!)
+        val collector = entropyCollectors[key(tenantId, gameId, roundId)]?.collector
+        val collected = collector?.finalizeSeeds(commitment.commitmentHash, roundId) ?: Triple(
+            sha256("${commitment.commitmentHash}:fallback:1:$roundId"),
+            sha256("${commitment.commitmentHash}:fallback:2:$roundId"),
+            sha256("${commitment.commitmentHash}:fallback:3:$roundId"),
+        )
+        val result = Triple(
+            commitment.clientSeed1?.takeIf(String::isNotBlank) ?: collected.first,
+            commitment.clientSeed2?.takeIf(String::isNotBlank) ?: collected.second,
+            commitment.clientSeed3?.takeIf(String::isNotBlank) ?: collected.third,
+        )
+        val fallbackCount = listOf(commitment.clientSeed1, commitment.clientSeed2, commitment.clientSeed3).count { it.isNullOrBlank() }
+        if (fallbackCount > 0) {
+            logger.warn("fairness.fallback.mode tenantId={} gameId={} roundId={} realSeedCount={}", tenantId, gameId, roundId, 3 - fallbackCount)
+            meterRegistry?.counter("fairness_fallback_rounds_total")?.increment()
         }
+        return result
+    }
 
-        val collector = entropyCollectors[key(tenantId, gameId, roundId)]
-        return collector?.finalizeSeeds(commitment.commitmentHash, roundId)
-            ?: Triple(
-                sha256("${commitment.commitmentHash}:fallback:1:$roundId"),
-                sha256("${commitment.commitmentHash}:fallback:2:$roundId"),
-                sha256("${commitment.commitmentHash}:fallback:3:$roundId"),
+    private fun persistAcceptedSeed(tenantId: String, gameId: String, roundId: String, seed: String) {
+        repeat(MAX_DERIVE_ATTEMPTS) {
+            val current = store.findCommitment(tenantId, gameId, roundId)
+                ?: throw FairnessAuthorityException("COMMITMENT_NOT_FOUND", "Commitment not found for round $roundId")
+            val existing = listOfNotNull(current.clientSeed1, current.clientSeed2, current.clientSeed3)
+            if (seed in existing) return
+            val next = current.copy(
+                clientSeed1 = current.clientSeed1 ?: seed,
+                clientSeed2 = if (current.clientSeed1 != null) current.clientSeed2 ?: seed else current.clientSeed2,
+                clientSeed3 = if (current.clientSeed1 != null && current.clientSeed2 != null) current.clientSeed3 ?: seed else current.clientSeed3,
+                updatedAt = clock.instant(),
             )
+            if (store.compareAndSetCommitment(next, current.serverVersion, setOf(RoundCommitmentStatus.COMMITTED, RoundCommitmentStatus.BETTING_ACTIVE))) return
+        }
+        throw FairnessAuthorityException("COMMIT_VERSION_CONFLICT", "Could not persist accepted client seed for round $roundId")
+    }
+
+    private fun evictExpiredCollectors() {
+        val cutoff = clock.instant().minus(collectorTtl)
+        entropyCollectors.entries.removeIf { it.value.createdAt.isBefore(cutoff) }
     }
 
     fun deriveAuthoritativeOutcome(tenantId: String, gameId: String, roundId: String): AuthoritativeOutcomeResult {
@@ -404,6 +451,7 @@ class ProvablyFairOutcomeAuthority(
                     }
                 }
             }
+            entropyCollectors.remove(key(command.tenantId, command.gameId, command.roundId))
             existingReveal
         } else {
             val finalization = outcomeFinalization
@@ -440,6 +488,9 @@ class ProvablyFairOutcomeAuthority(
             }
 
             val (cs1, cs2, cs3) = resolveClientSeeds(command.tenantId, command.gameId, command.roundId, commitment)
+            val fallbackMode = listOf(cs1, cs2, cs3).zip(1..3).any { (seed, slot) ->
+                seed == sha256("${commitment.commitmentHash}:fallback:$slot:${command.roundId}")
+            }
 
             // Derive authoritative multiplier
             val derivedMultiplier = AviatorAlgorithmRegistry.compute(
@@ -488,9 +539,11 @@ class ProvablyFairOutcomeAuthority(
                 verificationStatus = FairnessVerificationStatus.VERIFIED,
                 verificationError = null,
                 evidenceReference = evidenceRef,
+                fallbackMode = fallbackMode,
             )
 
             store.saveReveal(reveal)
+            entropyCollectors.remove(key(command.tenantId, command.gameId, command.roundId))
             if (!store.existsAuditEvent(command.tenantId, commitment.commitmentId, REVEAL_EVENT_KEY)) {
                 store.saveAuditEvent(verifiedAudit(command, derivedMultiplier, commitment, now))
             }

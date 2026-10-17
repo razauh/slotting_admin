@@ -89,7 +89,7 @@ class IdentityDocumentUploadTest {
 
     @Test
     fun `KYC-002-01-T001 Implement secure identity-document upload produces the required authoritative outcome`() {
-        val sampleBytes = "PASS_PORT_VALID_BINARY_DATA".toByteArray(Charsets.UTF_8)
+        val sampleBytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 0x50, 0x41, 0x53, 0x53)
         val command = IdentityDocumentUploadCommand(
             principal = playerPrincipal,
             tenantId = tenantId,
@@ -141,7 +141,7 @@ class IdentityDocumentUploadTest {
 
     @Test
     fun `KYC-002-01-T002 Implement secure identity-document upload rejects invalid, boundary, unauthorized, and stale input`() {
-        val sampleBytes = "VALID_CONTENT".toByteArray(Charsets.UTF_8)
+        val sampleBytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 0x56, 0x41, 0x4C, 0x49, 0x44)
 
         // 1. Invalid MIME type (e.g. .exe / dosexec)
         assertThrows(InvalidDocumentTypeException::class.java) {
@@ -210,8 +210,8 @@ class IdentityDocumentUploadTest {
                     tenantId = tenantId,
                     userId = playerId,
                     documentType = IdentityDocumentType.PASSPORT,
-                    filename = "infected.png",
-                    mimeType = "image/png",
+                    filename = "infected.jpg",
+                    mimeType = "image/jpeg",
                     fileBytes = sampleBytes,
                     idempotencyKey = "idemp-infected",
                     correlationId = "corr-005",
@@ -277,8 +277,8 @@ class IdentityDocumentUploadTest {
                 tenantId = tenantId,
                 userId = playerId,
                 documentType = IdentityDocumentType.DRIVERS_LICENSE,
-                filename = "license.png",
-                mimeType = "image/png",
+                filename = "license.jpg",
+                mimeType = "image/jpeg",
                 fileBytes = sampleBytes,
                 idempotencyKey = "idemp-valid-purge-target",
                 correlationId = "corr-008",
@@ -347,7 +347,7 @@ class IdentityDocumentUploadTest {
 
     @Test
     fun `KYC-002-01-T003 Implement secure identity-document upload survives concurrency, duplicate delivery, and dependency failure`() {
-        val sampleBytes = "ROBUST_BINARY_DOC".toByteArray(Charsets.UTF_8)
+        val sampleBytes = "%PDF-1.4 ROBUST_BINARY_DOC".toByteArray(Charsets.UTF_8)
         val command = IdentityDocumentUploadCommand(
             principal = playerPrincipal,
             tenantId = tenantId,
@@ -402,7 +402,7 @@ class IdentityDocumentUploadTest {
 
     @Test
     fun `KYC-002-01-T004 Implement secure identity-document upload remains compatible, recoverable, observable, and lifecycle-safe`() {
-        val sampleBytes = "DOCUMENT_FOR_LIFECYCLE".toByteArray(Charsets.UTF_8)
+        val sampleBytes = "%PDF-1.4 DOCUMENT_FOR_LIFECYCLE".toByteArray(Charsets.UTF_8)
         val uploadResult = service.uploadDocument(
             IdentityDocumentUploadCommand(
                 principal = playerPrincipal,

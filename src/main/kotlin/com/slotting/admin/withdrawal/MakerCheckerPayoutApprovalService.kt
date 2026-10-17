@@ -12,6 +12,7 @@ import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
+import org.slf4j.LoggerFactory
 
 /**
  * Authoritative service implementing WITHDRAW-002-03: Apply maker-checker payout approval.
@@ -31,7 +32,9 @@ class MakerCheckerPayoutApprovalService(
     private val clock: Clock = Clock.systemUTC()
 ) {
 
-    private val allowedMakerRoles = setOf(AdminRole.SUPPORT, AdminRole.AUDITOR, AdminRole.SUPER_ADMIN)
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    private val allowedMakerRoles = setOf(AdminRole.SUPPORT, AdminRole.SUPER_ADMIN)
     private val allowedCheckerRoles = setOf(AdminRole.AUDITOR, AdminRole.SUPER_ADMIN)
 
     private fun sha256(input: String): String {
@@ -53,6 +56,22 @@ class MakerCheckerPayoutApprovalService(
 
         val principal = cmd.principal ?: throw UnauthorizedApprovalAccessException("Unauthenticated: principal is null")
         if (principal.kind != PrincipalKind.ADMIN || principal.roles.none { it in allowedMakerRoles }) {
+            logger.warn("payout.maker.forbidden tenantId={} makerId={} roles={}", cmd.tenantId, principal.id, principal.roles)
+            observability.recordMetric(
+                PayoutApprovalMetricEvent(
+                    eventType = "maker_forbidden",
+                    tenantId = cmd.tenantId,
+                    ownerId = cmd.ownerId,
+                    approvalId = null,
+                    reservationId = cmd.reservationId,
+                    makerId = principal.id,
+                    checkerId = null,
+                    correlationId = cmd.correlationId,
+                    causationId = cmd.causationId,
+                    timestamp = clock.instant(),
+                    details = mapOf("roles" to principal.roles.map { it.name }),
+                )
+            )
             throw UnauthorizedApprovalAccessException("Principal ${principal.id} is not authorized to propose payout approvals")
         }
         if (principal.tenantId != cmd.tenantId) {
