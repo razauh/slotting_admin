@@ -223,21 +223,33 @@ class DurableGameWagerAndSettlementService(
             val txRef = AviatorCommandKeys.ledgerTransactionReference("CRASH", settlementKey)
 
             // Sweep escrow to house revenue via double-entry ledger
-            ledgerService.postTransaction(
-                PostTransactionCommand(
-                    principal = ledgerPrincipal(command.tenantId),
-                    tenantId = command.tenantId,
-                    transactionReference = txRef,
-                    currencyCode = bet.currencyCode,
-                    entries = listOf(
-                        JournalEntryDraft("ESCROW:GAME:${command.gameId}", JournalEntryDirection.DEBIT, bet.wagerMinorUnits, bet.currencyCode),
-                        JournalEntryDraft("HOUSE:GAME:${command.gameId}", JournalEntryDirection.CREDIT, bet.wagerMinorUnits, bet.currencyCode),
-                    ),
-                    idempotencyKey = settlementKey,
-                    correlationId = "corr-crash-${command.roundId}",
-                    causationId = "caus-crash-${command.roundId}",
+            try {
+                ledgerService.postTransaction(
+                    PostTransactionCommand(
+                        principal = ledgerPrincipal(command.tenantId),
+                        tenantId = command.tenantId,
+                        transactionReference = txRef,
+                        currencyCode = bet.currencyCode,
+                        entries = listOf(
+                            JournalEntryDraft("ESCROW:GAME:${command.gameId}", JournalEntryDirection.DEBIT, bet.wagerMinorUnits, bet.currencyCode),
+                            JournalEntryDraft("HOUSE:GAME:${command.gameId}", JournalEntryDirection.CREDIT, bet.wagerMinorUnits, bet.currencyCode),
+                        ),
+                        idempotencyKey = settlementKey,
+                        correlationId = "corr-crash-${command.roundId}",
+                        causationId = "caus-crash-${command.roundId}",
+                        requireNonNegativeAccounts = true,
+                    )
                 )
-            )
+            } catch (e: InsufficientAccountBalanceException) {
+                recordEscrowFloorBlocked(
+                    tenantId = command.tenantId,
+                    gameId = command.gameId,
+                    attemptedDebit = bet.wagerMinorUnits,
+                    currency = bet.currencyCode,
+                )
+                store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.LOST, GameBetStatus.ACCEPTED, now)
+                continue
+            }
 
             store.saveSettlement(
                 GameBetSettlementRecord(
@@ -598,35 +610,29 @@ class DurableGameWagerAndSettlementService(
             }
         }
 
+        var dailyAccumulatedGuarded = false
         compliance.responsiblePlay.dailyWagerLimitMinor?.let { dailyLimit ->
-            val dailyAccumulated = store.findDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr)
-            val newTotal = try {
-                Math.addExact(dailyAccumulated, wagerMinor)
-            } catch (e: ArithmeticException) {
+            val accumulated = store.guardedAddDailyWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor, dailyLimit)
+            if (!accumulated) {
                 return recordAndReturnRejection(
                     command = command,
                     ownerId = playerId,
                     gameId = gameId,
                     code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
-                    message = "Daily wager limit exceeded (arithmetic overflow)",
+                    message = "Cumulative daily wager exceeds daily limit $dailyLimit",
                     roundVersion = round.roundVersion,
                     fp = fp,
                 )
             }
-            if (newTotal > dailyLimit) {
-                return recordAndReturnRejection(
-                    command = command,
-                    ownerId = playerId,
-                    gameId = gameId,
-                    code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
-                    message = "Cumulative daily wager $newTotal exceeds daily limit $dailyLimit",
-                    roundVersion = round.roundVersion,
-                    fp = fp,
-                )
+            dailyAccumulatedGuarded = true
+        }
+
+        fun rollbackDailyIfGuarded() {
+            if (dailyAccumulatedGuarded) {
+                store.deductDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor)
             }
         }
 
-        // Aggregate Round Liability Cap Check
         val currentAcceptedBets = store.findBetsForRound(command.tenantId, gameId, command.roundId)
             .filter { it.status == GameBetStatus.ACCEPTED }
         val currentLiability = currentAcceptedBets.sumOf {
@@ -634,6 +640,7 @@ class DurableGameWagerAndSettlementService(
         }
         val additionalLiability = BigDecimal(wagerMinor).multiply(MAX_MULTIPLIER).toLong()
         if (currentLiability + additionalLiability > houseMaxRoundExposure) {
+            rollbackDailyIfGuarded()
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -647,6 +654,7 @@ class DurableGameWagerAndSettlementService(
 
         val playerAccount = "PLAYER:$playerId"
         if (!ledgerService.store.lockAccount(command.tenantId, playerAccount, command.currency)) {
+            rollbackDailyIfGuarded()
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -661,6 +669,7 @@ class DurableGameWagerAndSettlementService(
 
         val playerBalance = ledgerService.store.findBalance(command.tenantId, playerAccount, command.currency)
         if (playerBalance < wagerMinor) {
+            rollbackDailyIfGuarded()
             recordBetOverdraftBlocked(command, playerAccount, playerBalance, wagerMinor)
             return recordAndReturnRejection(
                 command = command,
@@ -677,7 +686,6 @@ class DurableGameWagerAndSettlementService(
         val placeBetKey = AviatorCommandKeys.placeBetKey(command.tenantId, gameId, command.roundId, playerId, command.handId)
         val txRef = AviatorCommandKeys.ledgerTransactionReference("WAGER", placeBetKey)
 
-        // Double-entry ledger reservation: Debit Player, Credit Escrow
         try {
             ledgerService.postTransaction(
                 PostTransactionCommand(
@@ -696,6 +704,7 @@ class DurableGameWagerAndSettlementService(
                 )
             )
         } catch (e: InsufficientAccountBalanceException) {
+            rollbackDailyIfGuarded()
             recordBetOverdraftBlocked(command, playerAccount, playerBalance, wagerMinor)
             return recordAndReturnRejection(
                 command = command,
@@ -707,6 +716,7 @@ class DurableGameWagerAndSettlementService(
                 fp = fp,
             )
         } catch (e: AccountLockTimeoutException) {
+            rollbackDailyIfGuarded()
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -726,6 +736,7 @@ class DurableGameWagerAndSettlementService(
             if (partiallyPosted) {
                 throw e
             }
+            rollbackDailyIfGuarded()
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,
@@ -737,7 +748,6 @@ class DurableGameWagerAndSettlementService(
             )
         }
 
-        // Persist accepted bet
         val betRecord = GameAcceptedBetRecord(
             betId = reservationId,
             tenantId = command.tenantId,
@@ -761,7 +771,9 @@ class DurableGameWagerAndSettlementService(
             playerId = playerId,
             clientSeed = command.clientSeed,
         )
-        store.addDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor)
+        if (!dailyAccumulatedGuarded) {
+            store.addDailyAccumulatedWager(command.tenantId, playerId, command.currency, todayStr, wagerMinor)
+        }
 
         val balanceAfter = ledgerService.store.findBalance(command.tenantId, "PLAYER:$playerId", command.currency)
         val seq = store.nextSequenceId(command.tenantId)
@@ -859,21 +871,41 @@ class DurableGameWagerAndSettlementService(
         }
 
         // Ledger reversal: Debit Escrow, Credit Player
-        ledgerService.postTransaction(
-            PostTransactionCommand(
-                principal = ledgerPrincipal(command.tenantId),
-                tenantId = command.tenantId,
-                transactionReference = txRef,
-                currencyCode = bet.currencyCode,
-                entries = listOf(
-                    JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.DEBIT, refundMinor, bet.currencyCode),
-                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, refundMinor, bet.currencyCode),
-                ),
-                idempotencyKey = settlementKey,
-                correlationId = command.correlationId,
-                causationId = command.causationId,
+        try {
+            ledgerService.postTransaction(
+                PostTransactionCommand(
+                    principal = ledgerPrincipal(command.tenantId),
+                    tenantId = command.tenantId,
+                    transactionReference = txRef,
+                    currencyCode = bet.currencyCode,
+                    entries = listOf(
+                        JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.DEBIT, refundMinor, bet.currencyCode),
+                        JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, refundMinor, bet.currencyCode),
+                    ),
+                    idempotencyKey = settlementKey,
+                    correlationId = command.correlationId,
+                    causationId = command.causationId,
+                    requireNonNegativeAccounts = true,
+                )
             )
-        )
+        } catch (e: InsufficientAccountBalanceException) {
+            recordEscrowFloorBlocked(
+                tenantId = command.tenantId,
+                gameId = gameId,
+                attemptedDebit = refundMinor,
+                currency = bet.currencyCode,
+            )
+            store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.CANCELLED, GameBetStatus.ACCEPTED, now)
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
+                message = "Escrow balance insufficient to refund bet ${bet.betId}",
+                roundVersion = round.roundVersion,
+                fp = fp,
+            )
+        }
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(
@@ -1078,18 +1110,38 @@ class DurableGameWagerAndSettlementService(
             entries.add(JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, payoutMinor, bet.currencyCode))
         }
 
-        ledgerService.postTransaction(
-            PostTransactionCommand(
-                principal = ledgerPrincipal(command.tenantId),
-                tenantId = command.tenantId,
-                transactionReference = txRef,
-                currencyCode = bet.currencyCode,
-                entries = entries,
-                idempotencyKey = settlementKey,
-                correlationId = command.correlationId,
-                causationId = command.causationId,
+        try {
+            ledgerService.postTransaction(
+                PostTransactionCommand(
+                    principal = ledgerPrincipal(command.tenantId),
+                    tenantId = command.tenantId,
+                    transactionReference = txRef,
+                    currencyCode = bet.currencyCode,
+                    entries = entries,
+                    idempotencyKey = settlementKey,
+                    correlationId = command.correlationId,
+                    causationId = command.causationId,
+                    requireNonNegativeAccounts = true,
+                )
             )
-        )
+        } catch (e: InsufficientAccountBalanceException) {
+            recordEscrowFloorBlocked(
+                tenantId = command.tenantId,
+                gameId = gameId,
+                attemptedDebit = bet.wagerMinorUnits,
+                currency = bet.currencyCode,
+            )
+            store.transitionBetStatus(bet.betId, command.tenantId, GameBetStatus.CASHED_OUT, GameBetStatus.ACCEPTED, now)
+            return recordAndReturnRejection(
+                command = command,
+                ownerId = playerId,
+                gameId = gameId,
+                code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
+                message = "Escrow balance insufficient for cash-out",
+                roundVersion = committedRound.roundVersion,
+                fp = fp,
+            )
+        }
 
         val evidenceRef = sha256("${command.tenantId}:${bet.betId}:$settlementId:${now.toEpochMilli()}")
         store.saveSettlement(
@@ -1257,6 +1309,25 @@ class DurableGameWagerAndSettlementService(
         )
         meterRegistry?.counter("game.bet_overdraft_blocked_total", "currency", command.currency)?.increment()
         meterRegistry?.counter("game.negative_balance_alert_total", "currency", command.currency)?.increment()
+    }
+
+    private fun recordEscrowFloorBlocked(
+        tenantId: String,
+        gameId: String,
+        attemptedDebit: Long,
+        currency: String,
+    ) {
+        val escrowAccount = "ESCROW:GAME:$gameId"
+        val escrowBalance = ledgerService.store.findBalance(tenantId, escrowAccount, currency)
+        logger.warn(
+            "escrow_floor_blocked tenantId={} gameId={} escrowBalance={} attemptedDebit={} currency={}",
+            tenantId,
+            gameId,
+            escrowBalance,
+            attemptedDebit,
+            currency,
+        )
+        meterRegistry?.counter("ledger.escrow_floor_blocks_total")?.increment()
     }
 
     private fun ledgerPrincipal(tenantId: String): AuthenticatedPrincipal = adminPrincipal.copy(tenantId = tenantId)

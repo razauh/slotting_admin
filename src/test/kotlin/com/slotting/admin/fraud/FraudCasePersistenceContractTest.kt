@@ -12,6 +12,20 @@ import java.util.UUID
 class FraudCasePersistenceContractTest {
 
     @Test
+    fun `V64 migration adds fraud integrity constraints JSONB and containment indexes`() {
+        val stream = javaClass.classLoader.getResourceAsStream("db/migration/V64__fraud_case_integrity.sql")
+        assertNotNull(stream)
+        val sql = stream!!.bufferedReader().use { it.readText().lowercase() }
+
+        assertTrue(sql.contains("foreign key (tenant_id, case_id)"))
+        assertTrue(sql.contains("type jsonb"))
+        assertTrue(sql.contains("check (state in"))
+        assertTrue(sql.contains("check (severity in"))
+        assertTrue(sql.contains("check (action in"))
+        assertTrue(sql.contains("using gin"))
+    }
+
+    @Test
     fun `V35 migration script defines all required schema objects, indexes, and idempotency constraints`() {
         val stream = javaClass.classLoader.getResourceAsStream("db/migration/V35__durable_fraud_cases_and_dispositions.sql")
         assertNotNull(stream, "V35 migration must exist on classpath")

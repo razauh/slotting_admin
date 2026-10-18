@@ -8,8 +8,17 @@ import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.security.SecureRandom
+import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+
+private val tokenMaterialRandom = SecureRandom()
+
+private fun newTokenMaterial(prefix: String): String {
+    val entropy = ByteArray(32).also(tokenMaterialRandom::nextBytes)
+    return prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(entropy)
+}
 
 /**
  * Gate to prevent expired, malformed, revoked, simultaneous refresh, reuse, and logout reuse.
@@ -290,8 +299,8 @@ class ShortLivedTokenService(
         )
         tokenStore.saveFamily(family)
 
-        val rawAccessToken = "sat_${UUID.randomUUID()}"
-        val rawRefreshToken = "srt_${UUID.randomUUID()}"
+        val rawAccessToken = newTokenMaterial("sat_")
+        val rawRefreshToken = newTokenMaterial("srt_")
         val accessExpiresAt = now.plus(accessTokenTtl)
         val refreshExpiresAt = now.plus(refreshTokenTtl)
 
@@ -442,8 +451,8 @@ class ShortLivedTokenService(
         existingToken.rotatedAt = now
         tokenStore.saveRefreshToken(existingToken)
 
-        val rawAccessToken = "sat_${UUID.randomUUID()}"
-        val rawRefreshToken = "srt_${UUID.randomUUID()}"
+        val rawAccessToken = newTokenMaterial("sat_")
+        val rawRefreshToken = newTokenMaterial("srt_")
         val accessExpiresAt = now.plus(accessTokenTtl)
         val refreshExpiresAt = now.plus(refreshTokenTtl)
 
@@ -529,7 +538,6 @@ class ShortLivedTokenService(
 
         val now = clock.instant()
         if (now.isAfter(token.expiresAt)) {
-            token.status = TokenStatus.EXPIRED
             return AccessTokenValidationResult(valid = false, reasonCode = AuthErrorCode.UNAUTHENTICATED)
         }
 
@@ -539,6 +547,17 @@ class ShortLivedTokenService(
             familyId = token.familyId,
             expiresAt = token.expiresAt
         )
+    }
+
+    fun expireAccessToken(tenantId: String, rawAccessToken: String): Boolean = synchronized(tokenStore) {
+        ShortLivedTokenBinding.checkBound()
+        if (tenantId.isBlank() || rawAccessToken.isBlank()) return false
+        val tokenHash = sha256(rawAccessToken.trim())
+        val token = tokenStore.findAccessTokenByHash(tenantId, tokenHash) ?: return false
+        if (!clock.instant().isAfter(token.expiresAt) || token.status != TokenStatus.ACTIVE) return false
+        token.status = TokenStatus.EXPIRED
+        tokenStore.saveAccessToken(token)
+        true
     }
 
     fun revokeFamily(command: RevokeTokenFamilyCommand): RevokeTokenFamilyResult = synchronized(tokenStore) {

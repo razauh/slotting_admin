@@ -125,6 +125,35 @@ class OAuth2OidcProtocolTest {
     }
 
     @Test
+    fun registrationFailureReturnsGenericHtmlWithCorrelationReference() {
+        controller = OAuth2Controller(
+            authService = authService,
+            registrationSybilControl = object : RegistrationSybilControl {
+                override fun register(
+                    tenantId: String,
+                    identifier: String,
+                    password: String,
+                    deviceFingerprint: String?,
+                    ipAddress: String?
+                ): RegistrationAssessment = throw IllegalStateException("tc47-internal-marker")
+
+                override fun openReviews(tenantId: String): List<RegistrationReview> = emptyList()
+
+                override fun clearReview(tenantId: String, playerId: UUID, reviewerId: String, reason: String) = false
+            },
+            loginThrottle = org.mockito.Mockito.mock(PasswordLoginThrottleService::class.java)
+        )
+        val csrfToken = fetchRegistrationCsrfToken("tc47-tenant", "tc47-state", "tc47-nonce", "openid")
+        val response = registerWithToken(csrfToken, "tc47@example.com", tenantId = "tc47-tenant")
+        val body = response.body as String
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertTrue(body.contains("Registration failed. Reference:"))
+        assertFalse(body.contains("tc47-internal-marker"))
+        assertTrue(Regex("Reference: [0-9a-fA-F-]{36}").containsMatchIn(body))
+    }
+
+    @Test
     fun registrationRejectsInvalidCsrfAndCrossOriginBeforeAccountCreation() {
         assertEquals(HttpStatus.BAD_REQUEST, registerWithToken("invalid-token", "invalid-csrf@example.com").statusCode)
         val validToken = fetchRegistrationCsrfToken("csrf-cross-origin", "cross-state", "cross-nonce", "openid profile")

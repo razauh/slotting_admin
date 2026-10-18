@@ -269,7 +269,7 @@ class LoginAbuseDefenseService(
                     playerId = existingLockout?.playerId ?: UUID.randomUUID(),
                     familyId = UUID.randomUUID(),
                     reason = "SUSPICIOUS_IP_BURST",
-                    details = "IP ${command.clientIp} throttled due to excessive failed attempts ($ipAttempts)"
+                    details = "IP throttle threshold reached after $ipAttempts failed attempts"
                 )
                 val auditEvent = AuditEvent(
                     eventId = UUID.randomUUID(),
@@ -341,7 +341,7 @@ class LoginAbuseDefenseService(
                     playerId = candidate?.playerId ?: UUID.randomUUID(),
                     familyId = UUID.randomUUID(),
                     reason = "LOGIN_BRUTE_FORCE_LOCKOUT",
-                    details = "Account $idHash locked out after $currentAttempts consecutive failed attempts. Support Ref: $supportRef"
+                    details = "Account locked out after $currentAttempts consecutive failed attempts. Support Ref: $supportRef"
                 )
 
                 val resultId = UUID.randomUUID()

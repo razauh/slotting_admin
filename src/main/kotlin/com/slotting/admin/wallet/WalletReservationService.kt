@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Semantic contract: "Terminal transitions idempotent; expiry is worker command, never silent deletion."
  * Protected risk assertion: "double reserve/overdraft/race"
  */
-class WalletReservationService(
+internal class WalletReservationService(
     private val reservationStore: WalletReservationStore,
     private val bucketStore: BalanceBucketsStore,
     private val clock: Clock = Clock.systemUTC(),

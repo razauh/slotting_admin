@@ -23,6 +23,53 @@ class ShortLivedTokenTest {
     private val now = Instant.parse("2026-09-18T17:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
 
+    @Test
+    fun issuedTokenMaterialHas256BitsAndExpiredValidationDoesNotMutateState() {
+        val regStore = InMemoryPlayerRegistrationStore()
+        val tokenStore = InMemoryTokenSecurityStore()
+        val playerId = UUID.randomUUID()
+        regStore.players[playerId] = PlayerRegistrationRecord(
+            playerId = playerId,
+            tenantId = "tenant-casino-1",
+            emailHash = "email-hash",
+            phoneHash = "phone-hash",
+            maskedEmail = "t***@example.com",
+            maskedPhone = "***0001",
+            jurisdiction = "DEFAULT",
+            riskScore = 20.0,
+            mfaRequired = false,
+            status = PlayerAccountStatus.ACTIVE,
+            emailVerified = true,
+            phoneVerified = true,
+            createdAt = now,
+            updatedAt = now
+        )
+        val service = ShortLivedTokenService(
+            registrationStore = regStore,
+            tokenStore = tokenStore,
+            clock = clock,
+            accessTokenTtl = Duration.ofSeconds(-1)
+        )
+        val pair = service.issueTokenPair(
+            IssueTokenPairCommand(
+                tenantId = "tenant-casino-1",
+                playerId = playerId,
+                idempotencyKey = "tc48-${UUID.randomUUID()}",
+                correlationId = "corr-tc48",
+                causationId = "caus-tc48"
+            )
+        )
+        val accessRecord = tokenStore.accessTokens.values.single()
+
+        assertTrue(pair.accessToken.matches(Regex("sat_[A-Za-z0-9_-]{43}")))
+        assertTrue(pair.refreshToken.matches(Regex("srt_[A-Za-z0-9_-]{43}")))
+        assertTrue(!service.validateAccessToken("tenant-casino-1", pair.accessToken).valid)
+        assertEquals(TokenStatus.ACTIVE, accessRecord.status)
+        assertTrue(service.expireAccessToken("tenant-casino-1", pair.accessToken))
+        assertEquals(TokenStatus.EXPIRED, accessRecord.status)
+        assertTrue(!service.expireAccessToken("tenant-casino-1", pair.accessToken))
+    }
+
     @BeforeEach
     fun setUp() {
         ShortLivedTokenBinding.isBound = true
@@ -47,6 +94,7 @@ class ShortLivedTokenTest {
             phone = "+1555" + (4000000 + regStore.players.size + 1),
             jurisdiction = "DEFAULT",
             riskScore = 20.0,
+            rawPassword = "Test-${UUID.randomUUID()}-Password!",
             idempotencyKey = "reg-${UUID.randomUUID()}",
             correlationId = "corr-reg-${UUID.randomUUID()}",
             causationId = "caus-reg-${UUID.randomUUID()}"

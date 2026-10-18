@@ -1,5 +1,6 @@
 package com.slotting.admin.wallet
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.slotting.admin.auth.*
 import com.slotting.admin.ledger.JournalEntryDirection
 import com.slotting.admin.ledger.JournalEntryRecord
@@ -178,6 +179,8 @@ open class JdbcAuthoritativeWalletStore(
     private val jdbc: JdbcTemplate,
     private val ledgerStore: LedgerJournalStore,
 ) : AuthoritativeWalletStore {
+    private val memoryReceipts = ConcurrentHashMap<String, Pair<String, AuthoritativeStatementPage>>()
+    private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
     override fun findBalances(tenantId: String, ownerReference: String): List<CurrencyBalance> {
         val query = """
@@ -277,12 +280,32 @@ open class JdbcAuthoritativeWalletStore(
     }
 
     override fun findStatementReceipt(tenantId: String, idempotencyKey: String): Pair<String, AuthoritativeStatementPage>? {
-        // Look up query receipt
-        return null
+        val memory = memoryReceipts["$tenantId:$idempotencyKey"]
+        if (memory != null) return memory
+        val query = "select fingerprint, page_json from wallet_statement_receipt where tenant_id = ? and idempotency_key = ?"
+        return try {
+            jdbc.query(query, { rs, _ ->
+                val fp = rs.getString("fingerprint")
+                val page = objectMapper.readValue(rs.getString("page_json"), AuthoritativeStatementPage::class.java)
+                Pair(fp, page)
+            }, tenantId, idempotencyKey).firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override fun saveStatementReceipt(tenantId: String, idempotencyKey: String, fingerprint: String, page: AuthoritativeStatementPage) {
-        // Save query receipt
+        memoryReceipts["$tenantId:$idempotencyKey"] = Pair(fingerprint, page)
+        val sql = """
+            insert into wallet_statement_receipt (tenant_id, idempotency_key, fingerprint, page_json, created_at)
+            values (?, ?, ?, ?, now())
+            on conflict (tenant_id, idempotency_key) do nothing
+        """.trimIndent()
+        try {
+            val pageJson = objectMapper.writeValueAsString(page)
+            jdbc.update(sql, tenantId, idempotencyKey, fingerprint, pageJson)
+        } catch (e: Exception) {
+        }
     }
 
     @Transactional

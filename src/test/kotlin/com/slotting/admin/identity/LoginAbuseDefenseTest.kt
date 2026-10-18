@@ -14,6 +14,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -53,22 +54,18 @@ class LoginAbuseDefenseTest {
             phone = "+1555" + (7000000 + regStore.players.size + 1),
             jurisdiction = "DEFAULT",
             riskScore = 20.0,
+            rawPassword = "SecurePassword123!",
             idempotencyKey = "reg-${UUID.randomUUID()}",
             correlationId = "corr-reg-${UUID.randomUUID()}",
             causationId = "caus-reg-${UUID.randomUUID()}"
         )
         val regResult = regService.register(regCmd)
 
-        val verCmd = VerifyContactCommand(
-            tenantId = tenantId,
-            playerId = regResult.playerId,
-            channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
-            idempotencyKey = "ver-${UUID.randomUUID()}",
-            correlationId = "corr-ver-${UUID.randomUUID()}",
-            causationId = "caus-ver-${UUID.randomUUID()}"
-        )
-        regService.verifyContact(verCmd)
+        regStore.players[regResult.playerId]?.apply {
+            status = PlayerAccountStatus.ACTIVE
+            emailVerified = true
+            phoneVerified = true
+        }
         return regResult
     }
 
@@ -101,7 +98,7 @@ class LoginAbuseDefenseTest {
         val validLoginCmd = LoginAttemptCommand(
             tenantId = "tenant-casino-1",
             identifier = "victim.player@example.com",
-            rawPassword = "DefaultPass123!",
+            rawPassword = "SecurePassword123!",
             clientIp = "192.168.1.50",
             userAgent = "SlottingApp/1.0",
             idempotencyKey = "login-valid-init",
@@ -153,6 +150,8 @@ class LoginAbuseDefenseTest {
         assertEquals(1, alertSink.alerts.size)
         assertTrue(alertSink.alerts[0].contains("LOGIN_BRUTE_FORCE_LOCKOUT"))
         assertTrue(alertSink.alerts[0].contains(lockoutRecord.supportReferenceId))
+        assertFalse(alertSink.alerts[0].contains(lockoutRecord.identifierHash))
+        assertFalse(alertSink.alerts[0].contains("192.168.1.50"))
 
         // Verify audit event
         assertTrue(durableStore.audit.any { it.type == "ACCOUNT_LOCKED_ABUSE" })
@@ -199,7 +198,7 @@ class LoginAbuseDefenseTest {
         val recoveredLogin = abuseService.evaluateLogin(LoginAttemptCommand(
             tenantId = "tenant-casino-1",
             identifier = "victim.player@example.com",
-            rawPassword = "DefaultPass123!",
+            rawPassword = "SecurePassword123!",
             clientIp = "192.168.1.50",
             userAgent = "SlottingApp/1.0",
             idempotencyKey = "login-post-unlock",

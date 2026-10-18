@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.util.HtmlUtils
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -300,6 +301,8 @@ class OAuth2Controller(
                 ipAddress = request.remoteAddr,
             )
         } catch (e: Exception) {
+            val correlationId = UUID.randomUUID().toString()
+            logger.error("OAuth2 registration failed correlationId={}", correlationId, e)
             val csrfToken = generateCsrfToken()
             val html = renderLoginFormHtml(
                 csrfToken = csrfToken,
@@ -311,7 +314,7 @@ class OAuth2Controller(
                 codeChallenge = codeChallenge,
                 codeChallengeMethod = codeChallengeMethod,
                 tenantId = tenantId,
-                errorMessage = e.message ?: "Registration failed"
+                errorMessage = "Registration failed. Reference: $correlationId"
             )
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.TEXT_HTML)
@@ -461,7 +464,7 @@ class OAuth2Controller(
         errorMessage: String?
     ): String {
         val errorHtml = if (errorMessage != null) {
-            """<div style="color: #ff4d4f; background: #fff1f0; border: 1px solid #ffa39e; padding: 10px; border-radius: 4px; margin-bottom: 16px;">$errorMessage</div>"""
+            """<div style="color: #ff4d4f; background: #fff1f0; border: 1px solid #ffa39e; padding: 10px; border-radius: 4px; margin-bottom: 16px;">${HtmlUtils.htmlEscape(errorMessage)}</div>"""
         } else ""
 
         return """

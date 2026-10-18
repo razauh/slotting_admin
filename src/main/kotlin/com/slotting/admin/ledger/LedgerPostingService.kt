@@ -223,7 +223,7 @@ open class LedgerPostingService(
 
             if (command.requireNonNegativeAccounts) {
                 val debitsByAccount = command.entries
-                    .filter { it.direction == JournalEntryDirection.DEBIT && it.accountReference.startsWith("PLAYER:") }
+                    .filter { it.direction == JournalEntryDirection.DEBIT && (it.accountReference.startsWith("PLAYER:") || it.accountReference.startsWith("ESCROW:")) }
                     .groupBy { it.accountReference }
                     .mapValues { (_, entries) -> entries.sumOf { it.amountMinorUnits } }
                 for ((account, debitTotal) in debitsByAccount) {

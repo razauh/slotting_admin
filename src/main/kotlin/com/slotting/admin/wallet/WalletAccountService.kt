@@ -133,7 +133,7 @@ class InMemoryWalletAccountStore : WalletAccountStore {
 // Authoritative Wallet Account Service
 // =============================================================================
 
-class WalletAccountService(
+internal class WalletAccountService(
     private val store: WalletAccountStore = InMemoryWalletAccountStore(),
     private val clock: Clock = Clock.systemUTC()
 ) {

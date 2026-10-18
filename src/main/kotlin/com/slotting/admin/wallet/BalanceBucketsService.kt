@@ -93,7 +93,7 @@ class InMemoryBalanceBucketsStore : BalanceBucketsStore {
 // Authoritative Balance Buckets Service
 // =============================================================================
 
-class BalanceBucketsService(
+internal class BalanceBucketsService(
     private val store: BalanceBucketsStore = InMemoryBalanceBucketsStore(),
     private val clock: Clock = Clock.systemUTC()
 ) {

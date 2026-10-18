@@ -34,6 +34,8 @@ interface DurableGameWagerAndSettlementStore {
     fun completeReceipt(tenantId: String, commandId: String, status: String, responseJson: String, serverSequenceId: Long, roundVersion: Long)
     fun findDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String): Long
     fun addDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long)
+    fun guardedAddDailyWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long, limitMinor: Long): Boolean
+    fun deductDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long)
     fun nextSequenceId(tenantId: String): Long
     fun findLatestRound(tenantId: String, gameId: String): GameRoundRecord?
     fun findActiveRounds(tenantId: String, gameId: String): List<GameRoundRecord> = emptyList()
@@ -238,6 +240,31 @@ open class InMemoryDurableGameWagerAndSettlementStore : DurableGameWagerAndSettl
         val key = dailyKey(tenantId, playerId, currencyCode, dailyDate)
         val current = dailyWagers[key] ?: 0L
         dailyWagers[key] = Math.addExact(current, amountMinor)
+    }
+
+    @Synchronized
+    override fun guardedAddDailyWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long, limitMinor: Long): Boolean {
+        if (amountMinor <= 0L) return false
+        val key = dailyKey(tenantId, playerId, currencyCode, dailyDate)
+        val current = dailyWagers[key] ?: 0L
+        val newTotal = try {
+            Math.addExact(current, amountMinor)
+        } catch (e: ArithmeticException) {
+            return false
+        }
+        if (newTotal > limitMinor) {
+            return false
+        }
+        dailyWagers[key] = newTotal
+        return true
+    }
+
+    @Synchronized
+    override fun deductDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long) {
+        if (amountMinor <= 0L) return
+        val key = dailyKey(tenantId, playerId, currencyCode, dailyDate)
+        val current = dailyWagers[key] ?: 0L
+        dailyWagers[key] = (current - amountMinor).coerceAtLeast(0L)
     }
 
     override fun nextSequenceId(tenantId: String): Long {
@@ -724,6 +751,48 @@ open class JdbcDurableGameWagerAndSettlementStore(
                 updated_at = now()
         """.trimIndent()
         jdbcTemplate.update(sql, tenantId, playerId, currencyCode, dailyDate, amountMinor)
+    }
+
+    @Transactional
+    override fun guardedAddDailyWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long, limitMinor: Long): Boolean {
+        if (amountMinor <= 0L) return false
+        if (amountMinor > limitMinor) return false
+        val sql = """
+            insert into game_cumulative_player_limit (
+                tenant_id, player_id, currency_code, daily_date, accumulated_wager_minor, accumulated_loss_minor, updated_at
+            )
+            select ?, ?, ?, ?, ?, 0, now()
+            where ? <= ?
+            on conflict (tenant_id, player_id, currency_code, daily_date) do update set
+                accumulated_wager_minor = game_cumulative_player_limit.accumulated_wager_minor + excluded.accumulated_wager_minor,
+                updated_at = now()
+            where game_cumulative_player_limit.accumulated_wager_minor + excluded.accumulated_wager_minor <= ?
+            returning accumulated_wager_minor
+        """.trimIndent()
+        return try {
+            val rows = jdbcTemplate.query(
+                sql,
+                { rs, _ -> rs.getLong("accumulated_wager_minor") },
+                tenantId, playerId, currencyCode, dailyDate, amountMinor,
+                amountMinor, limitMinor,
+                limitMinor
+            )
+            rows.isNotEmpty()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @Transactional
+    override fun deductDailyAccumulatedWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long) {
+        if (amountMinor <= 0L) return
+        val sql = """
+            update game_cumulative_player_limit
+            set accumulated_wager_minor = greatest(0, accumulated_wager_minor - ?),
+                updated_at = now()
+            where tenant_id = ? and player_id = ? and currency_code = ? and daily_date = ?
+        """.trimIndent()
+        jdbcTemplate.update(sql, amountMinor, tenantId, playerId, currencyCode, dailyDate)
     }
 
     @Transactional
