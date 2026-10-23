@@ -2,6 +2,7 @@ package com.slotting.admin.identity
 
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.UnpredictableChallengeService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,7 +43,7 @@ class PlayerAccountRecoveryTest {
         riskScore: Double = 20.0,
         rawPassword: String = "OldSecretPass123!"
     ): RegisterPlayerResult {
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val regCmd = RegisterPlayerCommand(
             tenantId = tenantId,
             email = email,
@@ -60,7 +61,7 @@ class PlayerAccountRecoveryTest {
             tenantId = tenantId,
             playerId = regResult.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "123456",
             idempotencyKey = "ver-${UUID.randomUUID()}",
             correlationId = "corr-ver-${UUID.randomUUID()}",
             causationId = "caus-ver-${UUID.randomUUID()}"
@@ -271,8 +272,9 @@ class PlayerAccountRecoveryTest {
         assertNull(nonExistentResult.recoveryToken, "Non-existent account must not receive a recovery token")
 
         // Unverified account defense: register an unverified player
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         regService.register(RegisterPlayerCommand(
+            rawPassword = "Test-${UUID.randomUUID()}-Password!",
             tenantId = "tenant-casino-1",
             email = "unverified.rec@example.com",
             phone = "+15559871122",
@@ -488,3 +490,24 @@ class PlayerAccountRecoveryTest {
         assertTrue(!auditString.contains("REC-", ignoreCase = false), "Must not leak raw recovery token")
     }
 }
+
+private fun registrationService(store: InMemoryPlayerRegistrationStore, clock: Clock): PlayerRegistrationService =
+    PlayerRegistrationService(
+        store = store,
+        clock = clock,
+        challengeGenerator = { tenant, player, purpose, ttl, issuedAt ->
+            val code = "123456"
+            val salt = UUID.randomUUID().toString().replace("-", "")
+            UnpredictableChallengeService.IssuedChallenge(
+                challengeId = UUID.randomUUID(),
+                tenantId = tenant,
+                playerId = player,
+                purpose = purpose,
+                plaintextCode = code,
+                codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+                salt = salt,
+                expiresAt = issuedAt.plus(ttl),
+                createdAt = issuedAt,
+            )
+        },
+    )

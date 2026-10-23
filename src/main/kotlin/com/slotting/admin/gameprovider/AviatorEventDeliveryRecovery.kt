@@ -1,5 +1,6 @@
 package com.slotting.admin.gameprovider
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -7,6 +8,12 @@ import java.time.Clock
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
+@ConditionalOnProperty(
+    prefix = "slotting.aviator.service",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = false,
+)
 class AviatorEventDeliveryRecovery(
     private val gameStore: DurableGameWagerAndSettlementStore,
     private val eventJournalStore: GameEventJournalStore,

@@ -33,7 +33,6 @@ class SecurityAuthenticationFilter(
         private val PUBLIC_EXACT_PATHS = setOf(
             "/auth/token",
             "/auth/revoke",
-            "/auth/logout",
             "/actuator",
             "/error",
             "/api/bet-limits",

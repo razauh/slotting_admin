@@ -232,7 +232,9 @@ class PlayerSessionService(
     private val sessionStore: PlayerSessionStore,
     private val clock: Clock = Clock.systemUTC(),
     private val sessionTtl: Duration = Duration.ofHours(1),
-    private val challengeTtl: Duration = Duration.ofMinutes(5)
+    private val challengeTtl: Duration = Duration.ofMinutes(5),
+    private val challengeGenerator: (String, UUID, String, Duration, Instant) -> UnpredictableChallengeService.IssuedChallenge =
+        UnpredictableChallengeService::generateChallenge,
 ) {
     fun login(command: LoginPlayerCommand): LoginPlayerResult = synchronized(sessionStore) {
         PlayerLoginLogoutBinding.checkBound()
@@ -320,7 +322,7 @@ class PlayerSessionService(
         // If MFA is required (either by jurisdiction/risk config or player status is PENDING_MFA)
         if (candidate.mfaRequired || candidate.status == PlayerAccountStatus.PENDING_MFA) {
             val challengeId = UUID.randomUUID()
-            val issuedChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, candidate.playerId, "LOGIN_MFA", challengeTtl, now)
+            val issuedChallenge = challengeGenerator(command.tenantId, candidate.playerId, "LOGIN_MFA", challengeTtl, now)
             val mfaChallenge = MfaChallenge(
                 challengeId = challengeId,
                 tenantId = command.tenantId,

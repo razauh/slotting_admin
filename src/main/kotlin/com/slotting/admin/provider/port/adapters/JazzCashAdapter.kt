@@ -20,13 +20,14 @@ import javax.crypto.spec.SecretKeySpec
  */
 class JazzCashAdapter : PaymentProviderPort {
     override val providerId: String = "JAZZCASH"
+    override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = false,
         supportsStatusLookup = false,
         supportsCancellation = false,
-        supportsRefund = true,
+        supportsRefund = false,
         supportsWebhookVerification = true,
         supportsRequestToPay = true,
         supportsAliasInquiry = false,
@@ -104,17 +105,10 @@ class JazzCashAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(command.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
+        return ProviderOutcome.declined(
             operationId = command.operationId,
-            providerReference = "JC-RFND-${command.operationId}",
-            code = "REFUND_SUCCESS",
-            evidence = mapOf(
-                "originalProviderReference" to command.providerReference,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
-            )
+            code = "UNSUPPORTED_OPERATION",
+            reason = "JazzCash refund execution is not implemented or approved; no settlement is produced",
         )
     }
 

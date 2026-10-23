@@ -88,6 +88,7 @@ class FairnessSecretMigrationTest {
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
     private lateinit var fairnessStore: JdbcFairnessEvidenceStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
 
     private fun envelope(keyId: String, version: Int, ring: Map<Int, ByteArray>): FairnessSeedEnvelope =
@@ -132,6 +133,7 @@ class FairnessSecretMigrationTest {
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
         fairnessStore = JdbcFairnessEvidenceStore(jdbc)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -139,6 +141,7 @@ class FairnessSecretMigrationTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -486,6 +489,7 @@ class FairnessSecretMigrationTest {
         for (iteration in 0 until 100) {
             val roundId = "rnd-tc014-order-$iteration"
             createRound(roundId)
+            fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, roundId, "salt-$roundId"))
             trace.clear()
             lifecycleStore.eventLog.clear()
 
@@ -497,6 +501,10 @@ class FairnessSecretMigrationTest {
             assertTrue(trace.any { it.first == "PLAYER_ACCOUNT" }, "iteration $iteration player account locked")
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" }, "iteration $iteration sequence counter locked")
             assertMonotonic(trace)
+
+            gameService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+            )
 
             val crash = lifecycleService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000")))
             assertEquals(1, crash.settledBetsCount, "iteration $iteration")
@@ -595,6 +603,7 @@ class FairnessSecretMigrationTest {
 
         val cashOutRound = "rnd-tc014-golden-cashout"
         createRound(cashOutRound)
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, cashOutRound, "salt-$cashOutRound"))
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc014-golden-bet-1")).status)
         gameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier))
         val cashOutAck = gameService.processCommand(
@@ -609,7 +618,9 @@ class FairnessSecretMigrationTest {
 
         val lossRound = "rnd-tc014-golden-loss"
         createRound(lossRound)
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, lossRound, "salt-$lossRound"))
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc014-golden-bet-2")).status)
+        gameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000")))
         val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(0L, jdbc.queryForObject("select payout_minor_units from game_bet_settlement where tenant_id = ? and outcome = 'LOSS_CRASH'", Long::class.java, tenantId))

@@ -181,6 +181,13 @@ class AviatorPlaceBetTransactionTest {
             after("addDailyAccumulatedWager")
         }
 
+        override fun guardedAddDailyWager(tenantId: String, playerId: String, currencyCode: String, dailyDate: String, amountMinor: Long, limitMinor: Long): Boolean {
+            before("guardedAddDailyWager")
+            val result = delegate.guardedAddDailyWager(tenantId, playerId, currencyCode, dailyDate, amountMinor, limitMinor)
+            after("guardedAddDailyWager")
+            return result
+        }
+
         override fun nextSequenceId(tenantId: String): Long {
             before("nextSequenceId")
             val seq = delegate.nextSequenceId(tenantId)
@@ -336,6 +343,7 @@ class AviatorPlaceBetTransactionTest {
             clock = clock,
             txManager = txManager,
             meterRegistry = meterRegistry,
+            fairnessAuthority = fairnessAuthority,
         )
 
         jdbc.update(
@@ -413,9 +421,13 @@ class AviatorPlaceBetTransactionTest {
                 currentMultiplier = multiplier,
             )
         )
+        if (fairnessStore.findCommitment(tenantId, gameId, roundId) == null) {
+            seedCommitment(roundId)
+        }
     }
 
     private fun seedCommitment(roundId: String) {
+        if (fairnessStore.findCommitment(tenantId, gameId, roundId) != null) return
         fairnessAuthority.publishPreBetCommitment(
             PublishCommitmentCommand(
                 tenantId = tenantId,
@@ -868,6 +880,7 @@ class AviatorPlaceBetTransactionTest {
 
         val cashOutRound = "rnd-tc008-golden-cashout"
         createRound(cashOutRound)
+        seedCommitment(cashOutRound)
         val placeAck = gameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId,
@@ -904,6 +917,7 @@ class AviatorPlaceBetTransactionTest {
 
         val lossRound = "rnd-tc008-golden-loss"
         createRound(lossRound)
+        seedCommitment(lossRound)
         val lossBet = gameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId,
@@ -918,6 +932,17 @@ class AviatorPlaceBetTransactionTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, lossBet.status)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = lossRound,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                expectedVersion = 1L,
+                currentMultiplier = BigDecimal("1.0000"),
+            )
+        )
 
         val crashResult = gameService.settleRoundCrash(
             SettleRoundCrashCommand(
@@ -1034,8 +1059,8 @@ class AviatorPlaceBetTransactionTest {
             "LEDGER:ledgerSave:after",
             "FAIRNESS:fairnessUpdate:before",
             "FAIRNESS:fairnessUpdate:after",
-            "GAME:addDailyAccumulatedWager:before",
-            "GAME:addDailyAccumulatedWager:after",
+            "GAME:guardedAddDailyWager:before",
+            "GAME:guardedAddDailyWager:after",
             "GAME:nextSequenceId:before",
             "GAME:nextSequenceId:after",
             "GAME:completeReceipt:before",
@@ -1078,8 +1103,6 @@ class AviatorPlaceBetTransactionTest {
             )
             val commandId = "cmd-tc008-fp-$index"
             val ledgerPostSpecs = setOf(
-                "LEDGER:lockAccount:before",
-                "LEDGER:lockAccount:after",
                 "LEDGER:ledgerSave:before",
             )
 

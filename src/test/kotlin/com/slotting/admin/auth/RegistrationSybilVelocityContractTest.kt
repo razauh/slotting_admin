@@ -35,8 +35,8 @@ class RegistrationSybilVelocityContractTest {
         }.getOrDefault(false)
     }
 
-    private fun authService(): DurableAuthService = DurableAuthService(
-        store = InMemoryDurableAuthStore(),
+    private fun authService(jdbc: JdbcTemplate): DurableAuthService = DurableAuthService(
+        store = JdbcDurableAuthStore(jdbc),
         clock = clock,
     )
 
@@ -47,7 +47,7 @@ class RegistrationSybilVelocityContractTest {
         org.junit.jupiter.api.Assumptions.assumeTrue(reachable(jdbcUrl), "PostgreSQL required for Sybil velocity test")
         val jdbc = jdbc()
         val scopedTenant = "tenant-sybil-velocity-${UUID.randomUUID()}"
-        val authService = authService()
+        val authService = authService(jdbc)
         val service = RegistrationSybilControlService(
             jdbc = jdbc,
             authService = authService,
@@ -92,7 +92,7 @@ class RegistrationSybilVelocityContractTest {
         org.junit.jupiter.api.Assumptions.assumeTrue(reachable(jdbcUrl), "PostgreSQL required for Sybil velocity test")
         val jdbc = jdbc()
         val scopedTenant = "tenant-sybil-device-${UUID.randomUUID()}"
-        val authService = authService()
+        val authService = authService(jdbc)
         val service = RegistrationSybilControlService(
             jdbc = jdbc,
             authService = authService,

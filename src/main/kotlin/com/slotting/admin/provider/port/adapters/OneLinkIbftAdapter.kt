@@ -15,6 +15,7 @@ import java.util.UUID
  */
 class OneLinkIbftAdapter : PaymentProviderPort {
     override val providerId: String = "ONELINK_IBFT"
+    override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = false,

@@ -512,7 +512,7 @@ class AviatorCommitmentReuseTest {
 
         for (iteration in 0 until 100) {
             val roundId = "rnd-tc017-order-$iteration"
-            insertRound(roundId)
+            insertRound(roundId, "BET_COUNTDOWN")
 
             trace.clear()
             lifecycleStore.eventLog.clear()
@@ -527,6 +527,9 @@ class AviatorCommitmentReuseTest {
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" }, "iteration $iteration sequence counter locked")
             assertMonotonic(trace)
 
+            lifecycleService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.1000"))
+            )
             val crash = lifecycleService.settleRoundCrash(
                 SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000"))
             )
@@ -552,14 +555,20 @@ class AviatorCommitmentReuseTest {
 
         val startingBalance = 50_000L
         seedFunds(startingBalance)
+        val fairGameService = DurableGameWagerAndSettlementService(
+            store = gameStore, ledgerService = ledgerService, registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock,
+            fairnessAuthority = fairnessAuthority, txManager = txManager,
+        )
 
         val cashOutRound = "rnd-tc017-golden-cashout"
-        insertRound(cashOutRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc017-golden-bet-1")).status)
-        gameService.createOrUpdateRound(
+        insertRound(cashOutRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, cashOutRound, "salt-$cashOutRound"))
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc017-golden-bet-1")).status)
+        fairGameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier)
         )
-        val cashOutAck = gameService.processCommand(
+        val cashOutAck = fairGameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId,
                 principal = playerPrincipal,
@@ -576,9 +585,13 @@ class AviatorCommitmentReuseTest {
         assertEquals(startingBalance - wagerMinor + expectedWinMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
 
         val lossRound = "rnd-tc017-golden-loss"
-        insertRound(lossRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc017-golden-bet-2")).status)
-        val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
+        insertRound(lossRound, "BET_COUNTDOWN")
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, lossRound, "salt-$lossRound"))
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(lossRound, "cmd-tc017-golden-bet-2")).status)
+        fairGameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"))
+        )
+        val crashResult = fairGameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(
             0L,

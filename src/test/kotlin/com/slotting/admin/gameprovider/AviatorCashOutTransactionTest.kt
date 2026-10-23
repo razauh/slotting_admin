@@ -144,6 +144,11 @@ class AviatorCashOutTransactionTest {
             return delegate.findRoundForShare(tenantId, gameId, roundId)
         }
 
+        override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+            if (eventLog.none { it.first == "ROUND_EXCLUSIVE" }) eventLog.add("ROUND_EXCLUSIVE" to 2)
+            return delegate.findRoundForUpdate(tenantId, gameId, roundId)
+        }
+
         override fun findBetForUpdate(tenantId: String, gameId: String, roundId: String, ownerId: String, handId: String): GameAcceptedBetRecord? {
             eventLog.add("BET" to 3)
             return delegate.findBetForUpdate(tenantId, gameId, roundId, ownerId, handId)
@@ -682,7 +687,7 @@ class AviatorCashOutTransactionTest {
             previousRank = rank
         }
         assertTrue(eventLog.any { it.first == "RECEIPT" }, "Early claim must be first")
-        assertTrue(eventLog.any { it.first == "ROUND_SHARED" })
+        assertTrue(eventLog.any { it.first == "ROUND_EXCLUSIVE" })
         assertTrue(eventLog.any { it.first == "BET" }, "Cash-out must lock the bet row")
         assertTrue(eventLog.any { it.first == "LEDGER_ACCOUNT_WRITE" }, "Cash-out must write the player account during the ledger posting")
         assertTrue(eventLog.any { it.first == "SEQUENCE_COUNTER" })
@@ -774,7 +779,7 @@ class AviatorCashOutTransactionTest {
     }
 
     @Test
-    fun `GivenCashOutHoldsSharedRoundLock_WhenLifecycleRequestsExclusive_ThenLifecycleBlocksAndCashOutSettles`() {
+    fun `GivenCashOutHoldsExclusiveRoundLock_WhenLifecycleRequestsExclusive_ThenLifecycleBlocksAndCashOutSettles`() {
         seedFunds(50000L)
         val roundId = "rnd-tc010-forced-interleave"
         createRound(roundId)
@@ -782,12 +787,12 @@ class AviatorCashOutTransactionTest {
         flyRound(roundId, BigDecimal("1.2345"))
 
         val tracingStore = ConnectionTracingStore(gameStore, dataSource)
-        val sharedHeld = CountDownLatch(1)
+        val exclusiveHeld = CountDownLatch(1)
         val release = CountDownLatch(1)
         val blockingStore = object : DurableGameWagerAndSettlementStore by tracingStore {
-            override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
-                val round = tracingStore.findRoundForShare(tenantId, gameId, roundId)
-                sharedHeld.countDown()
+            override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+                val round = tracingStore.findRoundForUpdate(tenantId, gameId, roundId)
+                exclusiveHeld.countDown()
                 release.await(10, TimeUnit.SECONDS)
                 return round
             }
@@ -827,7 +832,7 @@ class AviatorCashOutTransactionTest {
                 cashOutOutcome.set("ERROR:${e.javaClass.simpleName}")
             }
         }
-        assertTrue(sharedHeld.await(10, TimeUnit.SECONDS), "cash-out must acquire the shared round lock")
+        assertTrue(exclusiveHeld.await(10, TimeUnit.SECONDS), "cash-out must acquire the exclusive round lock")
 
         val lifecycleFuture = pool.submit {
             lifecycleService.createOrUpdateRound(
@@ -844,26 +849,25 @@ class AviatorCashOutTransactionTest {
             lifecycleAcquired.countDown()
         }
         assertTrue(lifecycleEntered.await(5, TimeUnit.SECONDS), "lifecycle worker must enter findRoundForUpdate")
-        assertTrue(!lifecycleAcquired.await(1, TimeUnit.SECONDS), "lifecycle exclusive lock must block while cash-out holds the shared round lock")
+        assertTrue(!lifecycleAcquired.await(1, TimeUnit.SECONDS), "lifecycle exclusive lock must block while cash-out holds the exclusive round lock")
 
         release.countDown()
         cashOutFuture.get(20, TimeUnit.SECONDS)
         lifecycleFuture.get(20, TimeUnit.SECONDS)
         pool.shutdown()
 
-        assertEquals("ACCEPTED", cashOutOutcome.get(), "cash-out that won the shared lock must settle")
+        assertEquals("ACCEPTED", cashOutOutcome.get(), "cash-out that won the exclusive lock must settle")
         assertEquals(1, settlementCount(GameSettlementOutcome.PAYOUT_CASH_OUT))
         val payout = jdbc.queryForObject(
             "select payout_minor_units from game_bet_settlement where tenant_id = ? and outcome = 'PAYOUT_CASH_OUT'",
             Long::class.java,
             tenantId,
         )
-        assertEquals(124L, payout, "cash-out must settle at the shared-lock multiplier")
+        assertEquals(124L, payout, "cash-out must settle at the multiplier observed under its round lock")
 
-        assertTrue(tracingStore.shareConnectionIds.isNotEmpty(), "cash-out connection must be observed")
-        assertTrue(tracingStore.updateConnectionIds.isNotEmpty(), "lifecycle connection must be observed")
+        assertTrue(tracingStore.updateConnectionIds.size >= 2, "cash-out and lifecycle connections must be observed")
         assertTrue(
-            tracingStore.shareConnectionIds.toSet().intersect(tracingStore.updateConnectionIds.toSet()).isEmpty(),
+            tracingStore.updateConnectionIds.toSet().size >= 2,
             "cash-out and lifecycle must run on distinct transaction-bound connections",
         )
 

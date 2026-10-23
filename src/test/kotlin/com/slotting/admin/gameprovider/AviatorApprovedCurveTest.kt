@@ -573,6 +573,9 @@ class AviatorApprovedCurveTest {
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" })
             assertMonotonic(trace)
 
+            lifecycleService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.1000"))
+            )
             val crash = lifecycleService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000")))
             assertEquals(1, crash.settledBetsCount)
             assertTrue(lifecycleStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" })
@@ -712,6 +715,9 @@ class AviatorApprovedCurveTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc021-golden-bet-2")).status)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"))
+        )
         val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(0L, jdbc.queryForObject("select payout_minor_units from game_bet_settlement where tenant_id = ? and outcome = 'LOSS_CRASH'", Long::class.java, tenantId))

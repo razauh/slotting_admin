@@ -84,6 +84,7 @@ class AviatorPostgresIntegrationTest {
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
     private lateinit var service: DurableGameWagerAndSettlementService
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
 
     enum class FailpointLocation {
         NONE,
@@ -144,6 +145,11 @@ class AviatorPostgresIntegrationTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(
+            store = fairnessStore,
+            clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
+        )
 
         service = DurableGameWagerAndSettlementService(
             store = gameStore,
@@ -152,6 +158,7 @@ class AviatorPostgresIntegrationTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -600,6 +607,15 @@ class AviatorPostgresIntegrationTest {
         assertNotNull(roundFromDb)
         assertEquals(GameRoundPhase.BET_COUNTDOWN, roundFromDb.phase)
 
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                publicSalt = "salt-$roundId",
+            )
+        )
+
         val betCmd = AviatorRestCommand(
             tenantId = tenantId,
             principal = playerPrincipal,
@@ -704,6 +720,15 @@ class AviatorPostgresIntegrationTest {
             )
         )
 
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                publicSalt = "salt-$roundId",
+            )
+        )
+
         val betCmd = AviatorRestCommand(
             tenantId = tenantId,
             principal = playerPrincipal,
@@ -717,6 +742,17 @@ class AviatorPostgresIntegrationTest {
         )
         val betAck = service.processCommand(betCmd)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck.status)
+
+        service.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                currentMultiplier = BigDecimal.ONE,
+            )
+        )
 
         val crashResult = service.settleRoundCrash(
             SettleRoundCrashCommand(

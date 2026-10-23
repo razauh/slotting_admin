@@ -256,7 +256,9 @@ class ConfigurableMfaChallengeService(
     private val registrationStore: PlayerRegistrationStore,
     private val mfaStore: ConfigurableMfaStore,
     private val clock: Clock = Clock.systemUTC(),
-    private val defaultChallengeTtl: Duration = Duration.ofMinutes(5)
+    private val defaultChallengeTtl: Duration = Duration.ofMinutes(5),
+    private val challengeGenerator: (String, UUID, String, Duration, Instant) -> UnpredictableChallengeService.IssuedChallenge =
+        UnpredictableChallengeService::generateChallenge,
 ) {
     fun enrollFactor(command: EnrollMfaFactorCommand): EnrollMfaFactorResult = synchronized(mfaStore) {
         ConfigurableMfaBinding.checkBound()
@@ -454,7 +456,7 @@ class ConfigurableMfaChallengeService(
         val rule = getEffectiveRule(command.tenantId, player.jurisdiction)
         val ttl = Duration.ofSeconds(rule.challengeTtlSeconds)
 
-        val issuedChallenge = UnpredictableChallengeService.generateChallenge(command.tenantId, command.playerId, "CONFIGURABLE_MFA", ttl, now)
+        val issuedChallenge = challengeGenerator(command.tenantId, command.playerId, "CONFIGURABLE_MFA", ttl, now)
         val challengeRecord = PlayerMfaChallengeRecord(
             challengeId = challengeId,
             tenantId = command.tenantId,

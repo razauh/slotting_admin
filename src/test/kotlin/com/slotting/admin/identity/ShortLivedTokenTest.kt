@@ -2,6 +2,7 @@ package com.slotting.admin.identity
 
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.UnpredictableChallengeService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -87,7 +88,7 @@ class ShortLivedTokenTest {
         tenantId: String = "tenant-casino-1",
         email: String = "token.player@example.com"
     ): RegisterPlayerResult {
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val regCmd = RegisterPlayerCommand(
             tenantId = tenantId,
             email = email,
@@ -105,7 +106,7 @@ class ShortLivedTokenTest {
             tenantId = tenantId,
             playerId = regResult.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "123456",
             idempotencyKey = "ver-${UUID.randomUUID()}",
             correlationId = "corr-ver-${UUID.randomUUID()}",
             causationId = "caus-ver-${UUID.randomUUID()}"
@@ -243,8 +244,9 @@ class ShortLivedTokenTest {
         }.also { assertEquals(AuthErrorCode.STALE, it.code) }
 
         // Unverified account defense: register unverified player
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val unverifiedPlayer = regService.register(RegisterPlayerCommand(
+            rawPassword = "Test-${UUID.randomUUID()}-Password!",
             tenantId = "tenant-casino-1",
             email = "unverified.tok@example.com",
             phone = "+15559876677",
@@ -476,3 +478,24 @@ class ShortLivedTokenTest {
         assertTrue(!auditString.contains("PASSWORD", ignoreCase = true))
     }
 }
+
+private fun registrationService(store: InMemoryPlayerRegistrationStore, clock: Clock): PlayerRegistrationService =
+    PlayerRegistrationService(
+        store = store,
+        clock = clock,
+        challengeGenerator = { tenant, player, purpose, ttl, issuedAt ->
+            val code = "123456"
+            val salt = UUID.randomUUID().toString().replace("-", "")
+            UnpredictableChallengeService.IssuedChallenge(
+                challengeId = UUID.randomUUID(),
+                tenantId = tenant,
+                playerId = player,
+                purpose = purpose,
+                plaintextCode = code,
+                codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+                salt = salt,
+                expiresAt = issuedAt.plus(ttl),
+                createdAt = issuedAt,
+            )
+        },
+    )

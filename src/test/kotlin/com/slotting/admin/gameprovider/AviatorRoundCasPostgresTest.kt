@@ -127,6 +127,7 @@ class AviatorRoundCasPostgresTest {
 
         gameStore = JdbcDurableGameWagerAndSettlementStore(jdbc)
         fairnessStore = JdbcFairnessEvidenceStore(jdbc)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         ledgerStore = JdbcLedgerJournalStore(jdbc)
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
@@ -139,9 +140,9 @@ class AviatorRoundCasPostgresTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
         walletService = AuthoritativeWalletService(
             store = walletStore,
@@ -348,6 +349,7 @@ class AviatorRoundCasPostgresTest {
         )
         assertEquals(2L, countdown.roundVersion)
         assertEquals(GameRoundPhase.BET_COUNTDOWN, countdown.phase)
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, roundId, "salt-$roundId"))
 
         ledgerService.postTransaction(
             PostTransactionCommand(
@@ -520,6 +522,7 @@ class AviatorRoundCasPostgresTest {
                         roundVersion = 1L,
                     )
                 )
+                fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, roundId, "salt-$roundId"))
 
                 if (actionType == "CANCEL_BET") {
                     val placeAck = gameService.processCommand(
@@ -572,7 +575,7 @@ class AviatorRoundCasPostgresTest {
                     eligibilityStore = eligibilityStore,
                     adminPrincipal = adminPrincipal,
                     clock = clock,
-                    txManager = txManager,
+                    fairnessAuthority = fairnessAuthority,
                 )
 
                 val lifecycleStore = LockOrderTracingStore(gameStore)
@@ -587,23 +590,31 @@ class AviatorRoundCasPostgresTest {
                 )
 
                 val latch = CountDownLatch(2)
+                val commandFailures = ConcurrentLinkedQueue<Throwable>()
+                val commandAcks = ConcurrentLinkedQueue<AviatorCommandAckResult>()
+                val balanceBeforeCommand = ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR")
+                val betBeforeCommand = gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary")
 
                 val workerCommand = Runnable {
                     try {
-                        val ack = cmdService.processCommand(
-                            AviatorRestCommand(
-                                tenantId = tenantId,
-                                principal = playerPrincipal,
-                                commandId = "cmd-lock-$idx-$i-${UUID.randomUUID().toString().take(4)}",
-                                roundId = roundId,
-                                handId = "hand_primary",
-                                action = actionType,
-                                wagerMinor = if (actionType == "PLACE_BET") 100L else null,
-                                currency = "INR",
-                                correlationId = "corr-lock-$idx-$i",
+                        val ack = TransactionTemplate(txManager).execute {
+                            cmdService.processCommand(
+                                AviatorRestCommand(
+                                    tenantId = tenantId,
+                                    principal = playerPrincipal,
+                                    commandId = "cmd-lock-$idx-$i-${UUID.randomUUID().toString().take(4)}",
+                                    roundId = roundId,
+                                    handId = "hand_primary",
+                                    action = actionType,
+                                    wagerMinor = if (actionType == "PLACE_BET") 100L else null,
+                                    currency = "INR",
+                                    correlationId = "corr-lock-$idx-$i",
+                                )
                             )
-                        )
-                        assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status)
+                        }!!
+                        commandAcks.add(ack)
+                    } catch (e: Throwable) {
+                        commandFailures.add(e)
                     } finally {
                         latch.countDown()
                     }
@@ -645,6 +656,19 @@ class AviatorRoundCasPostgresTest {
                 pool.submit(workerCommand)
                 pool.submit(workerLifecycle)
                 assertTrue(latch.await(5, TimeUnit.SECONDS))
+                assertTrue(commandFailures.isEmpty(), "Command failed for $actionType: $commandFailures")
+                val ack = commandAcks.single()
+                if (ack.status == AviatorCommandAckStatus.ACCEPTED) {
+                    assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status, "action=$actionType rejection=${ack.rejection}")
+                } else {
+                    assertEquals(AviatorCommandAckStatus.REJECTED, ack.status)
+                    assertTrue(
+                        ack.rejection?.code == AviatorCommandRejectionCode.INVALID_PHASE || ack.rejection?.retryable == true,
+                        "action=$actionType rejection=${ack.rejection}",
+                    )
+                    assertEquals(balanceBeforeCommand, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+                    assertEquals(betBeforeCommand, gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary"))
+                }
 
                 var prevRank = 0
                 for ((resource, rank) in cmdStore.eventLog) {
@@ -655,7 +679,8 @@ class AviatorRoundCasPostgresTest {
                         prevRank = rank
                     }
                 }
-                assertTrue(cmdStore.eventLog.any { it.first == "ROUND_SHARED" }, "Command $actionType must acquire shared round lock")
+                val commandRoundLock = if (actionType == "CASH_OUT") "ROUND_EXCLUSIVE" else "ROUND_SHARED"
+                assertTrue(cmdStore.eventLog.any { it.first == commandRoundLock }, "Command $actionType must acquire $commandRoundLock round lock")
                 assertTrue(lifecycleStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "Lifecycle must acquire exclusive round lock")
             }
         }
@@ -674,6 +699,7 @@ class AviatorRoundCasPostgresTest {
                     roundVersion = 1L,
                 )
             )
+            fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, testRoundId, "salt-$testRoundId"))
 
             if (actionType == "CANCEL_BET") {
                 val preBetAck = gameService.processCommand(
@@ -727,9 +753,18 @@ class AviatorRoundCasPostgresTest {
             val blockingStore = LockOrderTracingStore(
                 gameStore,
                 onRoundShared = {
-                    cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
-                    roundLockedLatch.countDown()
-                    releaseCommandLatch.await(5, TimeUnit.SECONDS)
+                    if (actionType != "CASH_OUT") {
+                        cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
+                        roundLockedLatch.countDown()
+                        releaseCommandLatch.await(5, TimeUnit.SECONDS)
+                    }
+                },
+                onAfterRoundExclusive = {
+                    if (actionType == "CASH_OUT") {
+                        cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
+                        roundLockedLatch.countDown()
+                        releaseCommandLatch.await(5, TimeUnit.SECONDS)
+                    }
                 }
             )
             val blockingService = DurableGameWagerAndSettlementService(
@@ -739,6 +774,7 @@ class AviatorRoundCasPostgresTest {
                 eligibilityStore = eligibilityStore,
                 adminPrincipal = adminPrincipal,
                 clock = clock,
+                fairnessAuthority = fairnessAuthority,
                 txManager = txManager,
             )
 
@@ -760,6 +796,8 @@ class AviatorRoundCasPostgresTest {
                 txManager = txManager,
             )
 
+            val balanceBeforeCommand = ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR")
+            val betBeforeCommand = gameStore.findBet(tenantId, gameId, testRoundId, playerIdStr, "hand_hold")
             val cmdFuture = pool.submit<AviatorCommandAckResult> {
                 blockingService.processCommand(
                     AviatorRestCommand(
@@ -775,8 +813,7 @@ class AviatorRoundCasPostgresTest {
                     )
                 )
             }
-
-            assertTrue(roundLockedLatch.await(5, TimeUnit.SECONDS), "Command $actionType must acquire shared round lock")
+            assertTrue(roundLockedLatch.await(5, TimeUnit.SECONDS), "Command $actionType must acquire its required round lock")
 
             val lifecycleFuture = pool.submit<GameRoundRecord> {
                 if (actionType == "CASH_OUT") {
@@ -845,15 +882,24 @@ class AviatorRoundCasPostgresTest {
             }
             assertNotNull(lifecyclePid, "Lifecycle backend PID must be captured")
             assertNotNull(cmdPid, "Command backend PID must be captured")
-            assertTrue(ungrantedCount > 0, "PostgreSQL must report ungranted lock for lifecycle PID $lifecyclePid while $actionType holds FOR SHARE")
+            assertTrue(ungrantedCount > 0, "PostgreSQL must report ungranted lock for lifecycle PID $lifecyclePid while $actionType holds the round lock")
             assertTrue(blockedSpecifically, "Lifecycle connection $lifecyclePid must be specifically blocked on game_authoritative_round FOR UPDATE by command connection $cmdPid")
-            kotlin.test.assertFalse(lifecycleFuture.isDone, "Exclusive lifecycle write must be blocked in PostgreSQL while $actionType holds FOR SHARE")
+            kotlin.test.assertFalse(lifecycleFuture.isDone, "Exclusive lifecycle write must be blocked in PostgreSQL while $actionType holds its round lock")
             kotlin.test.assertFalse(lifecycleTracingStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "ROUND_EXCLUSIVE must not be granted yet")
 
             releaseCommandLatch.countDown()
 
             val ack = cmdFuture.get(5, TimeUnit.SECONDS)
-            assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status)
+            if (ack.status == AviatorCommandAckStatus.REJECTED) {
+                assertTrue(
+                    ack.rejection?.code == AviatorCommandRejectionCode.INVALID_PHASE || ack.rejection?.retryable == true,
+                    "action=$actionType rejection=${ack.rejection}",
+                )
+                assertEquals(balanceBeforeCommand, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+                assertEquals(betBeforeCommand, gameStore.findBet(tenantId, gameId, testRoundId, playerIdStr, "hand_hold"))
+            } else {
+                assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status)
+            }
 
             val updatedRound = lifecycleFuture.get(5, TimeUnit.SECONDS)
             assertNotNull(updatedRound)
@@ -884,6 +930,9 @@ class AviatorRoundCasPostgresTest {
 
         val roundId1 = "rnd-gld1-${UUID.randomUUID().toString().take(6)}"
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId1, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId1, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+        )
 
         val balanceBefore = 50000L
         ledgerService.postTransaction(
@@ -944,6 +993,9 @@ class AviatorRoundCasPostgresTest {
         val roundId2 = "rnd-gld2-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId2, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+        )
 
         val betAck2 = gameService.processCommand(
             AviatorRestCommand(

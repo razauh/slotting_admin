@@ -2,6 +2,7 @@ package com.slotting.admin.identity
 
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.UnpredictableChallengeService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -43,7 +44,7 @@ class PlayerLoginLogoutLifecycleTest {
         riskScore: Double = 20.0,
         rawPassword: String = "SecretPass123!"
     ): RegisterPlayerResult {
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val regCmd = RegisterPlayerCommand(
             tenantId = tenantId,
             email = email,
@@ -62,7 +63,7 @@ class PlayerLoginLogoutLifecycleTest {
             tenantId = tenantId,
             playerId = regResult.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "123456",
             idempotencyKey = "ver-${UUID.randomUUID()}",
             correlationId = "corr-ver-${UUID.randomUUID()}",
             causationId = "caus-ver-${UUID.randomUUID()}"
@@ -116,6 +117,7 @@ class PlayerLoginLogoutLifecycleTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val sessionStore = InMemoryPlayerSessionStore()
         val sessionService = PlayerSessionService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             sessionStore = sessionStore,
             clock = clock
@@ -216,6 +218,7 @@ class PlayerLoginLogoutLifecycleTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val sessionStore = InMemoryPlayerSessionStore()
         val sessionService = PlayerSessionService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             sessionStore = sessionStore,
             clock = clock
@@ -267,7 +270,7 @@ class PlayerLoginLogoutLifecycleTest {
 
         // Unverified / recovery bypass defense:
         // Register an unverified player (do NOT verify contact)
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val unverifiedCmd = RegisterPlayerCommand(
             tenantId = "tenant-casino-1",
             email = "unverified.player@example.com",
@@ -361,6 +364,7 @@ class PlayerLoginLogoutLifecycleTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val sessionStore = InMemoryPlayerSessionStore()
         val sessionService = PlayerSessionService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             sessionStore = sessionStore,
             clock = clock
@@ -433,6 +437,7 @@ class PlayerLoginLogoutLifecycleTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val sessionStore = InMemoryPlayerSessionStore()
         val sessionService = PlayerSessionService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             sessionStore = sessionStore,
             clock = clock
@@ -500,4 +505,47 @@ class PlayerLoginLogoutLifecycleTest {
         assertTrue(!auditString.contains("SECRET", ignoreCase = true))
         assertTrue(!auditString.contains("PASSWORD", ignoreCase = true))
     }
+}
+
+private fun registrationService(store: InMemoryPlayerRegistrationStore, clock: Clock): PlayerRegistrationService =
+    PlayerRegistrationService(
+        store = store,
+        clock = clock,
+        challengeGenerator = { tenant, player, purpose, ttl, issuedAt ->
+            val code = "123456"
+            val salt = UUID.randomUUID().toString().replace("-", "")
+            UnpredictableChallengeService.IssuedChallenge(
+                challengeId = UUID.randomUUID(),
+                tenantId = tenant,
+                playerId = player,
+                purpose = purpose,
+                plaintextCode = code,
+                codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+                salt = salt,
+                expiresAt = issuedAt.plus(ttl),
+                createdAt = issuedAt,
+            )
+        },
+    )
+
+private fun testMfaChallengeGenerator(
+    tenant: String,
+    player: UUID,
+    purpose: String,
+    ttl: Duration,
+    issuedAt: Instant,
+): UnpredictableChallengeService.IssuedChallenge {
+    val code = "MFA-654321"
+    val salt = UUID.randomUUID().toString().replace("-", "")
+    return UnpredictableChallengeService.IssuedChallenge(
+        challengeId = UUID.randomUUID(),
+        tenantId = tenant,
+        playerId = player,
+        purpose = purpose,
+        plaintextCode = code,
+        codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+        salt = salt,
+        expiresAt = issuedAt.plus(ttl),
+        createdAt = issuedAt,
+    )
 }

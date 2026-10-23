@@ -168,7 +168,7 @@ class LoginAbuseDefenseTest {
             abuseService.evaluateLogin(LoginAttemptCommand(
                 tenantId = "tenant-casino-1",
                 identifier = "victim.player@example.com",
-                rawPassword = "DefaultPass123!", // CORRECT PASSWORD!
+                rawPassword = "SecurePassword123!", // CORRECT PASSWORD!
                 clientIp = "192.168.1.50",
                 userAgent = "AttackerBot/1.0",
                 idempotencyKey = "post-redis-loss-login",
@@ -387,7 +387,7 @@ class LoginAbuseDefenseTest {
         val cmd = LoginAttemptCommand(
             tenantId = "tenant-casino-1",
             identifier = "conc.player@example.com",
-            rawPassword = "DefaultPass123!",
+            rawPassword = "SecurePassword123!",
             clientIp = "10.0.0.5",
             userAgent = "App",
             idempotencyKey = "idem-login-key-1",
@@ -530,7 +530,7 @@ class LoginAbuseDefenseTest {
             abuseService2.evaluateLogin(LoginAttemptCommand(
                 tenantId = "tenant-casino-1",
                 identifier = "recov.player@example.com",
-                rawPassword = "DefaultPass123!",
+                rawPassword = "SecurePassword123!",
                 clientIp = "10.0.0.1",
                 userAgent = "App",
                 idempotencyKey = "post-restart-login",

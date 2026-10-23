@@ -458,6 +458,9 @@ class AviatorRoundCreationPostgresTest {
 
         val roundId1 = "rnd-gld1-${UUID.randomUUID().toString().take(6)}"
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId1, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId1, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"))
+        )
 
         val balanceBefore = 50000L
         ledgerService.postTransaction(
@@ -518,6 +521,9 @@ class AviatorRoundCreationPostgresTest {
         val roundId2 = "rnd-gld2-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId2, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"))
+        )
 
         val betAck2 = gameService.processCommand(
             AviatorRestCommand(
@@ -560,7 +566,17 @@ class AviatorRoundCreationPostgresTest {
             )
         )
 
-        val cashOutAck = gameService.processCommand(
+        val fairGameService = DurableGameWagerAndSettlementService(
+            store = gameStore,
+            ledgerService = ledgerService,
+            registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore,
+            adminPrincipal = adminPrincipal,
+            clock = clock,
+            fairnessAuthority = fairnessAuthority,
+            txManager = txManager,
+        )
+        val cashOutAck = fairGameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId,
                 principal = playerPrincipal,

@@ -234,8 +234,24 @@ class TruthfulProviderPortContractTest {
     fun `test09 capability discovery accurately reflects documented capabilities and denies unestablished ones`() {
         val jazzCash = JazzCashAdapter()
         assertTrue(jazzCash.capabilities.supportsDeposit, "JazzCash supports pay-in")
-        assertTrue(jazzCash.capabilities.supportsStatusLookup, "JazzCash supports inquiry")
-        assertTrue(jazzCash.capabilities.supportsRefund, "JazzCash supports refund")
+        assertFalse(jazzCash.capabilities.supportsStatusLookup, "JazzCash status inquiry is not implemented")
+        assertFalse(jazzCash.capabilities.supportsRefund, "JazzCash refund execution is not implemented")
+        val refundOutcome = jazzCash.refund(
+            ProviderRefundCommand(
+                tenantId = "tenant-pk-1",
+                operationId = UUID.randomUUID(),
+                originalOperationId = UUID.randomUUID(),
+                providerReference = "JC-TXN-ORIGINAL",
+                amountMinorUnits = 1_000L,
+                currency = "PKR",
+                idempotencyKey = "idem-jc-refund",
+                reason = "Unsupported refund",
+            ),
+            sampleConfig,
+            sampleCredentials,
+        )
+        assertEquals(ProviderOutcomeStatus.DECLINED, refundOutcome.status)
+        assertEquals("UNSUPPORTED_OPERATION", refundOutcome.rawResponseCode)
         assertFalse(jazzCash.capabilities.supportsPayout, "JazzCash payout must NOT be inferred without documented contract")
 
         // Attempting payout on JazzCash must return FAILED / DECLINED with UNSUPPORTED_OPERATION
@@ -246,22 +262,28 @@ class TruthfulProviderPortContractTest {
 
         val easypaisa = EasypaisaAdapter()
         assertTrue(easypaisa.capabilities.supportsDeposit, "Easypaisa supports mobile and OTC pay-in")
-        assertTrue(easypaisa.capabilities.supportsStatusLookup, "Easypaisa supports inquiry")
+        assertFalse(easypaisa.capabilities.supportsStatusLookup, "Easypaisa inquiry is not implemented")
         assertFalse(easypaisa.capabilities.supportsPayout, "Easypaisa payout must NOT be inferred")
         assertFalse(easypaisa.capabilities.supportsCancellation, "Easypaisa cancellation not established")
 
         val oneLinkRaast = OneLinkRaastAdapter()
         assertTrue(oneLinkRaast.capabilities.supportsRequestToPay, "OneLink Raast supports RTP")
         assertTrue(oneLinkRaast.capabilities.supportsCancellation, "OneLink Raast supports RTP cancellation")
-        assertTrue(oneLinkRaast.capabilities.supportsStatusLookup, "OneLink Raast supports status inquiry")
+        assertFalse(oneLinkRaast.capabilities.supportsStatusLookup, "OneLink Raast inquiry is not implemented")
         assertTrue(oneLinkRaast.capabilities.supportsAliasInquiry, "OneLink Raast supports alias inquiry")
         assertTrue(oneLinkRaast.capabilities.supportsTitleFetch, "OneLink Raast supports title fetch")
         assertFalse(oneLinkRaast.capabilities.supportsPayout, "OneLink Raast P2M does not execute IBFT payout")
 
         val oneLinkIbft = OneLinkIbftAdapter()
+        listOf(jazzCash, easypaisa, oneLinkRaast, oneLinkIbft, PayFastAdapter(), SafepayRaastAdapter()).forEach { adapter ->
+            assertFalse(adapter.isProductionReady, "${adapter.providerId} must not be production-ready without approval and certification")
+            assertFailsWith<IllegalStateException> {
+                ProductionProviderGuard.assertProductionReady(adapter, profile = "production")
+            }
+        }
         assertTrue(oneLinkIbft.capabilities.supportsPayout, "OneLink IBFT executes payout transfer")
         assertTrue(oneLinkIbft.capabilities.supportsTitleFetch, "OneLink IBFT supports title fetch")
-        assertTrue(oneLinkIbft.capabilities.supportsStatusLookup, "OneLink IBFT supports status lookup")
+        assertFalse(oneLinkIbft.capabilities.supportsStatusLookup, "OneLink IBFT inquiry is not implemented")
         assertFalse(oneLinkIbft.capabilities.supportsDeposit, "OneLink IBFT does not execute deposit")
     }
 

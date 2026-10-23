@@ -16,6 +16,7 @@ import java.util.UUID
  */
 class PayFastAdapter : PaymentProviderPort {
     override val providerId: String = "PAYFAST"
+    override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,

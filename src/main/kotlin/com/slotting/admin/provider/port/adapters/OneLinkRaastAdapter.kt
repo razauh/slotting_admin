@@ -27,6 +27,7 @@ class OneLinkRaastAdapter : PaymentProviderPort {
     private val objectMapper = ObjectMapper()
 
     override val providerId: String = "ONELINK_RAAST"
+    override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,

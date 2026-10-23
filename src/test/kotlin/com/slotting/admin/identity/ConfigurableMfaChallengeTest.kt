@@ -2,6 +2,7 @@ package com.slotting.admin.identity
 
 import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticationFailure
+import com.slotting.admin.auth.UnpredictableChallengeService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,8 +41,9 @@ class ConfigurableMfaChallengeTest {
         jurisdiction: String = "DEFAULT",
         riskScore: Double = 20.0
     ): RegisterPlayerResult {
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val regCmd = RegisterPlayerCommand(
+            rawPassword = "Test-${UUID.randomUUID()}-Password!",
             tenantId = tenantId,
             email = email,
             phone = "+1555" + (3000000 + regStore.players.size + 1),
@@ -57,7 +59,7 @@ class ConfigurableMfaChallengeTest {
             tenantId = tenantId,
             playerId = regResult.playerId,
             channel = ContactVerificationChannel.EMAIL,
-            verificationCode = "EMAIL-123456",
+            verificationCode = "123456",
             idempotencyKey = "ver-${UUID.randomUUID()}",
             correlationId = "corr-ver-${UUID.randomUUID()}",
             causationId = "caus-ver-${UUID.randomUUID()}"
@@ -75,6 +77,7 @@ class ConfigurableMfaChallengeTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val mfaStore = InMemoryConfigurableMfaStore()
         val mfaService = ConfigurableMfaChallengeService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             mfaStore = mfaStore,
             clock = clock
@@ -169,6 +172,7 @@ class ConfigurableMfaChallengeTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val mfaStore = InMemoryConfigurableMfaStore()
         val mfaService = ConfigurableMfaChallengeService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             mfaStore = mfaStore,
             clock = clock
@@ -217,8 +221,9 @@ class ConfigurableMfaChallengeTest {
         }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
 
         // Unverified account defense: register unverified player
-        val regService = PlayerRegistrationService(store = regStore, clock = clock)
+        val regService = registrationService(regStore, clock)
         val unverifiedPlayer = regService.register(RegisterPlayerCommand(
+            rawPassword = "Test-${UUID.randomUUID()}-Password!",
             tenantId = "tenant-casino-1",
             email = "unver.mfa@example.com",
             phone = "+15559873344",
@@ -345,6 +350,7 @@ class ConfigurableMfaChallengeTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val mfaStore = InMemoryConfigurableMfaStore()
         val mfaService = ConfigurableMfaChallengeService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             mfaStore = mfaStore,
             clock = clock
@@ -418,6 +424,7 @@ class ConfigurableMfaChallengeTest {
         val regStore = InMemoryPlayerRegistrationStore()
         val mfaStore = InMemoryConfigurableMfaStore()
         val mfaService = ConfigurableMfaChallengeService(
+            challengeGenerator = ::testMfaChallengeGenerator,
             registrationStore = regStore,
             mfaStore = mfaStore,
             clock = clock
@@ -492,4 +499,47 @@ class ConfigurableMfaChallengeTest {
         assertTrue(!auditString.contains("SECRET", ignoreCase = true))
         assertTrue(!auditString.contains("PASSWORD", ignoreCase = true))
     }
+}
+
+private fun registrationService(store: InMemoryPlayerRegistrationStore, clock: Clock): PlayerRegistrationService =
+    PlayerRegistrationService(
+        store = store,
+        clock = clock,
+        challengeGenerator = { tenant, player, purpose, ttl, issuedAt ->
+            val code = "123456"
+            val salt = UUID.randomUUID().toString().replace("-", "")
+            UnpredictableChallengeService.IssuedChallenge(
+                challengeId = UUID.randomUUID(),
+                tenantId = tenant,
+                playerId = player,
+                purpose = purpose,
+                plaintextCode = code,
+                codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+                salt = salt,
+                expiresAt = issuedAt.plus(ttl),
+                createdAt = issuedAt,
+            )
+        },
+    )
+
+private fun testMfaChallengeGenerator(
+    tenant: String,
+    player: UUID,
+    purpose: String,
+    ttl: Duration,
+    issuedAt: Instant,
+): UnpredictableChallengeService.IssuedChallenge {
+    val code = "MFA-654321"
+    val salt = UUID.randomUUID().toString().replace("-", "")
+    return UnpredictableChallengeService.IssuedChallenge(
+        challengeId = UUID.randomUUID(),
+        tenantId = tenant,
+        playerId = player,
+        purpose = purpose,
+        plaintextCode = code,
+        codeHash = UnpredictableChallengeService.hashChallengeCode(code, salt),
+        salt = salt,
+        expiresAt = issuedAt.plus(ttl),
+        createdAt = issuedAt,
+    )
 }

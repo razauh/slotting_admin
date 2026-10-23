@@ -88,6 +88,7 @@ class AviatorAlgorithmRegistryTest {
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
     private lateinit var fairnessStore: JdbcFairnessEvidenceStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
 
     private data class FrozenOutcome(
@@ -125,9 +126,11 @@ class AviatorAlgorithmRegistryTest {
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
         fairnessStore = JdbcFairnessEvidenceStore(jdbc)
+        fairnessAuthority = authority()
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore, ledgerService = ledgerService, registrationStore = registrationStore,
-            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock, txManager = txManager,
+            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock,
+            fairnessAuthority = fairnessAuthority, txManager = txManager,
         )
 
         jdbc.update(
@@ -262,9 +265,8 @@ class AviatorAlgorithmRegistryTest {
         val startupAttempt = runCatching { lifecycleProperties(UNKNOWN_VERSION) }
         val startupFailure = startupAttempt.exceptionOrNull()
         assertTrue(startupAttempt.isFailure, "startup configuration must reject an unregistered algorithm version")
-        val typedStartupFailure = startupFailure as? FairnessAuthorityException
-        assertNotNull(typedStartupFailure, "startup rejection must be typed, was $startupFailure")
-        assertEquals(UNSUPPORTED_VERSION_CODE, typedStartupFailure?.errorCode)
+        assertTrue(startupFailure is IllegalArgumentException)
+        assertTrue(startupFailure?.cause is UnsupportedAlgorithmException)
     }
 
     @Test
@@ -392,12 +394,17 @@ class AviatorAlgorithmRegistryTest {
         )
         val unknownDerive = runCatching { storedAuthority.deriveAuthoritativeOutcome(tenantId, gameId, unknownRound) }
         assertTrue(unknownDerive.isFailure, "derive must reject an unregistered stored version")
-        assertEquals(UNSUPPORTED_VERSION_CODE, (unknownDerive.exceptionOrNull() as? FairnessAuthorityException)?.errorCode)
+        val deriveErrorCode = generateSequence(unknownDerive.exceptionOrNull()) { it.cause }
+            .filterIsInstance<FairnessAuthorityException>()
+            .firstOrNull()
+            ?.errorCode
+        assertEquals(UNSUPPORTED_VERSION_CODE, deriveErrorCode)
         assertNull(unknownDerive.getOrNull(), "no computed multiplier may exist for an unregistered stored version")
 
         val configurationFailure = unknownConfiguration.exceptionOrNull()
         assertNotNull(configurationFailure, "unknown configuration must be rejected while stored 1.0.0 stays authoritative")
-        assertEquals(UNSUPPORTED_VERSION_CODE, (configurationFailure as? FairnessAuthorityException)?.errorCode)
+        assertTrue(configurationFailure is IllegalArgumentException)
+        assertTrue(configurationFailure?.cause is UnsupportedAlgorithmException)
 
         val registrySource = File(REGISTRY_SOURCE_PATH)
         assertTrue(registrySource.exists(), "immutable algorithm-version registry must exist at $REGISTRY_SOURCE_PATH")
@@ -452,6 +459,18 @@ class AviatorAlgorithmRegistryTest {
             assertTrue(trace.any { it.first == "PLAYER_ACCOUNT" }, "iteration $iteration player account locked")
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" }, "iteration $iteration sequence counter locked")
             assertMonotonic(trace)
+
+            gameService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(
+                    tenantId = tenantId,
+                    gameId = gameId,
+                    roundId = roundId,
+                    phase = GameRoundPhase.FLYING,
+                    roundVersion = 2L,
+                    expectedVersion = 1L,
+                    currentMultiplier = BigDecimal("1.0000"),
+                )
+            )
 
             val crash = lifecycleService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000")))
             assertEquals(1, crash.settledBetsCount, "iteration $iteration")
@@ -556,6 +575,9 @@ class AviatorAlgorithmRegistryTest {
 
         val cashOutRound = "rnd-tc016-golden-cashout"
         createRound(cashOutRound)
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(tenantId, gameId, cashOutRound, "salt-$cashOutRound")
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc016-golden-bet-1")).status)
         assertEquals(startingBalance - wagerMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
@@ -574,6 +596,7 @@ class AviatorAlgorithmRegistryTest {
 
         val cancelRound = "rnd-tc016-golden-cancel"
         createRound(cancelRound)
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, cancelRound, "salt-$cancelRound"))
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cancelRound, "cmd-tc016-golden-bet-cancel")).status)
         assertEquals(startingBalance - 2 * wagerMinor + expectedWinMinor, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertEquals(wagerMinor, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", currency))
@@ -589,7 +612,16 @@ class AviatorAlgorithmRegistryTest {
 
         val lossRound = "rnd-tc016-golden-loss"
         createRound(lossRound)
+        fairnessAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(tenantId, gameId, lossRound, "salt-$lossRound")
+        )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc016-golden-bet-2")).status)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"),
+                expectedVersion = 1L,
+            )
+        )
         val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(0L, jdbc.queryForObject("select payout_minor_units from game_bet_settlement where tenant_id = ? and outcome = 'LOSS_CRASH'", Long::class.java, tenantId))
@@ -598,6 +630,7 @@ class AviatorAlgorithmRegistryTest {
 
         val releaseRound = "rnd-tc016-golden-release"
         createRound(releaseRound)
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, releaseRound, "salt-$releaseRound"))
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(releaseRound, "cmd-tc016-golden-bet-3")).status)
         val releaseAck = gameService.processCommand(
             AviatorRestCommand(

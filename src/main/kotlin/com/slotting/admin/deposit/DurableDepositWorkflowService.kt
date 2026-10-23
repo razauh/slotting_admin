@@ -98,6 +98,10 @@ open class DurableDepositWorkflowService(
             ?: throw IllegalStateException("Payment provider port '${method.providerId}' is not configured")
         val config = resolveProviderConfiguration(command.tenantId, method.providerId)
         val credentials = resolveProviderCredentials(command.tenantId, method.providerId)
+        if (!port.capabilities.supportsDeposit) {
+            throw IllegalStateException("Payment provider port '${method.providerId}' does not declare deposit capability")
+        }
+        ProductionProviderGuard.assertProductionReady(port, config.environment.name)
 
         val intentId = UUID.randomUUID()
         val now = clock.instant()
@@ -225,6 +229,7 @@ open class DurableDepositWorkflowService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
         val credentials = resolveProviderCredentials(command.tenantId, command.providerId)
+        ProductionProviderGuard.assertProductionReady(port, config.environment.name)
 
         // 2. Cryptographically verify signature
         val payload = ProviderCallbackPayload(
@@ -509,6 +514,15 @@ open class DurableDepositWorkflowService(
                     operationId = currentIntent.intentId,
                     reason = "Provider status adapter is not configured",
                     code = "STATUS_ADAPTER_UNAVAILABLE",
+                )
+            } else if (runCatching {
+                    ProductionProviderGuard.assertProductionReady(port, config.environment.name)
+                }.isFailure
+            ) {
+                ProviderOutcome.unavailable(
+                    operationId = currentIntent.intentId,
+                    reason = "Provider status adapter is not certified for production settlement",
+                    code = "PROVIDER_NOT_PRODUCTION_READY",
                 )
             } else {
                 try {

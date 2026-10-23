@@ -395,10 +395,22 @@ class DurableAuthService(
         )
     }
 
-    fun logoutSession(sessionId: UUID, idempotencyKey: String, correlationId: String): SessionLogoutResponseDto {
+    fun logoutSession(
+        sessionId: UUID,
+        idempotencyKey: String,
+        correlationId: String,
+        principal: AuthenticatedPrincipal,
+    ): SessionLogoutResponseDto {
         val now = Instant.now(clock)
         val session = store.findSession(sessionId)
             ?: throw AuthenticationException("INVALID_REQUEST", "Session not found")
+
+        if (principal.kind != PrincipalKind.PLAYER ||
+            principal.tenantId != session.tenantId ||
+            principal.id != session.playerId.toString()
+        ) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
 
         store.terminateSession(sessionId, now)
 

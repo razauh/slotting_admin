@@ -443,20 +443,22 @@ class DurablePayoutDispatchContractTest {
             )
         }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
 
-        // Super Admin resolves manual review to FORCE_SUCCESS
-        val resolved = service.operatorResolveManualReview(
-            OperatorPayoutResolutionCommand(
-                principal = adminPrincipal,
-                sessionId = "sess-admin",
-                tenantId = "tenant-pk-1",
-                intentId = staged.intentId,
-                resolution = OperatorResolutionAction.FORCE_SUCCESS,
-                notes = "Bank statement confirmed manual settlement",
+        // Manual force-success must not settle without verified provider evidence
+        assertFailsWith<IllegalStateException> {
+            service.operatorResolveManualReview(
+                OperatorPayoutResolutionCommand(
+                    principal = adminPrincipal,
+                    sessionId = "sess-admin",
+                    tenantId = "tenant-pk-1",
+                    intentId = staged.intentId,
+                    resolution = OperatorResolutionAction.FORCE_SUCCESS,
+                    notes = "Bank statement confirmed manual settlement",
+                )
             )
-        )
-
-        assertEquals(PayoutDispatchStatus.SUCCEEDED, resolved.status)
-        assertNotNull(resolved.ledgerTransactionReference)
+        }
+        val unchanged = dispatchStore.findIntent("tenant-pk-1", staged.intentId)!!
+        assertEquals(PayoutDispatchStatus.MANUAL_REVIEW, unchanged.status)
+        assertNull(unchanged.ledgerTransactionReference)
     }
 
     // =========================================================================
@@ -529,5 +531,88 @@ class DurablePayoutDispatchContractTest {
         val successfulDispatches = results.filterIsInstance<PayoutDispatchResult>()
         assertEquals(1, successfulDispatches.size, "Exactly one worker leased and dispatched the intent")
         assertEquals(1, dispatchInvocations, "Provider payout endpoint was invoked exactly once")
+    }
+
+    @Test
+    fun `unverified payout acceptance remains ambiguous and posts no ledger settlement`() {
+        val dispatchStore = InMemoryPayoutDispatchStore()
+        val withdrawalStore = InMemoryAuthoritativeWithdrawalStore()
+        withdrawalStore.setAuthoritativeBalance("tenant-pk-1", playerAId, "PKR", 100_000L)
+        val ledgerStore = InMemoryLedgerJournalStore()
+        val ledgerService = LedgerPostingService(ledgerStore, clock = clock)
+        val unverifiedAdapter = object : PaymentProviderPort {
+            override val providerId: String = "UNVERIFIED"
+            override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
+                supportsPayout = true,
+                supportedCurrencies = setOf("PKR"),
+            )
+            override fun deposit(command: ProviderDepositCommand, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.declined(command.operationId, "UNSUPPORTED", "unsupported")
+            override fun payout(command: ProviderPayoutCommand, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.accepted(command.operationId, "prov-unverified-${command.operationId}", "TRANSFER_INITIATED")
+            override fun queryStatus(query: ProviderStatusQuery, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.accepted(query.operationId, query.providerReference ?: "prov-unverified", "TRANSFER_INITIATED")
+            override fun cancel(command: ProviderCancelCommand, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.declined(command.operationId, "UNSUPPORTED", "unsupported")
+            override fun refund(command: ProviderRefundCommand, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                ProviderOutcome.declined(command.operationId, "UNSUPPORTED", "unsupported")
+            override fun verifyCallback(callback: ProviderCallbackPayload, config: ProviderConfiguration, credentials: ProviderCredentials?) =
+                CallbackVerificationResult(isValid = false, rejectionReason = "UNSUPPORTED")
+        }
+        val service = DurablePayoutDispatchService(
+            dispatchStore = dispatchStore,
+            withdrawalStore = withdrawalStore,
+            ledgerPostingService = ledgerService,
+            providerPorts = mapOf("UNVERIFIED" to unverifiedAdapter),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, _ -> sampleConfig },
+            clock = clock,
+        )
+        val request = sampleApprovedRequest()
+        withdrawalStore.saveRequest(request)
+        val staged = service.stageDispatchIntent(
+            StagePayoutDispatchCommand("tenant-pk-1", request.requestId, "UNVERIFIED", "stage-unverified")
+        )
+        val result = service.dispatchNext("worker-1", Duration.ofMinutes(5))
+        assertNotNull(result)
+        assertEquals(PayoutDispatchStatus.AMBIGUOUS_RECONCILING, result.status)
+        assertNull(result.ledgerTransactionReference)
+        assertEquals(100_000L, withdrawalStore.getAuthoritativeBalance("tenant-pk-1", playerAId, "PKR"))
+        assertEquals(0L, ledgerStore.findBalance("tenant-pk-1", "gateway:clearing:UNVERIFIED", "PKR"))
+        assertEquals(PayoutDispatchStatus.AMBIGUOUS_RECONCILING, dispatchStore.findIntent("tenant-pk-1", staged.intentId)?.status)
+    }
+
+    @Test
+    fun `uncertified production adapter is rejected before provider dispatch`() {
+        val dispatchStore = InMemoryPayoutDispatchStore()
+        val withdrawalStore = InMemoryAuthoritativeWithdrawalStore()
+        withdrawalStore.setAuthoritativeBalance("tenant-pk-1", playerAId, "PKR", 100_000L)
+        val ledgerService = LedgerPostingService(InMemoryLedgerJournalStore(), clock = clock)
+        val adapter = AdversarialTestPaymentAdapter("UNCERTIFIED")
+        var calls = 0
+        val counting = object : PaymentProviderPort by adapter {
+            override fun payout(command: ProviderPayoutCommand, config: ProviderConfiguration, credentials: ProviderCredentials?): ProviderOutcome {
+                calls++
+                return adapter.payout(command, config, credentials)
+            }
+        }
+        val productionConfig = sampleConfig.copy(environment = ProviderEnvironment.PRODUCTION, baseUrl = "https://api.example.com/v1")
+        val service = DurablePayoutDispatchService(
+            dispatchStore = dispatchStore,
+            withdrawalStore = withdrawalStore,
+            ledgerPostingService = ledgerService,
+            providerPorts = mapOf("UNCERTIFIED" to counting),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, _ -> productionConfig },
+            clock = clock,
+        )
+        val request = sampleApprovedRequest()
+        withdrawalStore.saveRequest(request)
+        service.stageDispatchIntent(StagePayoutDispatchCommand("tenant-pk-1", request.requestId, "UNCERTIFIED", "stage-uncertified"))
+        val result = service.dispatchNext("worker-1", Duration.ofMinutes(5))
+        assertNotNull(result)
+        assertEquals(0, calls)
+        assertEquals(PayoutDispatchStatus.AMBIGUOUS_RECONCILING, result.status)
+        assertEquals(100_000L, withdrawalStore.getAuthoritativeBalance("tenant-pk-1", playerAId, "PKR"))
     }
 }

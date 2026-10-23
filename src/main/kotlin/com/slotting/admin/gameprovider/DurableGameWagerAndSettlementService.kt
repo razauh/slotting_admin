@@ -80,7 +80,7 @@ class DurableGameWagerAndSettlementService(
 
     private fun legalPriorPhases(target: GameRoundPhase): Set<GameRoundPhase> = when (target) {
         GameRoundPhase.BET_COUNTDOWN -> setOf(GameRoundPhase.SCHEDULED)
-        GameRoundPhase.FLYING -> setOf(GameRoundPhase.BET_COUNTDOWN)
+        GameRoundPhase.FLYING -> setOf(GameRoundPhase.BET_COUNTDOWN, GameRoundPhase.FLYING)
         GameRoundPhase.CRASHED -> setOf(GameRoundPhase.FLYING)
         GameRoundPhase.CLOSED -> setOf(GameRoundPhase.CRASHED)
         GameRoundPhase.SCHEDULED -> emptySet()

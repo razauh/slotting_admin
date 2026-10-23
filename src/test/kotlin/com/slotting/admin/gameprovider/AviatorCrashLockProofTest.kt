@@ -270,13 +270,13 @@ class AviatorCrashLockProofTest {
     ) : DurableGameWagerAndSettlementStore by delegate {
         val cashOutPid = AtomicInteger(0)
         val roundLockRequested = CountDownLatch(1)
-        @Volatile var pauseAfterRoundShare: (() -> Unit)? = null
+        @Volatile var pauseAfterRoundLock: (() -> Unit)? = null
 
-        override fun findRoundForShare(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
+        override fun findRoundForUpdate(tenantId: String, gameId: String, roundId: String): GameRoundRecord? {
             cashOutPid.set(jdbc.queryForObject("select pg_backend_pid()", Int::class.java)!!)
             roundLockRequested.countDown()
-            val round = delegate.findRoundForShare(tenantId, gameId, roundId)
-            pauseAfterRoundShare?.invoke()
+            val round = delegate.findRoundForUpdate(tenantId, gameId, roundId)
+            pauseAfterRoundLock?.invoke()
             return round
         }
     }
@@ -292,7 +292,7 @@ class AviatorCrashLockProofTest {
     }
 
     @Test
-    fun `GivenProductionCrashHoldsExclusiveRoundLock_WhenProductionCashOutRequestsSharedLock_ThenPostgresReportsBlocking`() {
+    fun `GivenProductionCrashHoldsExclusiveRoundLock_WhenProductionCashOutRequestsExclusiveLock_ThenPostgresReportsBlocking`() {
         val roundId = "rnd-tc048-prod-blocking"
         seedRound(roundId)
         val target = playerUuids.first()
@@ -315,7 +315,7 @@ class AviatorCrashLockProofTest {
         assertTrue(crashHolds.await(10, TimeUnit.SECONDS), "production crash must hold the exclusive round lock")
 
         val cashOutFuture: Future<AviatorCommandAckResult> = pool.submit(Callable { cashOutService.processCommand(cashOutCommand(roundId, "cmd-tc048-prod", target)) })
-        assertTrue(cashOutStore.roundLockRequested.await(10, TimeUnit.SECONDS), "production cash-out must request the shared round lock")
+        assertTrue(cashOutStore.roundLockRequested.await(10, TimeUnit.SECONDS), "production cash-out must request the exclusive round lock")
         probe.awaitBlocking(cashOutStore.cashOutPid.get(), crashStore.crashPid.get(), 5)
 
         releaseCrash.countDown()
@@ -374,12 +374,12 @@ class AviatorCrashLockProofTest {
             if (cashOutFirst) {
                 val cashOutHolds = CountDownLatch(1)
                 val releaseCashOut = CountDownLatch(1)
-                cashOutStore.pauseAfterRoundShare = {
+        cashOutStore.pauseAfterRoundLock = {
                     cashOutHolds.countDown()
                     releaseCashOut.await(10, TimeUnit.SECONDS)
                 }
                 val cashOutFuture = pool.submit(Callable { cashOutService.processCommand(cashOutCommand(roundId, "cmd-tc048-iter-$iteration-cashout", target)) })
-                assertTrue(cashOutHolds.await(10, TimeUnit.SECONDS), "iteration $iteration cash-out must hold the shared round lock")
+                assertTrue(cashOutHolds.await(10, TimeUnit.SECONDS), "iteration $iteration cash-out must hold the exclusive round lock")
                 val crashFuture: Future<*> = pool.submit(Callable { crashService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000"))) })
                 assertTrue(crashStore.roundLockRequested.await(10, TimeUnit.SECONDS), "iteration $iteration crash must request the exclusive round lock")
                 probe.awaitBlocking(crashStore.crashPid.get(), cashOutStore.cashOutPid.get(), 5)
@@ -396,7 +396,7 @@ class AviatorCrashLockProofTest {
                 val crashFuture: Future<*> = pool.submit(Callable { crashService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000"))) })
                 assertTrue(crashHolds.await(10, TimeUnit.SECONDS), "iteration $iteration crash must hold the exclusive round lock")
                 val cashOutFuture = pool.submit(Callable { cashOutService.processCommand(cashOutCommand(roundId, "cmd-tc048-iter-$iteration-cashout", target)) })
-                assertTrue(cashOutStore.roundLockRequested.await(10, TimeUnit.SECONDS), "iteration $iteration cash-out must request the shared round lock")
+                assertTrue(cashOutStore.roundLockRequested.await(10, TimeUnit.SECONDS), "iteration $iteration cash-out must request the exclusive round lock")
                 probe.awaitBlocking(cashOutStore.cashOutPid.get(), crashStore.crashPid.get(), 5)
                 releaseCrash.countDown()
                 crashFuture.get(15, TimeUnit.SECONDS)

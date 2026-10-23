@@ -90,6 +90,8 @@ class AviatorCommandClaimPostgresTest {
     private lateinit var registrationStore: JdbcPlayerRegistrationStore
     private lateinit var eligibilityStore: ServerEligibilityStore
     private lateinit var ledgerService: LedgerPostingService
+    private lateinit var fairnessStore: JdbcFairnessEvidenceStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var gameService: DurableGameWagerAndSettlementService
 
     @BeforeEach
@@ -97,6 +99,9 @@ class AviatorCommandClaimPostgresTest {
         jdbc.update("delete from game_bet_settlement where tenant_id = ?", tenantId)
         jdbc.update("delete from game_accepted_bet where tenant_id = ?", tenantId)
         jdbc.update("delete from game_command_receipt where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_audit where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_reveal where tenant_id = ?", tenantId)
+        jdbc.update("delete from game_fairness_commitment where tenant_id = ?", tenantId)
         jdbc.update("delete from game_cumulative_player_limit where tenant_id = ?", tenantId)
         jdbc.update("delete from game_authoritative_round where tenant_id = ?", tenantId)
         jdbc.update("delete from ledger_leg where tenant_id = ?", tenantId)
@@ -111,6 +116,8 @@ class AviatorCommandClaimPostgresTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessStore = JdbcFairnessEvidenceStore(jdbc)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -118,6 +125,7 @@ class AviatorCommandClaimPostgresTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
 
@@ -196,6 +204,11 @@ class AviatorCommandClaimPostgresTest {
                 currentMultiplier = multiplier,
             )
         )
+        if (fairnessStore.findCommitment(tenantId, gameId, roundId) == null) {
+            fairnessAuthority.publishPreBetCommitment(
+                PublishCommitmentCommand(tenantId, gameId, roundId, "salt-$roundId")
+            )
+        }
     }
 
     private fun claim(
@@ -695,6 +708,18 @@ class AviatorCommandClaimPostgresTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, lossBet.status)
+
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = lossRound,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                expectedVersion = 1L,
+                currentMultiplier = BigDecimal("1.0000"),
+            )
+        )
 
         val crashResult = gameService.settleRoundCrash(
             SettleRoundCrashCommand(

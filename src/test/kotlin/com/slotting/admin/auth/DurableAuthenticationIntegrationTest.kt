@@ -50,7 +50,10 @@ class DurableAuthenticationIntegrationTest {
         val password = "SecurePlayerPassword#2026"
         val hashed = PasswordKdfService.hashPassword(password)
 
-        assertEquals("pbkdf2_sha256", hashed.algo)
+        assertEquals(
+            if (System.getenv("SLOTTING_PASSWORD_PEPPER").isNullOrBlank()) PasswordKdfService.PBKDF2_ALGO else PasswordKdfService.PEPPERED_PBKDF2_ALGO,
+            hashed.algo,
+        )
         assertEquals(100_000, hashed.iterations)
         assertNotNull(hashed.salt)
         assertNotEquals(password, hashed.hash)
@@ -252,7 +255,7 @@ class DurableAuthenticationIntegrationTest {
             causationId = "caus-" + UUID.randomUUID().toString(),
             expectedVersion = 1000L,
             mfaAssertion = "98765432101234567890",
-            breakGlass = true
+            breakGlass = false
         )
 
         val authenticator = AdminMfaAuthenticator(
@@ -489,12 +492,66 @@ class DurableAuthenticationIntegrationTest {
                 "correlation_id": "logout-corr-001"
             }
         """.trimIndent()
-        val logoutResp = controller.logout(logoutJson)
+        val logoutResp = controller.logout(
+            logoutJson,
+            AuthenticatedPrincipal(tokenDto.playerId, tokenDto.tenantId, PrincipalKind.PLAYER, emptySet()),
+        )
         assertEquals(HttpStatus.OK, logoutResp.statusCode)
 
         // 5. Subsequent access token query after logout -> 401 Unauthorized (session terminated)
         val afterLogoutResp = controller.eligibility("Bearer $accessToken", null)
         assertEquals(HttpStatus.UNAUTHORIZED, afterLogoutResp.statusCode)
+    }
+
+    @Test
+    @DisplayName("Logout - cross-account session termination is rejected and own-session termination succeeds")
+    fun testLogoutRejectsCrossAccountSession() {
+        val ownerId = UUID.randomUUID()
+        val attackerId = UUID.randomUUID()
+        val ownerSession = UUID.randomUUID()
+        val attackerSession = UUID.randomUUID()
+        val now = Instant.now(clock)
+        store.createSession(
+            PlayerSessionRecord(
+                sessionId = ownerSession,
+                tenantId = tenantId,
+                playerId = ownerId,
+                expiresAt = now.plusSeconds(3600),
+            )
+        )
+        store.createSession(
+            PlayerSessionRecord(
+                sessionId = attackerSession,
+                tenantId = tenantId,
+                playerId = attackerId,
+                expiresAt = now.plusSeconds(3600),
+            )
+        )
+        val attackerPrincipal = AuthenticatedPrincipal(attackerId.toString(), tenantId, PrincipalKind.PLAYER, emptySet())
+        val ownerPrincipal = AuthenticatedPrincipal(ownerId.toString(), tenantId, PrincipalKind.PLAYER, emptySet())
+        val logoutJson = """
+            {
+                "session_id": "$ownerSession",
+                "idempotency_key": "logout-cross-account",
+                "correlation_id": "corr-logout-cross-account"
+            }
+        """.trimIndent()
+
+        val rejected = controller.logout(logoutJson, attackerPrincipal)
+        assertEquals(HttpStatus.FORBIDDEN, rejected.statusCode)
+        assertEquals(SessionState.ACTIVE, store.findSession(ownerSession)?.state)
+        assertEquals(SessionState.ACTIVE, store.findSession(attackerSession)?.state)
+
+        val missingPrincipal = controller.logout(logoutJson, null)
+        assertEquals(HttpStatus.UNAUTHORIZED, missingPrincipal.statusCode)
+        assertEquals(SessionState.ACTIVE, store.findSession(ownerSession)?.state)
+
+        val ownLogoutJson = logoutJson.replace(ownerSession.toString(), attackerSession.toString())
+            .replace("logout-cross-account", "logout-own-session")
+        val ownLogout = controller.logout(ownLogoutJson, attackerPrincipal)
+        assertEquals(HttpStatus.OK, ownLogout.statusCode)
+        assertEquals(SessionState.TERMINATED, store.findSession(attackerSession)?.state)
+        assertEquals(SessionState.ACTIVE, store.findSession(ownerSession)?.state)
     }
 
     // =========================================================================

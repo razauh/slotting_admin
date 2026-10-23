@@ -257,6 +257,7 @@ class FairnessAtomicEvidencePostgresTest {
     @Test
     fun GivenSameCommitmentVersion_WhenTwoFirstBetsRace_ThenOneWinsAndOneConflicts() {
         val pool = Executors.newFixedThreadPool(2)
+        try {
         var conflicts = 0
         repeat(1000) { iteration ->
             val roundId = "rnd-tc015-cas-$iteration"
@@ -297,8 +298,11 @@ class FairnessAtomicEvidencePostgresTest {
             assertEquals(RoundCommitmentStatus.BETTING_ACTIVE, afterSecond.status, "iteration $iteration second bet idempotent")
             assertEquals(firstTimestamp, afterSecond.firstBetAcceptedAt, "iteration $iteration first timestamp unchanged")
         }
-        pool.shutdown()
         assertEquals(1000, conflicts)
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(30, TimeUnit.SECONDS)
+        }
     }
 
     @Test
@@ -359,13 +363,13 @@ class FairnessAtomicEvidencePostgresTest {
             fairnessAuthority = fairAuth, txManager = txManager,
         )
         failpoint.failAfterCas = true
-        val txTemplate = TransactionTemplate(txManager)
-        assertFailsWith<SimulatedFailpoint> {
-            txTemplate.execute<Unit> { service.processCommand(placeBetCommand(roundId, "cmd-tc015-firstbet")) }
-        }
+        val ack = service.processCommand(placeBetCommand(roundId, "cmd-tc015-firstbet"))
+        assertEquals(AviatorCommandAckStatus.REJECTED, ack.status)
 
         assertNull(gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary"), "no bet may persist")
-        assertNull(gameStore.findReceipt(tenantId, "cmd-tc015-firstbet"), "no receipt may persist")
+        val receipt = gameStore.findReceipt(tenantId, "cmd-tc015-firstbet")
+        assertNotNull(receipt)
+        assertEquals("REJECTED", receipt.status, "failed place bet must persist a terminal rejection receipt")
         assertEquals(startingBalance, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", currency), "no ledger movement may persist")
         val commitment = fairnessStore.findCommitment(tenantId, gameId, roundId)!!
         assertEquals(RoundCommitmentStatus.COMMITTED, commitment.status, "first-bet status must roll back")
@@ -405,17 +409,21 @@ class FairnessAtomicEvidencePostgresTest {
 
         val pool = Executors.newFixedThreadPool(2)
         val done = CountDownLatch(2)
-        repeat(2) {
-            pool.submit {
-                try {
-                    fairAuth.revealAndVerifyOutcome(RevealOutcomeCommand(tenantId, gameId, roundId))
-                } finally {
-                    done.countDown()
+        try {
+            repeat(2) {
+                pool.submit {
+                    try {
+                        fairAuth.revealAndVerifyOutcome(RevealOutcomeCommand(tenantId, gameId, roundId))
+                    } finally {
+                        done.countDown()
+                    }
                 }
             }
+            assertTrue(done.await(20, TimeUnit.SECONDS))
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(30, TimeUnit.SECONDS)
         }
-        assertTrue(done.await(20, TimeUnit.SECONDS))
-        pool.shutdown()
 
         assertEquals(1, count("game_fairness_reveal", roundId), "exactly one reveal under concurrent repair")
         assertEquals(1, count("game_fairness_audit", roundId, "and event_key = ?", ProvablyFairOutcomeAuthority.REVEAL_EVENT_KEY), "exactly one verified audit under concurrent repair")
@@ -753,6 +761,9 @@ class FairnessAtomicEvidencePostgresTest {
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" }, "iteration $iteration sequence counter locked")
             assertMonotonic(trace)
 
+            lifecycleService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.1000"))
+            )
             val crash = lifecycleService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000")))
             assertEquals(1, crash.settledBetsCount, "iteration $iteration")
             assertTrue(lifecycleStore.eventLog.any { it.first == "ROUND_EXCLUSIVE" }, "iteration $iteration lifecycle exclusive round")
@@ -785,6 +796,7 @@ class FairnessAtomicEvidencePostgresTest {
         val inversionHoldsBet = CountDownLatch(1)
         val outcomes = ConcurrentLinkedQueue<Pair<String, Throwable?>>()
 
+        try {
         val forward = pool.submit(Callable {
             try {
                 txTemplate.execute<Unit> {
@@ -821,7 +833,10 @@ class FairnessAtomicEvidencePostgresTest {
         })
         forward.get(15, TimeUnit.SECONDS)
         inversion.get(15, TimeUnit.SECONDS)
-        pool.shutdown()
+        } finally {
+            pool.shutdownNow()
+            pool.awaitTermination(30, TimeUnit.SECONDS)
+        }
 
         val forwardAborted = outcomes.first { it.first == "forward" }.second != null
         val inversionAborted = outcomes.first { it.first == "inversion" }.second != null
@@ -847,12 +862,20 @@ class FairnessAtomicEvidencePostgresTest {
 
         val startingBalance = 50_000L
         seedFunds(startingBalance)
+        val fairGameService = DurableGameWagerAndSettlementService(
+            store = gameStore, ledgerService = ledgerService, registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock,
+            fairnessAuthority = springAuthority, txManager = txManager,
+        )
 
         val cashOutRound = "rnd-tc015-golden-cashout"
         createRound(cashOutRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc015-golden-bet-1")).status)
-        gameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier))
-        val cashOutAck = gameService.processCommand(
+        springAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(tenantId, gameId, cashOutRound, "salt-$cashOutRound")
+        )
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc015-golden-bet-1")).status)
+        fairGameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier))
+        val cashOutAck = fairGameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId, principal = playerPrincipal, commandId = "cmd-tc015-golden-cashout-1",
                 roundId = cashOutRound, handId = "hand_primary", action = "CASH_OUT", currency = currency, correlationId = "corr-tc015-golden-cashout-1",
@@ -864,8 +887,12 @@ class FairnessAtomicEvidencePostgresTest {
 
         val lossRound = "rnd-tc015-golden-loss"
         createRound(lossRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc015-golden-bet-2")).status)
-        val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
+        springAuthority.publishPreBetCommitment(
+            PublishCommitmentCommand(tenantId, gameId, lossRound, "salt-$lossRound")
+        )
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(lossRound, "cmd-tc015-golden-bet-2")).status)
+        fairGameService.createOrUpdateRound(CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000")))
+        val crashResult = fairGameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(0L, jdbc.queryForObject("select payout_minor_units from game_bet_settlement where tenant_id = ? and outcome = 'LOSS_CRASH'", Long::class.java, tenantId))
         assertJournalBalanced()

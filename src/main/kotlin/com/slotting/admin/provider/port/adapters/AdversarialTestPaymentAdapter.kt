@@ -118,10 +118,12 @@ class AdversarialTestPaymentAdapter(
         dispatchesByKey.compute(command.idempotencyKey) { _, c -> (c ?: 0) + 1 }
 
         val outcome = when (simulationMode) {
-            AdversarialSimulationMode.NORMAL_SUCCESS -> ProviderOutcome.accepted(
+            AdversarialSimulationMode.NORMAL_SUCCESS -> ProviderOutcome.verifiedSettlement(
                 operationId = command.operationId,
                 providerReference = "prov-payout-${command.operationId}",
-                code = "TRANSFER_SETTLED"
+                amountMinorUnits = command.amountMinorUnits,
+                currency = command.currency,
+                evidence = mapOf("mode" to simulationMode.name),
             )
             AdversarialSimulationMode.TIMEOUT_AFTER_DISPATCH -> ProviderOutcome.ambiguous(
                 operationId = command.operationId,

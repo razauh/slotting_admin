@@ -17,6 +17,7 @@ import com.slotting.admin.provider.port.ProviderOutcome
 import com.slotting.admin.provider.port.ProviderOutcomeStatus
 import com.slotting.admin.provider.port.ProviderPayoutCommand
 import com.slotting.admin.provider.port.ProviderStatusQuery
+import com.slotting.admin.provider.port.ProductionProviderGuard
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -124,6 +125,7 @@ class DurablePayoutDispatchService(
         )
 
         try {
+            requireProviderReady(port, config, intent.providerId, requirePayout = true)
             val outcome = port.payout(payoutCmd, config, credentials)
             return handleOutcome(intent, outcome)
         } catch (e: Exception) {
@@ -185,6 +187,7 @@ class DurablePayoutDispatchService(
                 baseUrl = "https://sandbox.api.test/v1",
             )
         val credentials = credentialsResolver(intent.tenantId, intent.providerId)
+        requireProviderReady(port, config, intent.providerId, requirePayout = true)
 
         val query = ProviderStatusQuery(
             tenantId = intent.tenantId,
@@ -192,12 +195,31 @@ class DurablePayoutDispatchService(
             providerId = intent.providerId,
             providerReference = intent.providerReference,
             idempotencyKey = "PAYOUT-QUERY-${intent.intentId}",
+            expectedAmountMinorUnits = intent.netPayoutAmountMinorUnits,
+            expectedCurrency = intent.currencyCode,
         )
 
         val outcome = port.queryStatus(query, config, credentials)
 
         return when (outcome.status) {
             ProviderOutcomeStatus.ACCEPTED -> {
+                if (!isVerifiedPayoutSettlement(outcome, intent)) {
+                    val updated = intent.copy(
+                        status = PayoutDispatchStatus.AMBIGUOUS_RECONCILING,
+                        providerReference = outcome.providerReference ?: intent.providerReference,
+                        failureReason = "Provider acceptance is not a verified payout settlement",
+                        updatedAt = clock.instant(),
+                        serverVersion = intent.serverVersion + 1,
+                    )
+                    dispatchStore.updateIntent(updated, intent.serverVersion)
+                    return PayoutDispatchReconciliationResult(
+                        intentId = intent.intentId,
+                        previousStatus = intent.status,
+                        newStatus = PayoutDispatchStatus.AMBIGUOUS_RECONCILING,
+                        actionTaken = "AWAITING_VERIFIED_SETTLEMENT",
+                        ledgerTransactionReference = null,
+                    )
+                }
                 val ledgerTxRef = postSuccessLedgerTransaction(intent)
                 val updated = intent.copy(
                     status = PayoutDispatchStatus.SUCCEEDED,
@@ -336,30 +358,9 @@ class DurablePayoutDispatchService(
         }
 
         return when (command.resolution) {
-            OperatorResolutionAction.FORCE_SUCCESS -> {
-                val ledgerTxRef = postSuccessLedgerTransaction(intent, principal)
-                val updated = intent.copy(
-                    status = PayoutDispatchStatus.SUCCEEDED,
-                    ledgerTransactionReference = ledgerTxRef,
-                    updatedAt = clock.instant(),
-                    serverVersion = intent.serverVersion + 1,
-                )
-                dispatchStore.updateIntent(updated, intent.serverVersion)
-                dispatchStore.recordAudit(
-                    PayoutReconciliationAuditRecord(
-                        auditId = UUID.randomUUID(),
-                        tenantId = command.tenantId,
-                        intentId = command.intentId,
-                        actionType = "OPERATOR_FORCE_SUCCESS",
-                        previousStatus = PayoutDispatchStatus.MANUAL_REVIEW,
-                        newStatus = PayoutDispatchStatus.SUCCEEDED,
-                        operatorId = principal.id,
-                        notes = command.notes,
-                        occurredAt = clock.instant(),
-                    )
-                )
-                updated
-            }
+            OperatorResolutionAction.FORCE_SUCCESS -> throw IllegalStateException(
+                "Manual force-success is disabled: payout success requires verified provider settlement evidence"
+            )
             OperatorResolutionAction.FORCE_FAILURE -> {
                 withdrawalStore.releaseReservedBalance(
                     intent.tenantId,
@@ -397,6 +398,25 @@ class DurablePayoutDispatchService(
     private fun handleOutcome(intent: PayoutDispatchIntentRecord, outcome: ProviderOutcome): PayoutDispatchResult {
         return when (outcome.status) {
             ProviderOutcomeStatus.ACCEPTED -> {
+                if (!isVerifiedPayoutSettlement(outcome, intent)) {
+                    val updated = intent.copy(
+                        status = PayoutDispatchStatus.AMBIGUOUS_RECONCILING,
+                        providerReference = outcome.providerReference ?: intent.providerReference,
+                        failureReason = "Provider acceptance is not a verified payout settlement",
+                        updatedAt = clock.instant(),
+                        serverVersion = intent.serverVersion + 1,
+                    )
+                    dispatchStore.updateIntent(updated, intent.serverVersion)
+                    return PayoutDispatchResult(
+                        intentId = intent.intentId,
+                        requestId = intent.requestId,
+                        status = PayoutDispatchStatus.AMBIGUOUS_RECONCILING,
+                        providerReference = outcome.providerReference,
+                        ledgerTransactionReference = null,
+                        failureReason = "Provider acceptance is not a verified payout settlement",
+                        completedAt = clock.instant(),
+                    )
+                }
                 val ledgerTxRef = postSuccessLedgerTransaction(intent)
                 val updated = intent.copy(
                     status = PayoutDispatchStatus.SUCCEEDED,
@@ -464,6 +484,26 @@ class DurablePayoutDispatchService(
                 )
             }
         }
+    }
+
+    private fun requireProviderReady(
+        port: PaymentProviderPort,
+        config: ProviderConfiguration,
+        providerId: String,
+        requirePayout: Boolean,
+    ) {
+        if (requirePayout && !port.capabilities.supportsPayout) {
+            throw IllegalStateException("Provider '$providerId' does not declare payout capability")
+        }
+        ProductionProviderGuard.assertProductionReady(port, config.environment.name)
+    }
+
+    private fun isVerifiedPayoutSettlement(outcome: ProviderOutcome, intent: PayoutDispatchIntentRecord): Boolean {
+        val verified = outcome.verifiedStatus ?: return false
+        return verified.signatureVerified &&
+            verified.providerReference == outcome.providerReference &&
+            verified.amountMinorUnits == intent.netPayoutAmountMinorUnits &&
+            verified.currency == intent.currencyCode
     }
 
     private fun postSuccessLedgerTransaction(

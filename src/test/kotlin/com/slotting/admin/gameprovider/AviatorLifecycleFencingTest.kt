@@ -292,14 +292,17 @@ class AviatorLifecycleFencingTest {
             pool.shutdownNow()
         }
 
-        clock.advanceMillis(50)
-        val currentOwnerId = leaseStore.getLease(tenantId, gameId)?.ownerId
-        val stabilizedRound = when (currentOwnerId) {
-            alpha.ownerId -> alpha.tick(tenantId, gameId)
-            beta.ownerId -> beta.tick(tenantId, gameId)
-            else -> null
+        for (attempt in 0 until 5) {
+            clock.advanceMillis(50)
+            val currentOwnerId = leaseStore.getLease(tenantId, gameId)?.ownerId
+            val owner = if (currentOwnerId == beta.ownerId) beta else alpha
+            val stabilizedRound = owner.tick(tenantId, gameId)
+            versionsByRound[stabilizedRound.roundId] = maxOf(
+                versionsByRound[stabilizedRound.roundId] ?: 0L,
+                stabilizedRound.roundVersion,
+            )
+            if (activeRoundCount() == 1) break
         }
-        stabilizedRound?.let { versionsByRound[it.roundId] = maxOf(versionsByRound[it.roundId] ?: 0L, it.roundVersion) }
 
         assertTrue(failures.isEmpty(), "no orchestrator tick may fail the fencing contract: ${failures.map { it.message }}")
         assertTrue(roundsCreated() >= 3, "at least three full cycles must complete, saw ${roundsCreated()}")
@@ -406,6 +409,10 @@ class AviatorLifecycleFencingTest {
         assertEquals(GameRoundPhase.BET_COUNTDOWN, resumed.phase, "takeover owner must resume durable state")
         assertEquals(2L, resumed.roundVersion)
 
+        port.persistRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000")),
+            tokenB,
+        )
         val settled = port.settleCrash(tenantId, gameId, roundId, BigDecimal("1.1000"), tokenB)
         assertEquals(GameRoundPhase.CRASHED, settled.phase)
         val crashEvents = eventJournalStore.findEventsForRound(tenantId, gameId, roundId)
@@ -695,6 +702,9 @@ class AviatorLifecycleFencingTest {
             ),
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc019-golden-bet-2")).status)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"))
+        )
         val crashResult = gameService.settleRoundCrash(settleCommand(lossRound))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(

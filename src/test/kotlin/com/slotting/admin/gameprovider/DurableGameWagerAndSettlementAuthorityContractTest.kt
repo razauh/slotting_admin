@@ -78,6 +78,7 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
     private lateinit var registrationStore: InMemoryPlayerRegistrationStore
     private lateinit var eligibilityStore: InMemoryServerEligibilityStore
     private lateinit var gameStore: InMemoryDurableGameWagerAndSettlementStore
+    private lateinit var fairnessAuthority: ProvablyFairOutcomeAuthority
     private lateinit var service: DurableGameWagerAndSettlementService
 
     @BeforeEach
@@ -87,6 +88,11 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
         registrationStore = InMemoryPlayerRegistrationStore()
         eligibilityStore = InMemoryServerEligibilityStore()
         gameStore = InMemoryDurableGameWagerAndSettlementStore()
+        fairnessAuthority = ProvablyFairOutcomeAuthority(
+            store = InMemoryFairnessEvidenceStore(),
+            clock = clock,
+            envelope = FairnessSeedEnvelope.devDefault(),
+        )
 
         service = DurableGameWagerAndSettlementService(
             store = gameStore,
@@ -94,7 +100,8 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
             registrationStore = registrationStore,
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
-            clock = clock
+            clock = clock,
+            fairnessAuthority = fairnessAuthority,
         )
 
         // Seed player registration as ACTIVE
@@ -168,6 +175,16 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
                 crashMultiplier = crashMultiplier
             )
         )
+        if (fairnessAuthority.store.findCommitment(tenantId, gameId, roundId) == null) {
+            fairnessAuthority.publishPreBetCommitment(
+                PublishCommitmentCommand(
+                    tenantId = tenantId,
+                    gameId = gameId,
+                    roundId = roundId,
+                    publicSalt = "salt-$roundId",
+                )
+            )
+        }
     }
 
     // =========================================================================
@@ -368,6 +385,18 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
             )
         )
 
+        service.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = "rnd-004",
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                expectedVersion = 1L,
+                currentMultiplier = BigDecimal("1.00"),
+            )
+        )
+
         // Round crashes at 1.10x
         service.settleRoundCrash(
             SettleRoundCrashCommand(
@@ -427,6 +456,18 @@ class DurableGameWagerAndSettlementAuthorityContractTest {
 
         val escrowBalanceBefore = ledgerService.store.findBalance(tenantId, "ESCROW:GAME:AVIATOR", currency)
         assertEquals(10000L, escrowBalanceBefore)
+
+        service.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = "rnd-005",
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                expectedVersion = 1L,
+                currentMultiplier = BigDecimal("1.00"),
+            )
+        )
 
         // Round crash triggers once-only settlement of pending bets
         val crashResult = service.settleRoundCrash(

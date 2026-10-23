@@ -214,8 +214,8 @@ class AviatorServiceCompositionTest {
         assertEquals(AviatorCommandAckStatus.ACCEPTED, ack.status, "Composed service must accept a wager for a non-system tenant")
         assertEquals(startingBalance - 60L, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", currency))
         assertTrue(
-            applicationContext.getBeanNamesForType(AviatorGameRestController::class.java).isEmpty(),
-            "Aviator controller must require both the wager service and the snapshot service",
+            applicationContext.getBeanNamesForType(AviatorGameRestController::class.java).isNotEmpty(),
+            "Enabled composition with both authority beans must expose the Aviator controller",
         )
     }
 }

@@ -82,12 +82,20 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    fun logout(@RequestBody body: String): ResponseEntity<Any> {
+    fun logout(
+        @RequestBody body: String,
+        @RequestAttribute(name = "authenticatedPrincipal", required = false) principal: AuthenticatedPrincipal?,
+    ): ResponseEntity<Any> {
+        if (principal == null) {
+            return error(HttpStatus.UNAUTHORIZED, "unauthorized", "UNAUTHORIZED", "Authentication required for logout", false)
+        }
         return try {
             val req = AuthContractCodec.parseSessionLogoutRequest(body)
             val sessionId = UUID.fromString(req.sessionId)
-            val resp = authService.logoutSession(sessionId, req.idempotencyKey, req.correlationId)
+            val resp = authService.logoutSession(sessionId, req.idempotencyKey, req.correlationId, principal)
             ResponseEntity.ok(resp)
+        } catch (e: AuthenticationFailure) {
+            error(HttpStatus.FORBIDDEN, "access_denied", e.code.name, "Session does not belong to the authenticated principal", false)
         } catch (e: Exception) {
             error(HttpStatus.BAD_REQUEST, "invalid_request", "INVALID_REQUEST", e.message ?: "Logout failed", false)
         }

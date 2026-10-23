@@ -144,6 +144,7 @@ class AviatorCommandSequencePostgresTest {
         registrationStore = JdbcPlayerRegistrationStore(jdbc)
         eligibilityStore = com.slotting.admin.identity.InMemoryServerEligibilityStore()
         ledgerService = LedgerPostingService(store = ledgerStore, clock = clock)
+        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
 
         gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
@@ -152,9 +153,9 @@ class AviatorCommandSequencePostgresTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = adminPrincipal,
             clock = clock,
+            fairnessAuthority = fairnessAuthority,
             txManager = txManager,
         )
-        fairnessAuthority = ProvablyFairOutcomeAuthority(store = fairnessStore, clock = clock, envelope = FairnessSeedEnvelope.devDefault())
         val walletStore = InMemoryAuthoritativeWalletStore(ledgerStore = ledgerStore, clock = clock)
         walletService = AuthoritativeWalletService(
             store = walletStore,
@@ -332,13 +333,17 @@ class AviatorCommandSequencePostgresTest {
         val r1 = createReceipt(legacyTenant, "cmd-legacy-dup-1", seqToDuplicate)
         val r2 = createReceipt(legacyTenant, "cmd-legacy-dup-2", seqToDuplicate)
 
-        val flyway = Flyway.configure()
+        val migrationFlyway = Flyway.configure()
             .dataSource(jdbc.dataSource!!)
             .locations("classpath:db/migration")
             .cleanDisabled(true)
+            .target(org.flywaydb.core.api.MigrationVersion.fromVersion("39"))
+            .outOfOrder(true)
             .load()
 
-        jdbc.update("delete from flyway_schema_history where version is not null and version::int >= 39")
+        jdbc.update("delete from flyway_schema_history where version = '39'")
+        jdbc.update("alter table game_event_journal drop constraint if exists ck_game_event_journal_round_version_positive")
+        jdbc.update("drop index if exists ux_game_event_journal_round_identity")
         jdbc.update("drop table if exists game_command_sequence cascade")
         jdbc.update("drop index if exists ix_game_command_receipt_tenant_seq")
 
@@ -376,7 +381,7 @@ class AviatorCommandSequencePostgresTest {
             assertEquals(2L, match.count, "Diagnostic must report row count 2")
 
             val flywayException = assertThrows<Exception> {
-                flyway.migrate()
+                migrationFlyway.migrate()
             }
             var rootCause: Throwable? = flywayException
             val allMessages = StringBuilder()
@@ -398,9 +403,16 @@ class AviatorCommandSequencePostgresTest {
             assertEquals(2, countAfter, "No rows must be deleted or renumbered during diagnostic abort")
         } finally {
             jdbc.update("delete from game_command_receipt where tenant_id = ?", legacyTenant)
-            jdbc.update("delete from flyway_schema_history where version is not null and version::int >= 39")
-            flyway.repair()
-            flyway.migrate()
+            jdbc.update("delete from flyway_schema_history where version = '39'")
+            val restoreFlyway = Flyway.configure()
+                .dataSource(jdbc.dataSource!!)
+                .locations("classpath:db/migration")
+                .cleanDisabled(true)
+                .target(org.flywaydb.core.api.MigrationVersion.fromVersion("39"))
+                .outOfOrder(true)
+                .load()
+            restoreFlyway.repair()
+            restoreFlyway.migrate()
         }
     }
 
@@ -463,6 +475,7 @@ class AviatorCommandSequencePostgresTest {
         val eventLog: MutableList<Pair<String, Int>> = mutableListOf(),
         val onRoundShared: (() -> Unit)? = null,
         val onRoundExclusive: (() -> Unit)? = null,
+        val onRoundExclusiveAcquired: (() -> Unit)? = null,
         val onBeforeSequenceCounter: (() -> Unit)? = null,
         val onAfterSequenceCounter: (() -> Unit)? = null,
     ) : DurableGameWagerAndSettlementStore by delegate {
@@ -482,6 +495,7 @@ class AviatorCommandSequencePostgresTest {
             onRoundExclusive?.invoke()
             val r = delegate.findRoundForUpdate(tenantId, gameId, roundId)
             eventLog.add("ROUND_EXCLUSIVE" to 2)
+            onRoundExclusiveAcquired?.invoke()
             return r
         }
 
@@ -824,6 +838,11 @@ class AviatorCommandSequencePostgresTest {
                     roundVersion = 1L,
                 )
             )
+            if (fairnessStore.findCommitment(tenantId, gameId, roundId) == null) {
+                fairnessAuthority.publishPreBetCommitment(
+                    PublishCommitmentCommand(tenantId, gameId, roundId, "salt-$roundId")
+                )
+            }
 
             if (actionType == "CANCEL_BET" || actionType == "CASH_OUT") {
                 val prePlace = gameService.processCommand(
@@ -859,14 +878,17 @@ class AviatorCommandSequencePostgresTest {
             var lifecyclePid: Int? = null
             val roundHeldLatch = CountDownLatch(1)
             val worker1ProceedLatch = CountDownLatch(1)
+            val holdCommandRound = {
+                cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
+                roundHeldLatch.countDown()
+                worker1ProceedLatch.await(5, TimeUnit.SECONDS)
+                Unit
+            }
 
             val cmdStore = LockOrderTracingStore(
                 gameStore,
-                onRoundShared = {
-                    cmdPid = jdbc.queryForObject("SELECT pg_backend_pid()", Int::class.java)
-                    roundHeldLatch.countDown()
-                    worker1ProceedLatch.await(5, TimeUnit.SECONDS)
-                }
+                onRoundShared = holdCommandRound,
+                onRoundExclusiveAcquired = holdCommandRound,
             )
             val cmdSvc = DurableGameWagerAndSettlementService(
                 store = cmdStore,
@@ -875,6 +897,7 @@ class AviatorCommandSequencePostgresTest {
                 eligibilityStore = eligibilityStore,
                 adminPrincipal = adminPrincipal,
                 clock = clock,
+                fairnessAuthority = fairnessAuthority,
                 txManager = txManager,
             )
 
@@ -989,7 +1012,8 @@ class AviatorCommandSequencePostgresTest {
                     prevRankCmd = rank
                 }
             }
-            assertTrue(cmdStore.eventLog.any { it.first == "ROUND_SHARED" }, "Cmd worker must acquire ROUND_SHARED")
+            val commandLock = if (actionType == "CASH_OUT") "ROUND_EXCLUSIVE" else "ROUND_SHARED"
+            assertTrue(cmdStore.eventLog.any { it.first == commandLock }, "Cmd worker must acquire $commandLock")
             assertTrue(cmdStore.eventLog.any { it.first == "SEQUENCE_COUNTER" }, "Cmd worker must acquire SEQUENCE_COUNTER")
 
             var prevRankLife = 0
@@ -1023,6 +1047,9 @@ class AviatorCommandSequencePostgresTest {
 
         val roundId1 = "rnd-seq-gld1-${UUID.randomUUID().toString().take(6)}"
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId1, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId1, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+        )
 
         val balanceBefore = 50000L
         ledgerService.postTransaction(
@@ -1064,7 +1091,7 @@ class AviatorCommandSequencePostgresTest {
                 correlationId = "corr-bet-seq-golden-1",
             )
         )
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck1.status)
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck1.status, "round1 bet rejected: ${betAck1.rejection}")
 
         val cancelAck = gameService.processCommand(
             AviatorRestCommand(
@@ -1083,6 +1110,9 @@ class AviatorCommandSequencePostgresTest {
         val roundId2 = "rnd-seq-gld2-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId2, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId2, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+        )
 
         val betAck2 = gameService.processCommand(
             AviatorRestCommand(
@@ -1105,8 +1135,8 @@ class AviatorCommandSequencePostgresTest {
                 gameId = gameId,
                 roundId = roundId2,
                 phase = GameRoundPhase.FLYING,
-                roundVersion = 2L,
-                expectedVersion = 1L,
+                roundVersion = 3L,
+                expectedVersion = 2L,
                 currentMultiplier = multiplier,
             )
         )
@@ -1131,6 +1161,9 @@ class AviatorCommandSequencePostgresTest {
         val roundId3 = "rnd-seq-gld3-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
         lifecyclePort.createScheduledRoundWithCommitment(tenantId, gameId, roundId3, properties)
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId3, GameRoundPhase.BET_COUNTDOWN, 2L, BigDecimal("1.0000"), expectedVersion = 1L)
+        )
 
         val betAck3 = gameService.processCommand(
             AviatorRestCommand(
@@ -1146,6 +1179,10 @@ class AviatorCommandSequencePostgresTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck3.status)
+
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, roundId3, GameRoundPhase.FLYING, 3L, BigDecimal("1.0000"), expectedVersion = 2L)
+        )
 
         val crashResult = gameService.settleRoundCrash(
             SettleRoundCrashCommand(

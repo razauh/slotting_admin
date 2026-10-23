@@ -454,7 +454,7 @@ class FairnessEnvelopePostgresTest {
         assertEquals(plaintext, envelope.open(tenantId, gameId, "rnd", roundTripId, sealed))
 
         val productionConfig = com.slotting.admin.config.FairnessEnvelopeConfiguration()
-        assertFailsWith<IllegalArgumentException> { productionConfig.fairnessSeedEnvelope("PRODUCTION", "", 1, "") }
+        assertFailsWith<IllegalStateException> { productionConfig.fairnessSeedEnvelope("PRODUCTION", "", 1, "") }
         assertFailsWith<IllegalArgumentException> { productionConfig.fairnessSeedEnvelope("PRODUCTION", "key-id", 1, "") }
 
         val store = JdbcFairnessEvidenceStore(jdbc)
@@ -573,6 +573,9 @@ class FairnessEnvelopePostgresTest {
             assertTrue(trace.any { it.first == "SEQUENCE_COUNTER" }, "iteration $iteration sequence counter must be locked last")
             assertMonotonic(trace)
 
+            lifecycleService.createOrUpdateRound(
+                CreateOrUpdateRoundCommand(tenantId, gameId, roundId, GameRoundPhase.FLYING, 2L, BigDecimal("1.1000"))
+            )
             val crash = lifecycleService.settleRoundCrash(
                 SettleRoundCrashCommand(tenantId, gameId, roundId, BigDecimal("1.1000"))
             )
@@ -687,14 +690,20 @@ class FairnessEnvelopePostgresTest {
 
         val startingBalance = 50_000L
         seedFunds(startingBalance)
+        val fairGameService = DurableGameWagerAndSettlementService(
+            store = gameStore, ledgerService = ledgerService, registrationStore = registrationStore,
+            eligibilityStore = eligibilityStore, adminPrincipal = adminPrincipal, clock = clock,
+            fairnessAuthority = fairnessAuthority, txManager = txManager,
+        )
 
         val cashOutRound = "rnd-tc013-golden-cashout"
         createRound(cashOutRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc013-golden-bet-1")).status)
-        gameService.createOrUpdateRound(
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, cashOutRound, "salt-$cashOutRound"))
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(cashOutRound, "cmd-tc013-golden-bet-1")).status)
+        fairGameService.createOrUpdateRound(
             CreateOrUpdateRoundCommand(tenantId, gameId, cashOutRound, GameRoundPhase.FLYING, 2L, multiplier)
         )
-        val cashOutAck = gameService.processCommand(
+        val cashOutAck = fairGameService.processCommand(
             AviatorRestCommand(
                 tenantId = tenantId,
                 principal = playerPrincipal,
@@ -712,8 +721,12 @@ class FairnessEnvelopePostgresTest {
 
         val lossRound = "rnd-tc013-golden-loss"
         createRound(lossRound)
-        assertEquals(AviatorCommandAckStatus.ACCEPTED, gameService.processCommand(placeBetCommand(lossRound, "cmd-tc013-golden-bet-2")).status)
-        val crashResult = gameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
+        fairnessAuthority.publishPreBetCommitment(PublishCommitmentCommand(tenantId, gameId, lossRound, "salt-$lossRound"))
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, fairGameService.processCommand(placeBetCommand(lossRound, "cmd-tc013-golden-bet-2")).status)
+        fairGameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(tenantId, gameId, lossRound, GameRoundPhase.FLYING, 2L, BigDecimal("1.0000"))
+        )
+        val crashResult = fairGameService.settleRoundCrash(SettleRoundCrashCommand(tenantId, gameId, lossRound, BigDecimal("1.0000")))
         assertEquals(1, crashResult.settledBetsCount)
         assertEquals(
             0L,

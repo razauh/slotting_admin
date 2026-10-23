@@ -18,6 +18,7 @@ import java.util.UUID
  */
 class EasypaisaAdapter : PaymentProviderPort {
     override val providerId: String = "EASYPAISA"
+    override val isProductionReady: Boolean = false
 
     val contractVersionAssumption: String = "v1.2-historical"
 

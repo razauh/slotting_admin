@@ -2,6 +2,7 @@ package com.slotting.admin.gameprovider
 
 import com.slotting.admin.config.AviatorServiceCompositionConfiguration
 import com.slotting.admin.identity.InMemoryServerEligibilityStore
+import com.slotting.admin.aml.PlayAbuseDetectionStore
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.identity.ServerEligibilityStore
 import com.slotting.admin.ledger.LedgerPostingService
@@ -33,6 +34,9 @@ class AviatorServiceCompositionFailClosedTest {
 
         @Bean
         fun clock(): Clock = Clock.systemUTC()
+
+        @Bean
+        fun playAbuseDetectionStore(): PlayAbuseDetectionStore = Mockito.mock(PlayAbuseDetectionStore::class.java)
     }
 
     @Configuration
