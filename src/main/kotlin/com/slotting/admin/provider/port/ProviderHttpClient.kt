@@ -12,7 +12,9 @@ data class ProviderHttpResponse(
     val headers: Map<String, List<String>>,
 )
 
-class ProviderHttpClient {
+class ProviderHttpClient(
+    private val transport: ((HttpRequest) -> HttpResponse<String>)? = null,
+) {
     fun execute(
         config: ProviderConfiguration,
         method: String,
@@ -30,15 +32,23 @@ class ProviderHttpClient {
             .timeout(Duration.ofMillis(config.timeoutMs))
             .method(method, body?.let(HttpRequest.BodyPublishers::ofString) ?: HttpRequest.BodyPublishers.noBody())
         headers.forEach { (name, value) -> requestBuilder.header(name, value) }
-        val response = HttpClient.newBuilder()
+        val request = requestBuilder.build()
+        if (transport != null) {
+            val raw = transport.invoke(request)
+            return ProviderHttpResponse(raw.statusCode(), raw.body(), raw.headers().map())
+        }
+        val raw = HttpClient.newBuilder()
             .connectTimeout(Duration.ofMillis(config.timeoutMs))
             .followRedirects(HttpClient.Redirect.NEVER)
             .build()
-            .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
+            .send(request, HttpResponse.BodyHandlers.ofByteArray())
+        if (raw.body().size > 64_000) {
+            throw IllegalStateException("Provider response exceeds the safe size bound")
+        }
         return ProviderHttpResponse(
-            statusCode = response.statusCode(),
-            body = response.body(),
-            headers = response.headers().map(),
+            statusCode = raw.statusCode(),
+            body = String(raw.body(), Charsets.UTF_8),
+            headers = raw.headers().map(),
         )
     }
 }

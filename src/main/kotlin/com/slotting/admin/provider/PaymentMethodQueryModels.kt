@@ -141,3 +141,14 @@ open class PaymentMethodUnavailableException(
     val serverVersion: Long?,
     message: String,
 ) : RuntimeException(message)
+
+class ConfiguredProviderStatusResolver(
+    private val configService: PaymentProviderConfigService,
+) : ProviderStatusResolver {
+    override fun isProviderAvailable(tenantId: String, providerId: String): Boolean {
+        val provider = configService.listProviders(tenantId)
+            .firstOrNull { it.providerId.equals(providerId, ignoreCase = true) }
+            ?: return false
+        return provider.status == PaymentProviderStatus.ENABLED && provider.setupStatus == ProviderSetupState.READY
+    }
+}

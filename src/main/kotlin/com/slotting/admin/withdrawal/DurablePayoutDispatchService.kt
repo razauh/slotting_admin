@@ -32,6 +32,7 @@ class DurablePayoutDispatchService(
     private val providerPorts: Map<String, PaymentProviderPort> = emptyMap(),
     private val credentialsResolver: (tenantId: String, providerId: String) -> ProviderCredentials? = { _, _ -> null },
     private val configResolver: (tenantId: String, providerId: String) -> ProviderConfiguration? = { _, _ -> null },
+    private val providerEnabled: (tenantId: String, providerId: String) -> Boolean = { _, _ -> false },
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val log = LoggerFactory.getLogger(DurablePayoutDispatchService::class.java)
@@ -53,6 +54,10 @@ class DurablePayoutDispatchService(
 
         val request = withdrawalStore.findRequest(command.tenantId, command.requestId)
             ?: throw IllegalArgumentException("Withdrawal request not found for this tenant")
+
+        if (!providerEnabled(command.tenantId, command.providerId)) {
+            throw IllegalStateException("Payment provider is disabled for new payouts")
+        }
 
         if (request.reviewState != WithdrawalReviewState.APPROVED) {
             throw IllegalStateException("Cannot stage payout for withdrawal request ${command.requestId}: review state is ${request.reviewState}, expected APPROVED")
@@ -93,6 +98,18 @@ class DurablePayoutDispatchService(
         val leaseExpiresAt = now.plus(leaseDuration)
 
         val intent = dispatchStore.findNextDispatchable(workerId, leaseExpiresAt, now) ?: return null
+        if (!providerEnabled(intent.tenantId, intent.providerId)) {
+            val restored = intent.copy(
+                status = PayoutDispatchStatus.DISPATCH_READY,
+                leaseWorkerId = null,
+                leaseExpiresAt = null,
+                attemptCount = maxOf(0, intent.attemptCount - 1),
+                serverVersion = intent.serverVersion + 1,
+                updatedAt = now,
+            )
+            dispatchStore.updateIntent(restored, intent.serverVersion)
+            return null
+        }
 
         val port = providerPorts[intent.providerId]
             ?: throw IllegalStateException("Payment provider port not found for providerId: ${intent.providerId}")

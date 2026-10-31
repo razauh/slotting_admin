@@ -116,6 +116,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to wrappedAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -165,6 +166,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to adapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -215,6 +217,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to adapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -280,6 +283,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to adapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -334,6 +338,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -375,6 +380,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = futureClock,
         )
 
@@ -401,6 +407,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -492,6 +499,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("ONE_LINK_IBFT" to countingAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
 
@@ -566,6 +574,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("UNVERIFIED" to unverifiedAdapter),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
         val request = sampleApprovedRequest()
@@ -604,6 +613,7 @@ class DurablePayoutDispatchContractTest {
             providerPorts = mapOf("UNCERTIFIED" to counting),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, _ -> productionConfig },
+            providerEnabled = { _, _ -> true },
             clock = clock,
         )
         val request = sampleApprovedRequest()
@@ -614,5 +624,40 @@ class DurablePayoutDispatchContractTest {
         assertEquals(0, calls)
         assertEquals(PayoutDispatchStatus.AMBIGUOUS_RECONCILING, result.status)
         assertEquals(100_000L, withdrawalStore.getAuthoritativeBalance("tenant-pk-1", playerAId, "PKR"))
+    }
+
+    @Test
+    fun `TC-018-R2 disabled provider blocks new payout while existing intent remains available for reconciliation`() {
+        val dispatchStore = InMemoryPayoutDispatchStore()
+        val withdrawalStore = InMemoryAuthoritativeWithdrawalStore()
+        withdrawalStore.setAuthoritativeBalance("tenant-pk-1", playerAId, "PKR", 100_000L)
+        val ledgerService = LedgerPostingService(InMemoryLedgerJournalStore(), clock = clock)
+        val adapter = AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")
+        var enabled = true
+        val service = DurablePayoutDispatchService(
+            dispatchStore = dispatchStore,
+            withdrawalStore = withdrawalStore,
+            ledgerPostingService = ledgerService,
+            providerPorts = mapOf("ONE_LINK_IBFT" to adapter),
+            credentialsResolver = { _, _ -> sampleCredentials },
+            configResolver = { _, _ -> sampleConfig },
+            providerEnabled = { _, _ -> enabled },
+            clock = clock,
+        )
+        val request = sampleApprovedRequest()
+        withdrawalStore.saveRequest(request)
+        val staged = service.stageDispatchIntent(
+            StagePayoutDispatchCommand("tenant-pk-1", request.requestId, "ONE_LINK_IBFT", "stage-disabled-1")
+        )
+        enabled = false
+        assertNull(service.dispatchNext("worker-disabled", Duration.ofMinutes(5)))
+        assertEquals(PayoutDispatchStatus.DISPATCH_READY, dispatchStore.findIntent("tenant-pk-1", staged.intentId)?.status)
+        val secondRequest = sampleApprovedRequest()
+        withdrawalStore.saveRequest(secondRequest)
+        assertFailsWith<IllegalStateException> {
+            service.stageDispatchIntent(
+                StagePayoutDispatchCommand("tenant-pk-1", secondRequest.requestId, "ONE_LINK_IBFT", "stage-disabled-2")
+            )
+        }
     }
 }

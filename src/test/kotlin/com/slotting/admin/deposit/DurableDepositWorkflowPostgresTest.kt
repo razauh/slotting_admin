@@ -15,6 +15,17 @@ import com.slotting.admin.provider.port.ProviderConfiguration
 import com.slotting.admin.provider.port.ProviderCredentials
 import com.slotting.admin.provider.port.ProviderEnvironment
 import com.slotting.admin.provider.port.adapters.SafepayRaastAdapter
+import com.slotting.admin.provider.port.JdbcVersionedProviderCredentialsStore
+import com.slotting.admin.provider.port.KmsProviderCredentialsResolver
+import com.slotting.admin.provider.port.InMemoryEncryptedProviderCredentialsStore
+import com.slotting.admin.secret.BackendKeyAlgorithm
+import com.slotting.admin.secret.BackendSecretEntry
+import com.slotting.admin.secret.BackendSecretStatus
+import com.slotting.admin.secret.BackendSecretType
+import com.slotting.admin.secret.FakeKmsBackendProviderAdapter
+import com.slotting.admin.secret.InMemoryKmsBackendSecretsStore
+import com.slotting.admin.secret.KeyVersionMetadata
+import com.slotting.admin.secret.KmsBackendSecretsService
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -116,6 +127,7 @@ class DurableDepositWorkflowPostgresTest {
         amount: Long = 50_000L,
         currency: String = "PKR",
         playerId: UUID = UUID.randomUUID(),
+        credentialVersion: Long? = null,
     ): DepositIntentRecord {
         val intent = DepositIntentRecord(
             intentId = UUID.randomUUID(),
@@ -129,6 +141,7 @@ class DurableDepositWorkflowPostgresTest {
             idempotencyKey = "idem-${UUID.randomUUID()}",
             requestFingerprint = "fp-${UUID.randomUUID()}",
             providerReference = tracker,
+            providerCredentialVersion = credentialVersion,
             expiresAt = now.plusSeconds(900),
             createdAt = now,
             updatedAt = now,
@@ -144,6 +157,7 @@ class DurableDepositWorkflowPostgresTest {
         currency: String = "PKR",
         status: String = "paid",
         signature: String? = null,
+        signingSecret: String = credentials.signingSecretOrKey!!,
     ): DepositCallbackCommand {
         val body = """{"data":{"token":"token_123","amount":$amount,"currency":"$currency","status":"$status","tracker":"$tracker"}}"""
         return DepositCallbackCommand(
@@ -151,7 +165,7 @@ class DurableDepositWorkflowPostgresTest {
             providerId = "SAFEPAY_RAAST",
             providerEventId = eventId,
             rawBody = body,
-            headers = mapOf("x-sfpy-signature" to (signature ?: adapter.calculateHmacSha256(body, credentials.signingSecretOrKey!!))),
+            headers = mapOf("x-sfpy-signature" to (signature ?: adapter.calculateHmacSha256(body, signingSecret))),
         )
     }
 
@@ -287,5 +301,60 @@ class DurableDepositWorkflowPostgresTest {
             50_000L,
             JdbcLedgerJournalStore(jdbc).findBalance(tenantId, "player:wallet:${intent.playerId}", "PKR"),
         )
+    }
+
+    @Test
+    fun `TC-016-RED-1 callback verifies only the credential version bound to the intent`() {
+        val tenantId = "tenant-tc016-${UUID.randomUUID()}"
+        val trackerV1 = "tracker-v1-${UUID.randomUUID()}"
+        val trackerMismatch = "tracker-mismatch-${UUID.randomUUID()}"
+        val kmsProvider = FakeKmsBackendProviderAdapter()
+        val key = kmsProvider.createKey(tenantId, "payment-api", BackendKeyAlgorithm.AES_256_GCM)
+        val kmsStore = InMemoryKmsBackendSecretsStore()
+        kmsStore.saveSecret(
+            BackendSecretEntry(
+                secretId = "secret-${UUID.randomUUID()}",
+                tenantId = tenantId,
+                secretKeyAlias = "payment-api",
+                secretType = BackendSecretType.API_INTEGRATION_TOKEN,
+                algorithm = BackendKeyAlgorithm.AES_256_GCM,
+                activeVersion = 1,
+                versions = mapOf(1 to KeyVersionMetadata(1, key.kmsKeyUri, key.digestSha256, BackendSecretStatus.ACTIVE, now)),
+                overlapGracePeriodSeconds = 3600,
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        val kms = KmsBackendSecretsService(kmsStore, kmsProvider, clock)
+        val versionedStore = JdbcVersionedProviderCredentialsStore(jdbc)
+        val resolver = KmsProviderCredentialsResolver(kms, InMemoryEncryptedProviderCredentialsStore(), versionedStore = versionedStore)
+        val admin = AuthenticatedPrincipal("security-admin", tenantId, PrincipalKind.ADMIN, setOf(AdminRole.SECURITY))
+        resolver.storeCredentialsVersioned(tenantId, "SAFEPAY_RAAST", "payment-api", ProviderCredentials(signingSecretOrKey = "v1-signing-secret"), admin, 1L, now)
+        resolver.activateVersion(tenantId, "SAFEPAY_RAAST", 1L, now)
+
+        val intent = seedIntent(tenantId, trackerV1, credentialVersion = 1L)
+        val serviceV1 = DurableDepositWorkflowService(
+            workflowStore = newStore(),
+            paymentMethodStore = InMemoryPaymentMethodStore(),
+            sessions = object : com.slotting.admin.auth.AdminSessionDirectory {
+                override fun find(tenantId: String, principalId: String, sessionId: String) =
+                    com.slotting.admin.auth.AdminSessionStatus(true, false, now.plusSeconds(3600), mfaVerified = true)
+            },
+            ledgerPostingService = newLedger(),
+            providerPorts = mapOf("SAFEPAY_RAAST" to adapter),
+            credentialsResolver = resolver,
+            configResolver = { _, _ -> config },
+            clock = clock,
+        )
+        val settled = process(serviceV1, callback(tenantId, trackerV1, "evt-v1-${UUID.randomUUID()}", signingSecret = "v1-signing-secret"))
+        assertEquals(DepositIntentStatus.SETTLED, settled.status)
+
+        resolver.storeCredentialsVersioned(tenantId, "SAFEPAY_RAAST", "payment-api", ProviderCredentials(signingSecretOrKey = "v2-signing-secret"), admin, 2L, now)
+        resolver.activateVersion(tenantId, "SAFEPAY_RAAST", 2L, now)
+        val mismatchIntent = seedIntent(tenantId, trackerMismatch, credentialVersion = 1L)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            process(serviceV1, callback(tenantId, trackerMismatch, "evt-v2-${UUID.randomUUID()}", signingSecret = "v2-signing-secret"))
+        }
+        assertEquals(0, ledgerCount(mismatchIntent.intentId))
     }
 }

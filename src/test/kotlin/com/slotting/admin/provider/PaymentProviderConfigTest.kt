@@ -27,15 +27,24 @@ class PaymentProviderConfigTest {
         )
         // Assert: No secret values displayed
         assertFalse(registered.provider.toString().contains("supersecret"))
-        assertEquals("****2345", registered.provider.maskedSecretPreview)
-        assertEquals(PaymentProviderStatus.ENABLED, registered.provider.status)
+        assertEquals("********", registered.provider.maskedSecretPreview)
+        assertEquals(PaymentProviderStatus.DISABLED, registered.provider.status)
         assertEquals("https://api.provider.test/v1", registered.provider.endpointUrl)
 
-        // 2. Disable provider correlating to incident
+        // 2. Enable after setup validation, then disable correlating to incident
+        val enabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = registered.provider.serverVersion,
+                incidentReference = "INC-1001",
+                idempotencyKey = "key-enable-initial",
+            )
+        )
+        assertEquals(PaymentProviderStatus.ENABLED, enabled.provider.status)
         val disabled = service.operate(
             command(
                 action = PaymentProviderConfigAction.DISABLE,
-                expectedVersion = registered.provider.serverVersion,
+                expectedVersion = enabled.provider.serverVersion,
                 incidentReference = "INC-1002",
                 idempotencyKey = "key-disable",
             )
@@ -56,11 +65,11 @@ class PaymentProviderConfigTest {
         assertEquals("INC-1002-RESOLVED", reEnabled.provider.incidentReference)
 
         // Verify audit and outbox
-        assertEquals(3, store.audit.size)
-        assertEquals(3, store.outbox.size)
+        assertEquals(4, store.audit.size)
+        assertEquals(4, store.outbox.size)
         assertEquals("PROVIDER_CONFIG_REGISTER", store.audit[0].type)
-        assertEquals("PROVIDER_CONFIG_DISABLE", store.audit[1].type)
-        assertEquals("PROVIDER_CONFIG_ENABLE", store.audit[2].type)
+        assertEquals("PROVIDER_CONFIG_ENABLE", store.audit[1].type)
+        assertEquals("PROVIDER_CONFIG_DISABLE", store.audit[2].type)
         assertEquals("corr-1", store.audit[0].correlationId)
         assertEquals("cause-1", store.audit[0].causationId)
     }
@@ -93,7 +102,7 @@ class PaymentProviderConfigTest {
         // Unknown provider on disable
         assertFailsWith<AuthenticationFailure.Rejected> {
             service.operate(command(action = PaymentProviderConfigAction.DISABLE, providerId = "unknown-prov"))
-        }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
 
         val registered = service.operate(command(action = PaymentProviderConfigAction.REGISTER))
 
@@ -102,11 +111,19 @@ class PaymentProviderConfigTest {
             service.operate(command(action = PaymentProviderConfigAction.DISABLE, expectedVersion = 99))
         }.also { assertEquals(AuthErrorCode.STALE, it.code) }
 
+        val enabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = registered.provider.serverVersion,
+                incidentReference = "INC-0",
+                idempotencyKey = "en-0",
+            )
+        )
         // Unsafe enable: enabling without incident reference
         val disabled = service.operate(
             command(
                 action = PaymentProviderConfigAction.DISABLE,
-                expectedVersion = registered.provider.serverVersion,
+                expectedVersion = enabled.provider.serverVersion,
                 incidentReference = "INC-1",
                 idempotencyKey = "dis-1",
             )
@@ -178,17 +195,321 @@ class PaymentProviderConfigTest {
         assertTrue(!migration.contains("update admin_"))
     }
 
-    private fun service(store: ProviderMemoryStore) =
-        PaymentProviderConfigService(AdminRbacPolicy(true), ActiveProviderSessionDirectory(), store, clock)
+    @Test
+    fun `TC-013-R1 PKR provider configuration is eligible while USD settlement and INR are rejected`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val registered = service.operate(
+            command(action = PaymentProviderConfigAction.REGISTER, apiKeySecret = "fake-key", idempotencyKey = "tc013-reg")
+        )
+        assertEquals(PaymentProviderStatus.DISABLED, registered.provider.status)
+        assertEquals(ProviderSetupState.READY, registered.provider.setupStatus)
+        assertEquals(setOf("PKR"), registered.provider.settlementCurrencies)
+        assertEquals("********", registered.provider.maskedSecretPreview)
+
+        val enabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = registered.provider.serverVersion,
+                incidentReference = "CHG-013",
+                idempotencyKey = "tc013-enable",
+            )
+        )
+        assertEquals(PaymentProviderStatus.ENABLED, enabled.provider.status)
+
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    providerId = "SAFEPAY_RAAST",
+                    action = PaymentProviderConfigAction.REGISTER,
+                    walletCurrencies = setOf("USD"),
+                    settlementCurrencies = setOf("USD"),
+                    idempotencyKey = "tc013-usd",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    providerId = "EASYPAISA",
+                    action = PaymentProviderConfigAction.REGISTER,
+                    walletCurrencies = setOf("INR"),
+                    settlementCurrencies = setOf("PKR"),
+                    idempotencyKey = "tc013-inr",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+        assertEquals(2, store.audit.size)
+    }
+
+    @Test
+    fun `TC-013-R2 unknown provider and unsupported payout fail closed without fallback`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(command(providerId = "UNKNOWN_PROVIDER", idempotencyKey = "tc013-unknown"))
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+
+        val unsupported = service.operate(
+            command(
+                action = PaymentProviderConfigAction.REGISTER,
+                supportedOperations = setOf("PAYOUT"),
+                idempotencyKey = "tc013-payout",
+            )
+        )
+        assertEquals(PaymentProviderStatus.DISABLED, unsupported.provider.status)
+        assertEquals(ProviderSetupState.INVALID_CONFIG, unsupported.provider.setupStatus)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    action = PaymentProviderConfigAction.ENABLE,
+                    expectedVersion = unsupported.provider.serverVersion,
+                    incidentReference = "CHG-013",
+                    idempotencyKey = "tc013-payout-enable",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+    }
+
+    @Test
+    fun `TC-013-R3 tenant isolation and stale capability version reject selection`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val registered = service.operate(
+            command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc013-tenant")
+        )
+        assertTrue(service.listProviders("tenant-1").any { it.providerId == "JAZZCASH" })
+        assertTrue(service.listProviders("tenant-2").isEmpty())
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    principal = admin("tenant-2"),
+                    action = PaymentProviderConfigAction.ENABLE,
+                    expectedVersion = registered.provider.serverVersion,
+                    incidentReference = "CHG-013",
+                    idempotencyKey = "tc013-cross-tenant",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    action = PaymentProviderConfigAction.ENABLE,
+                    expectedVersion = 999L,
+                    incidentReference = "CHG-013",
+                    idempotencyKey = "tc013-stale",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.STALE, it.code) }
+    }
+
+    @Test
+    fun `TC-018-R1 production enablement requires permitted use technical verification and evidence`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val registered = service.operate(
+            command(
+                action = PaymentProviderConfigAction.REGISTER,
+                environment = com.slotting.admin.provider.port.ProviderEnvironment.PRODUCTION,
+                apiKeySecret = "fake-key",
+                idempotencyKey = "tc018-reg",
+            )
+        )
+        assertEquals(ProviderSetupState.NOT_VERIFIED, registered.provider.setupStatus)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    action = PaymentProviderConfigAction.ENABLE,
+                    expectedVersion = registered.provider.serverVersion,
+                    incidentReference = "CHG-018",
+                    idempotencyKey = "tc018-enable-denied",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+
+        val simulator = service.operate(
+            command(
+                providerId = "EASYPAISA",
+                action = PaymentProviderConfigAction.REGISTER,
+                environment = com.slotting.admin.provider.port.ProviderEnvironment.LOCAL_MOCK,
+                apiKeySecret = "fake-key",
+                idempotencyKey = "tc018-sim",
+            )
+        )
+        assertEquals(ProviderSetupState.READY, simulator.provider.setupStatus)
+        assertEquals(PaymentProviderStatus.DISABLED, simulator.provider.status)
+    }
+
+    @Test
+    fun `TC-018-R2 disabled provider stops new payouts while existing operations remain reconcilable`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val registered = service.operate(
+            command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc018-r2-reg")
+        )
+        val enabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = registered.provider.serverVersion,
+                incidentReference = "CHG-018",
+                idempotencyKey = "tc018-r2-enable",
+            )
+        )
+        val disabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.DISABLE,
+                expectedVersion = enabled.provider.serverVersion,
+                incidentReference = "INC-018",
+                idempotencyKey = "tc018-r2-disable",
+            )
+        )
+        assertEquals(PaymentProviderStatus.DISABLED, disabled.provider.status)
+        assertTrue(disabled.provider.setupStatus == ProviderSetupState.READY)
+    }
+
+    @Test
+    fun `TC-018-R3 support role and aliased production guard are denied`() {
+        val store = ProviderMemoryStore()
+        val support = AuthenticatedPrincipal("support-1", "tenant-1", PrincipalKind.ADMIN, setOf(AdminRole.SUPPORT))
+        val service = service(store)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    principal = support,
+                    action = PaymentProviderConfigAction.REGISTER,
+                    idempotencyKey = "tc018-support",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
+
+        val fakeAdapter = com.slotting.admin.provider.port.adapters.AdversarialTestPaymentAdapter("ADVERSARIAL_TEST")
+        assertFailsWith<IllegalStateException> {
+            com.slotting.admin.provider.port.ProductionProviderGuard.assertProductionReady(fakeAdapter, "prod")
+        }
+        assertFailsWith<IllegalStateException> {
+            com.slotting.admin.provider.port.ProductionProviderGuard.assertProductionReady(fakeAdapter, "production")
+        }
+    }
+
+    @Test
+    fun `TC-014-R2 revoked session cannot replay a stored configuration result`() {
+        val store = ProviderMemoryStore()
+        val sessions = ToggleProviderSessionDirectory()
+        val service = PaymentProviderConfigService(AdminRbacPolicy(true), sessions, store, clock, TestProviderCredentialWriter())
+        val cmd = command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc014-replay")
+        service.operate(cmd)
+        sessions.active = false
+        assertFailsWith<AuthenticationFailure.Rejected> { service.operate(cmd) }
+            .also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
+        assertEquals(1, store.audit.size)
+    }
+
+    @Test
+    fun `TC-014-RED-3 missing KMS writer fails closed and config save failure revokes the new credential version`() {
+        val noWriter = PaymentProviderConfigService(AdminRbacPolicy(true), ActiveProviderSessionDirectory(), ProviderMemoryStore(), clock)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            noWriter.operate(command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc014-no-kms"))
+        }.also { assertEquals(AuthErrorCode.DEPENDENCY_UNAVAILABLE, it.code) }
+
+        val writer = TestProviderCredentialWriter()
+        val failingStore = FailingSaveProviderStore()
+        val service = PaymentProviderConfigService(AdminRbacPolicy(true), ActiveProviderSessionDirectory(), failingStore, clock, writer)
+        assertFailsWith<IllegalStateException> {
+            service.operate(command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc014-atomic"))
+        }
+        assertTrue(writer.revoked.contains(1L))
+    }
+
+    @Test
+    fun `TC-018-R1 adapter readiness is server-derived and caller flags cannot enable production`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val registered = service.operate(
+            command(
+                action = PaymentProviderConfigAction.REGISTER,
+                environment = com.slotting.admin.provider.port.ProviderEnvironment.PRODUCTION,
+                apiKeySecret = "fake-key",
+                permittedUseApproved = true,
+                technicalVerificationApproved = true,
+                externalEvidenceReference = "external-evidence-1",
+                reviewer = "reviewer-1",
+                adapterProductionReady = true,
+                idempotencyKey = "tc018-adapter-flag",
+            )
+        )
+        assertEquals(ProviderSetupState.NOT_VERIFIED, registered.provider.setupStatus)
+        assertFailsWith<AuthenticationFailure.Rejected> {
+            service.operate(
+                command(
+                    action = PaymentProviderConfigAction.ENABLE,
+                    expectedVersion = registered.provider.serverVersion,
+                    incidentReference = "CHG-018",
+                    adapterProductionReady = true,
+                    idempotencyKey = "tc018-adapter-enable-denied",
+                )
+            )
+        }.also { assertEquals(AuthErrorCode.INVALID, it.code) }
+
+        val trusted = service(ProviderMemoryStore(), ProviderAdapterRegistry(setOf("JAZZCASH")))
+        val trustedStore = ProviderMemoryStore()
+        val trustedService = service(trustedStore, ProviderAdapterRegistry(setOf("JAZZCASH")))
+        val trustedRegistered = trustedService.operate(
+            command(
+                action = PaymentProviderConfigAction.REGISTER,
+                environment = com.slotting.admin.provider.port.ProviderEnvironment.PRODUCTION,
+                apiKeySecret = "fake-key",
+                permittedUseApproved = true,
+                technicalVerificationApproved = true,
+                externalEvidenceReference = "external-evidence-1",
+                reviewer = "reviewer-1",
+                idempotencyKey = "tc018-trusted-reg",
+            )
+        )
+        assertEquals(ProviderSetupState.READY, trustedRegistered.provider.setupStatus)
+        val enabled = trustedService.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = trustedRegistered.provider.serverVersion,
+                incidentReference = "CHG-018",
+                idempotencyKey = "tc018-trusted-enable",
+            )
+        )
+        assertEquals(PaymentProviderStatus.ENABLED, enabled.provider.status)
+    }
+
+    @Test
+    fun `TC-013-R1 public method availability is gated by enabled and ready provider configuration`() {
+        val store = ProviderMemoryStore()
+        val service = service(store)
+        val resolver = ConfiguredProviderStatusResolver(service)
+        val registered = service.operate(
+            command(action = PaymentProviderConfigAction.REGISTER, idempotencyKey = "tc013-gate-reg")
+        )
+        assertEquals(false, resolver.isProviderAvailable("tenant-1", "JAZZCASH"))
+        val enabled = service.operate(
+            command(
+                action = PaymentProviderConfigAction.ENABLE,
+                expectedVersion = registered.provider.serverVersion,
+                incidentReference = "CHG-013",
+                idempotencyKey = "tc013-gate-enable",
+            )
+        )
+        assertEquals(true, resolver.isProviderAvailable("tenant-1", "JAZZCASH"))
+        assertEquals(false, resolver.isProviderAvailable("tenant-2", "JAZZCASH"))
+        assertEquals(false, resolver.isProviderAvailable("tenant-1", "UNKNOWN_PROVIDER"))
+    }
+
+    private fun service(store: ProviderMemoryStore, registry: ProviderAdapterRegistry = ProviderAdapterRegistry()) =
+        PaymentProviderConfigService(AdminRbacPolicy(true), ActiveProviderSessionDirectory(), store, clock, TestProviderCredentialWriter(), registry)
 
     private fun serviceWithDependencyFailure(store: ProviderMemoryStore) =
-        PaymentProviderConfigService(AdminRbacPolicy(true), FailingProviderSessionDirectory(), store, clock)
+        PaymentProviderConfigService(AdminRbacPolicy(true), FailingProviderSessionDirectory(), store, clock, TestProviderCredentialWriter())
 
     private fun command(
         principal: AuthenticatedPrincipal? = admin(),
-        providerId: String = "stripe-v1",
+        providerId: String = "JAZZCASH",
         action: PaymentProviderConfigAction = PaymentProviderConfigAction.REGISTER,
-        displayName: String = "Stripe Gateway",
+        displayName: String = "JazzCash",
         endpointUrl: String = "https://api.provider.test/v1",
         apiKeySecret: String? = "sec_12345",
         incidentReference: String? = null,
@@ -197,6 +518,16 @@ class PaymentProviderConfigTest {
         sessionId: String = "session-1",
         correlationId: String = "corr-1",
         causationId: String = "cause-1",
+        environment: com.slotting.admin.provider.port.ProviderEnvironment = com.slotting.admin.provider.port.ProviderEnvironment.SANDBOX,
+        walletCurrencies: Set<String> = setOf("PKR"),
+        settlementCurrencies: Set<String> = setOf("PKR"),
+        supportedOperations: Set<String> = setOf("DEPOSIT"),
+        permittedUseApproved: Boolean = false,
+        technicalVerificationApproved: Boolean = false,
+        externalEvidenceReference: String? = null,
+        reviewer: String? = null,
+        adapterProductionReady: Boolean = false,
+        credentialVersion: Long = 1L,
     ) = PaymentProviderConfigCommand(
         principal,
         sessionId,
@@ -211,6 +542,22 @@ class PaymentProviderConfigTest {
         correlationId,
         causationId,
         expectedVersion,
+        environment,
+        walletCurrencies,
+        settlementCurrencies,
+        supportedOperations,
+        1L,
+        permittedUseApproved,
+        technicalVerificationApproved,
+        externalEvidenceReference,
+        reviewer,
+        credentialVersion,
+        null,
+        null,
+        null,
+        null,
+        adapterProductionReady,
+        null,
     )
 
     private fun admin(tenantId: String = "tenant-1") =
@@ -240,6 +587,9 @@ private class ProviderMemoryStore : PaymentProviderConfigStore {
 
     override fun findByIdempotency(tenantId: String, key: String) = synchronized(this) { results["$tenantId:$key"] }
     override fun findProvider(tenantId: String, providerId: String) = synchronized(this) { items["$tenantId:$providerId"] }
+    override fun listProviders(tenantId: String): List<PaymentProviderConfig> = synchronized(this) {
+        items.filterKeys { it.startsWith("$tenantId:") }.values.toList()
+    }
     override fun save(
         result: PaymentProviderConfigResult,
         tenantId: String,
@@ -253,5 +603,28 @@ private class ProviderMemoryStore : PaymentProviderConfigStore {
         results["$tenantId:$idempotencyKey"] = queryFingerprint to result
         this.audit += audit
         this.outbox += outbox
+    }
+}
+
+private class ToggleProviderSessionDirectory : AdminSessionDirectory {
+    var active: Boolean = true
+    override fun find(tenantId: String, principalId: String, sessionId: String) =
+        if (active) AdminSessionStatus(true, false, Instant.parse("2026-09-17T18:00:00Z"), mfaVerified = true)
+        else AdminSessionStatus(false, false, Instant.parse("2026-09-17T18:00:00Z"), mfaVerified = true)
+}
+
+private class FailingSaveProviderStore : PaymentProviderConfigStore {
+    override fun findByIdempotency(tenantId: String, key: String): Pair<String, PaymentProviderConfigResult>? = null
+    override fun findProvider(tenantId: String, providerId: String): PaymentProviderConfig? = null
+    override fun save(
+        result: PaymentProviderConfigResult,
+        tenantId: String,
+        secretHash: String,
+        queryFingerprint: String,
+        idempotencyKey: String,
+        audit: AuditEvent,
+        outbox: OutboxEvent,
+    ) {
+        throw IllegalStateException("simulated config persistence failure")
     }
 }

@@ -88,6 +88,7 @@ class DurablePayoutDispatchPostgresTest {
         providerPorts = mapOf("ADVERSARIAL_TEST" to port),
         credentialsResolver = { _, _ -> credentials },
         configResolver = { _, _ -> config },
+        providerEnabled = { _, _ -> true },
         clock = clock,
     )
 

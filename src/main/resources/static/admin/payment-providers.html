@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment provider setup</title>
+  <meta name="csrf-token" content="">
+  <meta name="admin-session-id" content="">
+  <style>
+    body{font:15px/1.5 system-ui;margin:24px;max-width:1100px;color:#17212b}
+    table{border-collapse:collapse;width:100%;margin:16px 0}th,td{border:1px solid #b8c4d0;padding:8px;text-align:left;vertical-align:top}
+    input,select,button{margin:3px 0;padding:6px}label{display:block;margin-top:8px}code{background:#eef3f7;padding:2px 4px}
+    .muted{color:#566573}.error{color:#a12622}.ok{color:#176b3a}
+  </style>
+</head>
+<body>
+  <h1>Payment provider setup</h1>
+  <p class="muted">Credentials are write-only. Read responses never contain a secret. Tenant is derived from the authenticated admin session.</p>
+  <p id="status" class="muted"></p>
+  <table>
+    <thead><tr><th>Provider</th><th>Environment</th><th>Status</th><th>Setup</th><th>Currencies</th><th>Operations</th><th>Version</th><th>Last probe</th></tr></thead>
+    <tbody id="providers"></tbody>
+  </table>
+
+  <h2>Register or update</h2>
+  <form id="provider-form">
+    <label>Provider ID <input name="providerId" required placeholder="JAZZCASH"></label>
+    <label>Action
+      <select name="action">
+        <option>REGISTER</option><option>UPDATE_CONFIG</option><option>ENABLE</option><option>DISABLE</option><option>ROTATE_CREDENTIAL</option>
+      </select>
+    </label>
+    <label>Display name <input name="displayName"></label>
+    <label>Endpoint URL <input name="endpointUrl" placeholder="https://provider.example"></label>
+    <label>Environment <select name="environment"><option>SANDBOX</option><option>LOCAL_MOCK</option><option>PRODUCTION</option></select></label>
+    <label>Wallet currencies <input name="walletCurrencies" value="PKR"></label>
+    <label>Settlement currencies <input name="settlementCurrencies" value="PKR"></label>
+    <label>Operations <input name="supportedOperations" value="DEPOSIT"></label>
+    <label>Expected version <input name="expectedVersion" type="number" value="0"></label>
+    <label>Merchant ID <input name="merchantId" autocomplete="off"></label>
+    <label>API key (write-only) <input name="apiKeySecret" type="password" autocomplete="new-password"></label>
+    <label>Signing secret (write-only) <input name="signingSecretOrKey" type="password" autocomplete="new-password"></label>
+    <label>Incident / change reference <input name="incidentReference"></label>
+    <label><input name="permittedUseApproved" type="checkbox"> Permitted use approved (external evidence required)</label>
+    <label><input name="technicalVerificationApproved" type="checkbox"> Technical verification approved</label>
+    <label>External evidence reference <input name="externalEvidenceReference"></label>
+    <label>Reviewer <input name="reviewer"></label>
+    <button type="submit">Save</button>
+  </form>
+  <p class="muted">Mutations require the admin session header and a CSRF token from the admin shell. Secret fields are cleared after submit.</p>
+  <script>
+    const status = document.getElementById('status');
+    const providers = document.getElementById('providers');
+    function text(value) { const td = document.createElement('td'); td.textContent = value == null ? '' : String(value); return td; }
+    async function load() {
+      const response = await fetch('/admin/payment-providers', {credentials: 'same-origin'});
+      if (!response.ok) { status.textContent = 'Could not load providers.'; status.className = 'error'; return; }
+      const rows = await response.json();
+      providers.replaceChildren();
+      rows.forEach(function (p) {
+        const tr = document.createElement('tr');
+        [p.providerId, p.environment, p.status, p.setupStatus, Array.from(p.walletCurrencies).join(',') + ' / ' + Array.from(p.settlementCurrencies).join(','), Array.from(p.supportedOperations).join(','), p.serverVersion, p.lastProbeStatus || 'not checked'].forEach(function (v) { tr.appendChild(text(v)); });
+        providers.appendChild(tr);
+      });
+    }
+    document.getElementById('provider-form').addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form).entries());
+      const providerId = data.providerId;
+      delete data.providerId;
+      data.walletCurrencies = data.walletCurrencies.split(',').map(function (v) { return v.trim(); }).filter(Boolean);
+      data.settlementCurrencies = data.settlementCurrencies.split(',').map(function (v) { return v.trim(); }).filter(Boolean);
+      data.supportedOperations = data.supportedOperations.split(',').map(function (v) { return v.trim().toUpperCase(); }).filter(Boolean);
+      data.expectedVersion = Number(data.expectedVersion || 0);
+      data.permittedUseApproved = data.permittedUseApproved === 'on';
+      data.technicalVerificationApproved = data.technicalVerificationApproved === 'on';
+      data.idempotencyKey = 'admin-' + providerId + '-' + Date.now();
+      data.correlationId = 'admin-ui-' + providerId;
+      data.causationId = 'admin-ui-' + providerId;
+      let csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      if (!csrf) {
+        const sessionId = document.querySelector('meta[name="admin-session-id"]')?.content || '';
+        if (sessionId) {
+          const tokenResponse = await fetch('/admin/payment-providers/csrf', {credentials: 'same-origin', headers: {'X-Session-Id': sessionId}});
+          if (tokenResponse.ok) {
+            csrf = (await tokenResponse.json()).csrfToken || '';
+          }
+        }
+      }
+      const response = await fetch('/admin/payment-providers/' + encodeURIComponent(providerId), {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrf},
+        body: JSON.stringify(data)
+      });
+      const body = await response.json().catch(function () { return {}; });
+      status.textContent = response.ok ? 'Saved safely.' : ('Rejected: ' + (body.error || response.status));
+      status.className = response.ok ? 'ok' : 'error';
+      form.querySelector('input[name="apiKeySecret"]').value = '';
+      form.querySelector('input[name="signingSecretOrKey"]').value = '';
+      load();
+    });
+    load();
+  </script>
+</body>
+</html>

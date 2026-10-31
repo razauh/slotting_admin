@@ -7,7 +7,9 @@ import com.slotting.admin.ledger.*
 import com.slotting.admin.provider.*
 import com.slotting.admin.provider.port.EncryptedProviderCredentialsStore
 import com.slotting.admin.provider.port.JdbcEncryptedProviderCredentialsStore
+import com.slotting.admin.provider.port.JdbcVersionedProviderCredentialsStore
 import com.slotting.admin.provider.port.KmsProviderCredentialsResolver
+import com.slotting.admin.provider.port.VersionedProviderCredentialsStore
 import com.slotting.admin.provider.port.ProviderCredentialsResolver
 import com.slotting.admin.rg.*
 import com.slotting.admin.secret.KmsBackendSecretsService
@@ -78,12 +80,33 @@ class ProductionCompositionConfiguration {
         JdbcEncryptedProviderCredentialsStore(jdbc)
 
     @Bean
+    @ConditionalOnMissingBean
+    fun versionedProviderCredentialsStore(jdbc: JdbcTemplate): VersionedProviderCredentialsStore =
+        JdbcVersionedProviderCredentialsStore(jdbc)
+
+    @Bean
     @ConditionalOnBean(KmsBackendSecretsService::class)
     @ConditionalOnMissingBean(ProviderCredentialsResolver::class)
     fun providerCredentialsResolver(
         kms: KmsBackendSecretsService,
         store: EncryptedProviderCredentialsStore,
-    ): ProviderCredentialsResolver = KmsProviderCredentialsResolver(kms, store)
+        versionedStore: VersionedProviderCredentialsStore,
+    ): KmsProviderCredentialsResolver = KmsProviderCredentialsResolver(kms, store, versionedStore = versionedStore)
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun paymentProviderConfigService(
+        sessions: AdminSessionDirectory,
+        jdbc: JdbcTemplate,
+        clock: Clock,
+        credentialsResolver: ObjectProvider<KmsProviderCredentialsResolver>,
+    ): PaymentProviderConfigService = PaymentProviderConfigService(
+        policy = AdminRbacPolicy(true),
+        sessions = sessions,
+        store = JdbcPaymentProviderConfigStore(jdbc),
+        clock = clock,
+        credentialsResolver = credentialsResolver.getIfAvailable(),
+    )
 
     @Bean
     @ConditionalOnMissingBean
@@ -91,9 +114,11 @@ class ProductionCompositionConfiguration {
         paymentMethodStore: PaymentMethodStore,
         sessions: AdminSessionDirectory,
         clock: Clock,
+        providerConfigService: PaymentProviderConfigService,
     ): PaymentMethodQueryService = PaymentMethodQueryService(
         paymentMethodStore = paymentMethodStore,
         sessions = sessions,
+        providerStatusResolver = ConfiguredProviderStatusResolver(providerConfigService),
         clock = clock,
     )
 

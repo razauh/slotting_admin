@@ -146,6 +146,7 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
         idempotencyKey = getString("idempotency_key"),
         requestFingerprint = getString("request_fingerprint"),
         providerReference = getString("provider_reference"),
+        providerCredentialVersion = getLong("provider_credential_version").takeIf { !wasNull() },
         redirectUrl = getString("redirect_url"),
         clientSecret = getString("client_secret"),
         failureReason = getString("failure_reason"),
@@ -177,10 +178,10 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
             INSERT INTO admin_deposit_intent (
                 intent_id, tenant_id, player_id, method_id, provider_id,
                 amount_minor_units, currency, status, idempotency_key, request_fingerprint,
-                provider_reference, redirect_url, client_secret, failure_reason,
+                provider_reference, provider_credential_version, redirect_url, client_secret, failure_reason,
                 ledger_transaction_reference, settled_at, expires_at, server_version,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             record.intentId,
             record.tenantId,
@@ -193,6 +194,7 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
             record.idempotencyKey,
             record.requestFingerprint,
             record.providerReference,
+            record.providerCredentialVersion,
             record.redirectUrl,
             record.clientSecret,
             record.failureReason,
@@ -251,6 +253,7 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
             UPDATE admin_deposit_intent
             SET status = ?,
                 provider_reference = ?,
+                provider_credential_version = ?,
                 redirect_url = ?,
                 client_secret = ?,
                 failure_reason = ?,
@@ -263,6 +266,7 @@ class JdbcDepositWorkflowStore(private val jdbc: JdbcTemplate) : DepositWorkflow
             """.trimIndent(),
             record.status.name,
             record.providerReference,
+            record.providerCredentialVersion,
             record.redirectUrl,
             record.clientSecret,
             record.failureReason,

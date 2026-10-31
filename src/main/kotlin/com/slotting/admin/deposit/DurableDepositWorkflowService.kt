@@ -4,6 +4,8 @@ import com.slotting.admin.auth.*
 import com.slotting.admin.ledger.*
 import com.slotting.admin.provider.*
 import com.slotting.admin.provider.port.*
+import com.slotting.admin.provider.port.KmsProviderCredentialsResolver
+import com.slotting.admin.provider.port.ProviderCredentialVersionStatus
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Clock
@@ -120,6 +122,10 @@ open class DurableDepositWorkflowService(
             idempotencyKey = command.idempotencyKey,
             requestFingerprint = fp,
             providerReference = null,
+            providerCredentialVersion = (credentialsResolver as? KmsProviderCredentialsResolver)
+                ?.listVersions(command.tenantId, method.providerId)
+                ?.lastOrNull { it.status != ProviderCredentialVersionStatus.REVOKED }
+                ?.credentialVersion,
             redirectUrl = null,
             clientSecret = null,
             failureReason = null,
@@ -228,10 +234,9 @@ open class DurableDepositWorkflowService(
         if (config.callbackIpAllowlist.isNotEmpty() && command.sourceIp !in config.callbackIpAllowlist) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
-        val credentials = resolveProviderCredentials(command.tenantId, command.providerId)
         ProductionProviderGuard.assertProductionReady(port, config.environment.name)
 
-        // 2. Cryptographically verify signature
+        // 2. Cryptographically verify signature against the bound credential version when available
         val payload = ProviderCallbackPayload(
             providerId = command.providerId,
             rawBody = command.rawBody,
@@ -239,20 +244,34 @@ open class DurableDepositWorkflowService(
             queryParams = command.queryParams,
         )
 
-        val verification = port.verifyCallback(payload, config, credentials)
-        if (!verification.isValid) {
-            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        var verification: CallbackVerificationResult? = null
+        var verifiedCredentialVersion: Long? = null
+        for ((version, credentials) in resolveCallbackCredentialCandidates(command.tenantId, command.providerId)) {
+            val candidate = port.verifyCallback(payload, config, credentials)
+            if (candidate.isValid) {
+                verification = candidate
+                verifiedCredentialVersion = version
+                break
+            }
         }
+        val validVerification = verification
+            ?: throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
 
         // 4. Resolve associated deposit intent
         val candidateIntent = when {
-            verification.providerReference != null ->
-                workflowStore.findIntentByProviderReference(command.tenantId, verification.providerReference!!)
-                    ?: verification.operationId?.let { workflowStore.findIntent(command.tenantId, it) }
-            verification.operationId != null ->
-                workflowStore.findIntent(command.tenantId, verification.operationId!!)
+            validVerification.providerReference != null ->
+                workflowStore.findIntentByProviderReference(command.tenantId, validVerification.providerReference!!)
+                    ?: validVerification.operationId?.let { workflowStore.findIntent(command.tenantId, it) }
+            validVerification.operationId != null ->
+                workflowStore.findIntent(command.tenantId, validVerification.operationId!!)
             else -> null
         } ?: throw IllegalStateException("Could not match callback to an existing deposit intent")
+
+        if (candidateIntent.providerCredentialVersion != null && verifiedCredentialVersion != null &&
+            candidateIntent.providerCredentialVersion != verifiedCredentialVersion
+        ) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
 
         // 3. Deduplicate in inbox
         val payloadIdentity = buildString {
@@ -351,10 +370,10 @@ open class DurableDepositWorkflowService(
                 )
             }
 
-            val evidence = verification.outcome?.evidence.orEmpty()
+            val evidence = validVerification.outcome?.evidence.orEmpty()
             val receivedAmount = evidence["amountMinorUnits"]?.toLongOrNull()
             val receivedCurrency = evidence["currency"]
-            val receivedStatus = evidence["status"] ?: evidence["responseCode"] ?: verification.outcome?.rawResponseCode
+            val receivedStatus = evidence["status"] ?: evidence["responseCode"] ?: validVerification.outcome?.rawResponseCode
             val successStatuses = setOf("PAID", "SUCCESS", "SUCCEEDED", "SETTLED", "RTP_SETTLED", "000")
             val reason = when {
                 receivedStatus.isNullOrBlank() || !successStatuses.contains(receivedStatus.uppercase()) -> "CALLBACK_STATUS_NOT_SUCCESS"
@@ -497,7 +516,7 @@ open class DurableDepositWorkflowService(
             val port = providerPorts[currentIntent.providerId]
 
             val config = resolveProviderConfiguration(command.tenantId, currentIntent.providerId)
-            val credentials = resolveProviderCredentials(command.tenantId, currentIntent.providerId)
+            val credentials = resolveProviderCredentialsForIntent(currentIntent)
 
             val query = ProviderStatusQuery(
                 tenantId = command.tenantId,
@@ -743,6 +762,34 @@ open class DurableDepositWorkflowService(
                 meterRegistry?.counter("deposit_credentials_fail_closed_total")?.increment()
                 throw IllegalStateException("Provider credentials missing for tenant $tenantId")
             }
+
+    private fun resolveProviderCredentialsForIntent(intent: DepositIntentRecord): ProviderCredentials {
+        val version = intent.providerCredentialVersion
+        val resolver = credentialsResolver
+        if (version != null && resolver is KmsProviderCredentialsResolver) {
+            resolver.resolveCredentials(intent.tenantId, intent.providerId, version)?.let { return it }
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+        return resolveProviderCredentials(intent.tenantId, intent.providerId)
+    }
+
+    private fun resolveCallbackCredentialCandidates(
+        tenantId: String,
+        providerId: String,
+    ): List<Pair<Long?, ProviderCredentials>> {
+        val resolver = credentialsResolver
+        if (resolver is KmsProviderCredentialsResolver) {
+            val versions = resolver.listVersions(tenantId, providerId)
+                .filter { it.status != ProviderCredentialVersionStatus.REVOKED }
+            if (versions.isNotEmpty()) {
+                return versions.mapNotNull { versioned ->
+                    resolver.resolveCredentials(tenantId, providerId, versioned.credentialVersion)
+                        ?.let { versioned.credentialVersion to it }
+                }
+            }
+        }
+        return listOf(null to resolveProviderCredentials(tenantId, providerId))
+    }
 
     /**
      * Rejects all attempts to settle an intent or credit balances via Android/browser return URL.

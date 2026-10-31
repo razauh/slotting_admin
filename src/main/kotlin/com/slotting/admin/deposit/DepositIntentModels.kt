@@ -27,6 +27,7 @@ data class DepositIntentRecord(
     val idempotencyKey: String,
     val requestFingerprint: String,
     val providerReference: String? = null,
+    val providerCredentialVersion: Long? = null,
     val redirectUrl: String? = null,
     val clientSecret: String? = null,
     val failureReason: String? = null,
