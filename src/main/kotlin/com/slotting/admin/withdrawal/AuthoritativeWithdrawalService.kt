@@ -6,6 +6,7 @@ import com.slotting.admin.provider.PaymentMethodStatus
 import com.slotting.admin.provider.PaymentMethodStore
 import com.slotting.admin.provider.PaymentMethodUnavailableException
 import com.slotting.admin.provider.MethodAvailabilityCode
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Clock
@@ -52,7 +53,10 @@ open class AuthoritativeWithdrawalService(
             throw IllegalArgumentException("Gross amount must be strictly positive: ${command.grossAmountMinorUnits}")
         }
 
-        // 6. Restriction check
+        // 6. Alpha monetary policy (PKR/USD only)
+        SupportedAlphaCurrencyPolicy.validate(command.currencyCode)
+
+        // 7. Restriction check
         if (restrictionPolicy(command.tenantId, command.ownerId)) {
             throw RestrictedAccountException("Player ${command.ownerId} has active withdrawal restrictions")
         }
@@ -204,6 +208,12 @@ open class AuthoritativeWithdrawalService(
 
         // Idempotency check
         withdrawalStore.findRequestByIdempotency(command.tenantId, command.idempotencyKey)?.let { existing ->
+            if (existing.ownerId != command.ownerId) {
+                throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+            }
+            if (existing.quoteId != command.quoteId) {
+                throw RequestPayloadConflictException("Idempotency key reused with a different quote payload")
+            }
             return AuthoritativeWithdrawalRequestResult(
                 requestId = existing.requestId,
                 tenantId = existing.tenantId,

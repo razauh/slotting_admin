@@ -83,7 +83,7 @@ class AviatorSocketReconciliationCompatibilityTest {
 
         assertEquals("rnd-crash-501", snapshot.roundId)
         assertEquals(500000L, snapshot.userBalanceMinor)
-        assertEquals("INR", snapshot.currency)
+        assertEquals("PKR", snapshot.currency)
         assertEquals(frame.sequenceId, snapshot.sequenceId)
         assertTrue(store.outboxEvents.isNotEmpty())
         assertTrue(store.auditEvents.isNotEmpty())
@@ -174,7 +174,7 @@ class AviatorSocketReconciliationCompatibilityTest {
     fun `GAME-010-02-T004 Map Aviator socket and reconciliation compatibility remains compatible, recoverable, observable, and lifecycle-safe`() {
         AviatorSocketReconciliationCompatibilityBinding.checkBound()
 
-        val initialBalance = store.getBalance(tenantId, authorizedPrincipal.id, "INR")
+        val initialBalance = store.getBalance(tenantId, authorizedPrincipal.id, "PKR")
         assertEquals(500000L, initialBalance)
 
         // 1. Client bets via socket action
@@ -223,6 +223,6 @@ class AviatorSocketReconciliationCompatibilityTest {
         assertEquals(7500L, cashOutSnap.primaryHand.payoutMinor)
 
         // Conservation check
-        assertEquals(505000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(505000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
     }
 }

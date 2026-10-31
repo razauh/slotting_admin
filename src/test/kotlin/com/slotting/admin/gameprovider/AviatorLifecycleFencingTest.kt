@@ -68,7 +68,7 @@ class AviatorLifecycleFencingTest {
     private val now = Instant.parse("2026-10-01T10:00:00Z")
     private val tenantId = "tenant-tc019-fencing"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.randomUUID()
     private val playerIdStr = playerUuid.toString()
 

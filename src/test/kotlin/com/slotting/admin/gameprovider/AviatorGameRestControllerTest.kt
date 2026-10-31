@@ -167,10 +167,10 @@ class AviatorGameRestControllerTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-DEP-REST-01",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 50000L, "INR"),
-                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, 50000L, "INR")
+                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 50000L, "PKR"),
+                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, 50000L, "PKR")
                 ),
                 idempotencyKey = "IDEM-DEP-REST-01",
                 correlationId = "corr-dep-rest-01",
@@ -225,10 +225,10 @@ class AviatorGameRestControllerTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-DEP-CMD-01",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 10000L, "INR"),
-                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, 10000L, "INR")
+                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 10000L, "PKR"),
+                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, 10000L, "PKR")
                 ),
                 idempotencyKey = "IDEM-DEP-CMD-01",
                 correlationId = "corr-dep-cmd-01",
@@ -243,7 +243,7 @@ class AviatorGameRestControllerTest {
             handId = "hand_primary",
             action = "BET",
             wagerMinorUnits = 2500L,
-            currencyCode = "INR"
+            currencyCode = "PKR"
         )
 
         val cmdResponse = controller.postCommand(

@@ -64,7 +64,7 @@ class AviatorCrashCashOutRaceStressTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc047-race"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuids = (1..10).map { UUID.randomUUID() }
 
     private val adminPrincipal = AuthenticatedPrincipal(

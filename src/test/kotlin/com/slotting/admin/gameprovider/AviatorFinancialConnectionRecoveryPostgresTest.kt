@@ -65,10 +65,10 @@ class AviatorFinancialConnectionRecoveryPostgresTest {
             ),
             tenantId = tenantId,
             transactionReference = "TX-TC033-CONNECTION",
-            currencyCode = "INR",
+            currencyCode = "PKR",
             entries = listOf(
-                JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 101L, "INR"),
-                JournalEntryDraft("PLAYER:tc033-test", JournalEntryDirection.CREDIT, 101L, "INR"),
+                JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 101L, "PKR"),
+                JournalEntryDraft("PLAYER:tc033-test", JournalEntryDirection.CREDIT, 101L, "PKR"),
             ),
             idempotencyKey = "tc033-connection-retry",
             correlationId = "corr-tc033-connection",

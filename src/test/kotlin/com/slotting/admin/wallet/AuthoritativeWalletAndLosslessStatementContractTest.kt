@@ -180,10 +180,10 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 principal = adminPrincipal,
                 tenantId = "tenant-prod-1",
                 transactionReference = "TX-DEP-EUR-1",
-                currencyCode = "EUR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("HOUSE_SETTLEMENT", JournalEntryDirection.DEBIT, 8000L, "EUR"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 8000L, "EUR"),
+                    JournalEntryDraft("HOUSE_SETTLEMENT", JournalEntryDirection.DEBIT, 8000L, "PKR"),
+                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 8000L, "PKR"),
                 ),
                 idempotencyKey = "IDEM-DEP-EUR",
                 correlationId = "corr-2",
@@ -206,7 +206,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
         assertEquals(2, snapshot.currencyBalances.size)
 
         // EUR: 8,000 minor units
-        val eur = snapshot.currencyBalances.first { it.currencyCode == "EUR" }
+        val eur = snapshot.currencyBalances.first { it.currencyCode == "PKR" }
         assertEquals(8000L, eur.balanceMinorUnits)
 
         // USD: 5,000 minor units

@@ -159,9 +159,10 @@ class LedgerDiscrepancyDetectionService(
             throw DiscrepancyConflictException("Idempotency key reused with conflicting payload")
         }
 
-        // 4. Calculate journal sums per account
-        val journalSums = mutableMapOf<String, Long>()
-        val accountCurrencies = mutableMapOf<String, String>()
+        // 4. Calculate journal sums per currency-partitioned account
+        data class AccountPartition(val accountReference: String, val currencyCode: String)
+
+        val journalSums = mutableMapOf<AccountPartition, Long>()
 
         val relevantBatches = journalBatches.filter {
             it.tenantId == command.tenantId &&
@@ -171,26 +172,30 @@ class LedgerDiscrepancyDetectionService(
 
         for (batch in relevantBatches) {
             for (entry in batch.entries) {
+                val partition = AccountPartition(entry.accountReference, entry.currencyCode)
                 val sign = if (entry.direction == JournalEntryDirection.CREDIT) 1L else -1L
                 val delta = entry.amountMinorUnits * sign
-                journalSums[entry.accountReference] = (journalSums[entry.accountReference] ?: 0L) + delta
-                accountCurrencies[entry.accountReference] = entry.currencyCode
+                journalSums[partition] = try {
+                    Math.addExact(journalSums[partition] ?: 0L, delta)
+                } catch (e: ArithmeticException) {
+                    throw DiscrepancyInvalidException("Arithmetic overflow detected while reconciling journal sums")
+                }
             }
         }
 
-        // Map live projections by account
+        // Map live projections by currency-partitioned account
         val projectionsMap = liveProjections
             .filter { it.tenantId == command.tenantId && (command.currencyCode == null || it.currencyCode == command.currencyCode) }
-            .associateBy { it.accountReference }
+            .associateBy { AccountPartition(it.accountReference, it.currencyCode) }
 
-        val allAccountRefs = (journalSums.keys + projectionsMap.keys).toSet()
+        val allAccountRefs = (journalSums.keys + projectionsMap.keys)
         val detectedDiscrepancies = mutableListOf<ReconciliationDiscrepancy>()
         val now = Instant.now(clock)
         var zeroTolerancePagingTriggered = false
 
-        for (accRef in allAccountRefs) {
-            val jSum = journalSums[accRef] ?: 0L
-            val pBal = projectionsMap[accRef]?.balanceMinorUnits ?: 0L
+        for (partition in allAccountRefs) {
+            val jSum = journalSums[partition] ?: 0L
+            val pBal = projectionsMap[partition]?.balanceMinorUnits ?: 0L
             val diff = pBal - jSum
 
             if (diff != 0L) {
@@ -200,8 +205,8 @@ class LedgerDiscrepancyDetectionService(
                 val disc = ReconciliationDiscrepancy(
                     discrepancyId = discId,
                     tenantId = command.tenantId,
-                    accountReference = accRef,
-                    currencyCode = accountCurrencies[accRef] ?: projectionsMap[accRef]?.currencyCode ?: "USD",
+                    accountReference = partition.accountReference,
+                    currencyCode = partition.currencyCode,
                     journalSumMinorUnits = jSum,
                     projectedBalanceMinorUnits = pBal,
                     differenceMinorUnits = diff,

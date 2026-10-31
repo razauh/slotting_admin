@@ -61,7 +61,7 @@ class AviatorFinancialConcurrencyStressTest {
 
     private val tenantId = "tenant-tc034-overdraft"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val now = Instant.parse("2026-10-11T00:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
 

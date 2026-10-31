@@ -1,6 +1,8 @@
 package com.slotting.admin.ledger
 
 import com.slotting.admin.auth.*
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
@@ -114,9 +116,34 @@ data class PostingResult(
  * Semantic contract: "One accepted key→one result; payload mismatch conflicts; all direct balance writes prohibited."
  * Protected risk assertion: "duplicate/concurrent posting"
  */
+fun interface PostingCurrencyPolicy {
+    fun validatePostingCurrency(currencyCode: String?)
+}
+
+object AlphaCurrencyPostingPolicy : PostingCurrencyPolicy {
+    override fun validatePostingCurrency(currencyCode: String?) {
+        try {
+            SupportedAlphaCurrencyPolicy.validate(currencyCode)
+        } catch (e: InvalidCurrencyException) {
+            throw PostingInvalidException(
+                "Currency code is not supported by the alpha policy (only PKR and USD): " + (currencyCode ?: "null")
+            )
+        }
+    }
+}
+
+object LegacyIsoCurrencyPostingPolicy : PostingCurrencyPolicy {
+    override fun validatePostingCurrency(currencyCode: String?) {
+        if (currencyCode.isNullOrBlank() || !currencyCode.matches(Regex("^[A-Z]{3}$"))) {
+            throw PostingInvalidException("Currency code must be a valid 3-letter ISO code: '$currencyCode'")
+        }
+    }
+}
+
 open class LedgerPostingService(
     val store: LedgerJournalStore = InMemoryLedgerJournalStore(),
     private val clock: Clock = Clock.systemUTC(),
+    private val currencyPolicy: PostingCurrencyPolicy = AlphaCurrencyPostingPolicy,
 ) {
     private val auditLogs = mutableListOf<AuditEvent>()
     private val inFlightLocks = ConcurrentHashMap<String, Any>()
@@ -154,9 +181,7 @@ open class LedgerPostingService(
         if (command.transactionReference.isBlank() || command.transactionReference.length > 128) {
             throw PostingInvalidException("Transaction reference must not be blank or exceed 128 characters")
         }
-        if (command.currencyCode.isBlank() || !command.currencyCode.matches(Regex("^[A-Z]{3}$"))) {
-            throw PostingInvalidException("Currency code must be a valid 3-letter ISO code: '${command.currencyCode}'")
-        }
+        currencyPolicy.validatePostingCurrency(command.currencyCode)
         if (command.correlationId.isBlank() || command.causationId.isBlank()) {
             throw PostingInvalidException("Correlation and causation IDs are required for audit traceability")
         }

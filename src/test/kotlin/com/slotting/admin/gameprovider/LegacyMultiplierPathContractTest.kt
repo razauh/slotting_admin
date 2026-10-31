@@ -38,7 +38,7 @@ class LegacyMultiplierPathContractTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-pilot-001"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.fromString("11111111-1111-1111-1111-111111111111")
     private val playerIdStr = playerUuid.toString()
 

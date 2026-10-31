@@ -74,7 +74,7 @@ class AviatorCashOutTransactionTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc010-cashout"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.randomUUID()
     private val playerIdStr = playerUuid.toString()
 

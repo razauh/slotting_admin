@@ -15,6 +15,7 @@ class DestinationMismatchException(message: String) : RuntimeException(message)
 class StepUpReplayException(message: String) : RuntimeException(message)
 class StepUpBindingMismatchException(message: String) : RuntimeException(message)
 class RestrictedAccountException(message: String) : RuntimeException(message)
+class RequestPayloadConflictException(message: String) : RuntimeException(message)
 
 // =============================================================================
 // Domain Models

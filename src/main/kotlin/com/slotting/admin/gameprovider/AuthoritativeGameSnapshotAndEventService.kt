@@ -77,7 +77,7 @@ class AuthoritativeGameSnapshotAndEventService(
         AuthoritativeGameSnapshotBinding.checkBound()
         val p = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         if (p.tenantId != tenantId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        val balance = ledgerStore.findBalance(tenantId, "PLAYER:${p.id}", "INR")
+        val balance = ledgerStore.findBalance(tenantId, "PLAYER:${p.id}", "PKR")
         val playerUuid = try { UUID.fromString(p.id) } catch (e: Exception) { null }
         val registration = playerUuid?.let { registrationStore.findById(tenantId, it) }
         val userName = registration?.maskedEmail ?: p.id
@@ -85,7 +85,7 @@ class AuthoritativeGameSnapshotAndEventService(
             userId = p.id,
             userName = userName,
             balanceMinor = balance,
-            currency = "INR",
+            currency = "PKR",
         )
     }
 
@@ -124,7 +124,7 @@ class AuthoritativeGameSnapshotAndEventService(
                 roundId = settlement.roundId,
                 userName = userName,
                 wagerMinor = bet?.wagerMinorUnits ?: 0L,
-                currency = bet?.currencyCode ?: "INR",
+                currency = bet?.currencyCode ?: "PKR",
                 multiplier = settlement.multiplier.toDouble(),
                 payoutMinor = settlement.payoutMinorUnits,
                 timestampMillis = settlement.settledAt.toEpochMilli(),
@@ -161,7 +161,7 @@ class AuthoritativeGameSnapshotAndEventService(
         }
 
         val now = clock.instant()
-        val balance = ledgerStore.findBalance(tenantId, "PLAYER:$targetOwnerId", "INR")
+        val balance = ledgerStore.findBalance(tenantId, "PLAYER:$targetOwnerId", "PKR")
 
         val round = if (roundId != null) {
             gameStore.findRound(tenantId, gameId, roundId)
@@ -194,13 +194,13 @@ class AuthoritativeGameSnapshotAndEventService(
             elapsedFlightSeconds = elapsedFlightSeconds,
             sequenceId = seqId,
             roundVersion = round?.roundVersion ?: 1L,
-            currency = "INR",
+            currency = "PKR",
             limits = CrashBetLimits(),
             user = SnapshotUser(
                 userId = targetOwnerId,
                 userName = userName,
                 balanceMinor = balance,
-                currency = "INR",
+                currency = "PKR",
             ),
             primaryHand = primaryHand,
             secondaryHand = secondaryHand,

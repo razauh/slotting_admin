@@ -66,7 +66,7 @@ data class AviatorRestCommand(
     val handId: String,
     val action: String,
     val wagerMinor: Long? = null,
-    val currency: String = "INR",
+    val currency: String = "PKR",
     val autoCashOutMultiplier: String? = null,
     val cashOutMultiplier: Double? = null,
     val correlationId: String,
@@ -238,7 +238,8 @@ class AviatorRestCommandCompatibilityService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
-        if (command.currency.length != 3 || command.currency != "INR") {
+        if (command.currency.length != 3 ||
+            !(command.currency.equals("PKR", ignoreCase = true) || command.currency.equals("USD", ignoreCase = true))) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
@@ -436,7 +437,7 @@ class AviatorRestCommandCompatibilityService(
         val expVer = root.get("expectedRoundVersion")?.takeIf { it.isIntegralNumber }?.asLong() ?: 1L
 
         var wagerMinor: Long? = null
-        var currency = "INR"
+        var currency = "PKR"
 
         if (rawAction.uppercase() in listOf("PLACE_BET", "BET", "B", "PLAY")) {
             val accountMoney = root.get("accountMoney") ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)

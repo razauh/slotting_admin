@@ -92,7 +92,7 @@ class ServerOnlyDepositCreditTest {
             providerId = providerId,
             providerTransactionId = "tx-prov-t001",
             amountMinorUnits = 10000L,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             source = CreditSource.SERVER_VERIFIED_WEBHOOK,
             idempotencyKey = "key-credit-t001",
             correlationId = "corr-cred-1",
@@ -141,7 +141,7 @@ class ServerOnlyDepositCreditTest {
         assertEquals("dep-credit-t001", result.paymentReference)
         assertEquals("tx-prov-t001", result.providerTransactionId)
         assertEquals(10000L, result.creditedAmountMinorUnits)
-        assertEquals("EUR", result.currencyCode)
+        assertEquals("PKR", result.currencyCode)
         assertEquals("TX-DEP-dep-credit-t001", result.ledgerTransactionReference)
         assertFalse(result.isDuplicate)
         assertTrue(result.conserved)
@@ -177,7 +177,7 @@ class ServerOnlyDepositCreditTest {
             providerId = providerId,
             providerTransactionId = "tx-prov-t002",
             amountMinorUnits = 10000L,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             source = CreditSource.SERVER_VERIFIED_WEBHOOK,
             idempotencyKey = "key-credit-t002",
             correlationId = "corr-cred-2",
@@ -267,7 +267,7 @@ class ServerOnlyDepositCreditTest {
             providerId = providerId,
             providerTransactionId = "tx-prov-con-001",
             amountMinorUnits = 15000L,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             source = CreditSource.SERVER_VERIFIED_WEBHOOK,
             idempotencyKey = "key-credit-con-001",
             correlationId = "corr-cred-con",
@@ -343,7 +343,7 @@ class ServerOnlyDepositCreditTest {
             providerId = providerId,
             providerTransactionId = "tx-prov-retry-001",
             amountMinorUnits = 20000L,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             source = CreditSource.SERVER_VERIFIED_WEBHOOK,
             idempotencyKey = "key-credit-retry-001",
             correlationId = "corr-retry-1",
@@ -392,7 +392,7 @@ class ServerOnlyDepositCreditTest {
             providerId = providerId,
             providerTransactionId = "tx-prov-rec-001",
             amountMinorUnits = 30000L,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             source = CreditSource.SERVER_VERIFIED_WEBHOOK,
             idempotencyKey = "key-credit-rec-001",
             correlationId = "corr-rec-1",

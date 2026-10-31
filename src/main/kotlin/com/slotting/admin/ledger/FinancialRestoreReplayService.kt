@@ -104,8 +104,32 @@ class FinancialRestoreReplayService(
             throw DiscrepancyForbiddenException("Backup does not match requested tenant")
         }
 
+        val replayableBatches = journalBatches.filter {
+            it.tenantId == command.tenantId &&
+                (command.targetTimestamp == null || !it.postedAt.isAfter(command.targetTimestamp))
+        }.sortedBy { it.postedAt }
+        val canonicalEntryFingerprint = replayableBatches
+            .flatMap { it.entries }
+            .map { entry ->
+                listOf(
+                    entry.entryId.toString(),
+                    entry.batchId.toString(),
+                    entry.accountReference,
+                    entry.currencyCode,
+                    entry.amountMinorUnits.toString(),
+                    entry.direction.name,
+                    entry.lineOrder.toString(),
+                ).joinToString(":")
+            }
+            .sorted()
+        val sig = hashPayload(
+            command.tenantId,
+            command.backupId.toString(),
+            command.targetTimestamp?.toString() ?: "LATEST",
+            canonicalEntryFingerprint.joinToString(";"),
+        )
+
         // 3. Idempotency check
-        val sig = hashPayload(command.tenantId, command.backupId.toString(), command.targetTimestamp?.toString() ?: "LATEST")
         restoreIdempotency[command.idempotencyKey]?.let { (cachedSig, cachedResult) ->
             if (cachedSig == sig) return cachedResult
             throw DiscrepancyConflictException("Idempotency key reused with conflicting payload")
@@ -119,32 +143,45 @@ class FinancialRestoreReplayService(
         }
 
         // 4. Deterministic replay of journal entries
-        val eligibleBatches = journalBatches.filter {
-            it.tenantId == command.tenantId &&
-                (command.targetTimestamp == null || !it.postedAt.isAfter(command.targetTimestamp))
-        }.sortedBy { it.postedAt }
+        val eligibleBatches = replayableBatches
 
         var totalDebits = 0L
         var totalCredits = 0L
         var totalEntries = 0
         val entryHashes = mutableListOf<String>()
-        val accountBalances = mutableMapOf<String, Long>()
-        val accountCurrencies = mutableMapOf<String, String>()
-        val lastAppliedBatches = mutableMapOf<String, UUID>()
+        data class AccountPartition(val accountReference: String, val currencyCode: String)
+        val accountBalances = mutableMapOf<AccountPartition, Long>()
+        val lastAppliedBatches = mutableMapOf<AccountPartition, UUID>()
 
         for (batch in eligibleBatches) {
             for (entry in batch.entries) {
+                val partition = AccountPartition(entry.accountReference, entry.currencyCode)
                 totalEntries++
                 val sign = if (entry.direction == JournalEntryDirection.CREDIT) 1L else -1L
-                val delta = entry.amountMinorUnits * sign
-                accountBalances[entry.accountReference] = (accountBalances[entry.accountReference] ?: 0L) + delta
-                accountCurrencies[entry.accountReference] = entry.currencyCode
-                lastAppliedBatches[entry.accountReference] = batch.batchId
+                val delta = try {
+                    Math.multiplyExact(entry.amountMinorUnits, sign)
+                } catch (e: ArithmeticException) {
+                    throw DiscrepancyInvalidException("Arithmetic overflow detected while applying restore sign shift")
+                }
+                accountBalances[partition] = try {
+                    Math.addExact(accountBalances[partition] ?: 0L, delta)
+                } catch (e: ArithmeticException) {
+                    throw DiscrepancyInvalidException("Arithmetic overflow detected while replaying journal state")
+                }
+                lastAppliedBatches[partition] = batch.batchId
 
                 if (entry.direction == JournalEntryDirection.DEBIT) {
-                    totalDebits += entry.amountMinorUnits
+                    totalDebits = try {
+                        Math.addExact(totalDebits, entry.amountMinorUnits)
+                    } catch (e: ArithmeticException) {
+                        throw DiscrepancyInvalidException("Arithmetic overflow detected while totalling restored debits")
+                    }
                 } else {
-                    totalCredits += entry.amountMinorUnits
+                    totalCredits = try {
+                        Math.addExact(totalCredits, entry.amountMinorUnits)
+                    } catch (e: ArithmeticException) {
+                        throw DiscrepancyInvalidException("Arithmetic overflow detected while totalling restored credits")
+                    }
                 }
 
                 entryHashes.add(hashPayload(entry.entryId.toString(), entry.accountReference, entry.amountMinorUnits.toString(), entry.direction.name))
@@ -160,14 +197,14 @@ class FinancialRestoreReplayService(
         val now = Instant.now(clock)
 
         // Build deterministic projections
-        val restoredProjections = accountBalances.map { (accRef, bal) ->
+        val restoredProjections = accountBalances.map { (partition, bal) ->
             AccountBalanceProjection(
                 tenantId = command.tenantId,
-                accountReference = accRef,
-                currencyCode = accountCurrencies[accRef] ?: "USD",
+                accountReference = partition.accountReference,
+                currencyCode = partition.currencyCode,
                 balanceMinorUnits = bal,
                 version = 1L,
-                lastAppliedBatchId = lastAppliedBatches[accRef],
+                lastAppliedBatchId = lastAppliedBatches[partition],
                 lastUpdated = now,
             )
         }

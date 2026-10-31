@@ -58,7 +58,7 @@ class AviatorInvariantCheckerTest {
         val base = InMemoryLedgerJournalStore()
         val ledger = object : LedgerJournalStore by base {
             override fun findAllLegsForTenant(tenantId: String): List<JournalEntryRecord> = listOf(
-                JournalEntryRecord(UUID.randomUUID(), UUID.randomUUID(), tenantId, "PLAYER:p1", JournalEntryDirection.DEBIT, 1L, "INR", 1, createdAt = now)
+                JournalEntryRecord(UUID.randomUUID(), UUID.randomUUID(), tenantId, "PLAYER:p1", JournalEntryDirection.DEBIT, 1L, "PKR", 1, createdAt = now)
             )
         }
         val gameStore = InMemoryDurableGameWagerAndSettlementStore()

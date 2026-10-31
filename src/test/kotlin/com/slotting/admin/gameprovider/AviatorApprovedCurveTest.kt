@@ -64,7 +64,7 @@ class AviatorApprovedCurveTest {
 
     private val tenantId = "tenant-tc021-curve"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.fromString("11111111-2222-3333-4444-555555555555")
     private val playerIdStr = playerUuid.toString()
     private val now = Instant.parse("2026-10-11T12:00:00Z")

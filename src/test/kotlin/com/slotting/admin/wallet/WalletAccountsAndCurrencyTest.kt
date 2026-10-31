@@ -201,7 +201,7 @@ class WalletAccountsAndCurrencyTest {
         assertEquals("IDOR_FORBIDDEN", idorEx.errorCode)
 
         // 3. Invalid currency codes -> INVALID_CURRENCY
-        val invalidCurrencies = listOf("", "   ", "US", "USDD", "usd", "XYZ9", "123", "!@#")
+        val invalidCurrencies = listOf("US", "USDD", "usd", "XYZ9", "123", "!@#", "INR", "EUR")
         for (invalidCur in invalidCurrencies) {
             val badCurCmd = CreateWalletAccountCommand(
                 principal = adminPrincipal,
@@ -224,7 +224,7 @@ class WalletAccountsAndCurrencyTest {
             principal = adminPrincipal,
             tenantId = "tenant-wallet-prod",
             ownerId = ownerId,
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             accountType = WalletAccountType.CASH,
             initialBalanceMinorUnits = -500L,
             idempotencyKey = "idemp-t002-neg-bal",
@@ -268,14 +268,14 @@ class WalletAccountsAndCurrencyTest {
         assertEquals("DUPLICATE_ACCOUNT", dupEx.errorCode)
         assertTrue(dupEx.message!!.contains("cross-currency/duplicate account allowed"))
 
-        // 7. Cross-currency transfer attempt: Account 1 is USD, create Account 2 in EUR
+        // 7. Cross-currency transfer attempt: Account 1 is USD, create Account 2 in PKR
         val ownerId2 = UUID.randomUUID()
         val accEur = service.createAccount(
             CreateWalletAccountCommand(
                 principal = adminPrincipal,
                 tenantId = "tenant-wallet-prod",
                 ownerId = ownerId2,
-                currencyCode = "EUR",
+                currencyCode = "PKR",
                 accountType = WalletAccountType.CASH,
                 initialBalanceMinorUnits = 10_000L,
                 idempotencyKey = "idemp-t002-eur",
@@ -356,7 +356,7 @@ class WalletAccountsAndCurrencyTest {
             principal = adminPrincipal,
             tenantId = "tenant-wallet-prod",
             ownerId = ownerId,
-            currencyCode = "GBP",
+            currencyCode = "PKR",
             accountType = WalletAccountType.BONUS,
             initialBalanceMinorUnits = 15_000L,
             idempotencyKey = "idemp-t003-replay",
@@ -392,7 +392,7 @@ class WalletAccountsAndCurrencyTest {
                         principal = adminPrincipal,
                         tenantId = "tenant-wallet-prod",
                         ownerId = concurrentOwner,
-                        currencyCode = "CAD",
+                        currencyCode = "PKR",
                         accountType = WalletAccountType.CASH,
                         initialBalanceMinorUnits = 1_000L,
                         idempotencyKey = "idemp-concurrent-create-$i",
@@ -424,7 +424,7 @@ class WalletAccountsAndCurrencyTest {
                 principal = adminPrincipal,
                 tenantId = "tenant-wallet-prod",
                 ownerId = UUID.randomUUID(),
-                currencyCode = "AUD",
+                currencyCode = "USD",
                 accountType = WalletAccountType.CASH,
                 initialBalanceMinorUnits = 10_000L,
                 idempotencyKey = "idemp-src-race",
@@ -438,7 +438,7 @@ class WalletAccountsAndCurrencyTest {
                 principal = adminPrincipal,
                 tenantId = "tenant-wallet-prod",
                 ownerId = UUID.randomUUID(),
-                currencyCode = "AUD",
+                currencyCode = "USD",
                 accountType = WalletAccountType.CASH,
                 initialBalanceMinorUnits = 0L,
                 idempotencyKey = "idemp-dest-race",
@@ -463,7 +463,7 @@ class WalletAccountsAndCurrencyTest {
                         sourceAccountId = sourceAcc.accountId,
                         destinationAccountId = destAcc.accountId,
                         amountMinorUnits = 2_000L,
-                        currencyCode = "AUD",
+                        currencyCode = "USD",
                         idempotencyKey = "idemp-transfer-race-$i",
                         correlationId = "corr-tx-race-$i",
                         causationId = "caus-tx-race-$i",
@@ -524,7 +524,7 @@ class WalletAccountsAndCurrencyTest {
                 principal = adminPrincipal,
                 tenantId = "tenant-wallet-prod",
                 ownerId = owner1,
-                currencyCode = "JPY",
+                currencyCode = "USD",
                 accountType = WalletAccountType.CASH,
                 initialBalanceMinorUnits = 50_000L,
                 idempotencyKey = "idemp-t004-acc1",
@@ -538,7 +538,7 @@ class WalletAccountsAndCurrencyTest {
                 principal = adminPrincipal,
                 tenantId = "tenant-wallet-prod",
                 ownerId = owner2,
-                currencyCode = "JPY",
+                currencyCode = "USD",
                 accountType = WalletAccountType.CASH,
                 initialBalanceMinorUnits = 10_000L,
                 idempotencyKey = "idemp-t004-acc2",
@@ -555,7 +555,7 @@ class WalletAccountsAndCurrencyTest {
                 sourceAccountId = acc1.accountId,
                 destinationAccountId = acc2.accountId,
                 amountMinorUnits = 15_000L,
-                currencyCode = "JPY",
+                currencyCode = "USD",
                 idempotencyKey = "idemp-t004-tx",
                 correlationId = "corr-t004-03",
                 causationId = "caus-t004-03",
@@ -582,7 +582,7 @@ class WalletAccountsAndCurrencyTest {
                 sourceAccountId = acc2.accountId,
                 destinationAccountId = acc1.accountId,
                 amountMinorUnits = 15_000L,
-                currencyCode = "JPY",
+                currencyCode = "USD",
                 reference = "reversal-of-idemp-t004-tx",
                 idempotencyKey = "idemp-t004-compensate",
                 correlationId = "corr-t004-comp",

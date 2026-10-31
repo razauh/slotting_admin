@@ -35,7 +35,7 @@ class AviatorLifecycleDiagnosticsTest {
         val roundId = "round-broken"
         gameStore.insertRound(round(roundId, GameRoundPhase.CRASHED))
         gameStore.saveBet(
-            GameAcceptedBetRecord(UUID.randomUUID(), tenantId, "player-1", gameId, roundId, "hand-1", 101L, "INR", UUID.randomUUID(), "reservation-1", GameBetStatus.ACCEPTED, now, now)
+            GameAcceptedBetRecord(UUID.randomUUID(), tenantId, "player-1", gameId, roundId, "hand-1", 101L, "PKR", UUID.randomUUID(), "reservation-1", GameBetStatus.ACCEPTED, now, now)
         )
         val journal = InMemoryLifecycleAttemptJournalStore()
         val report = AviatorLifecycleReconciliationService(

@@ -528,11 +528,11 @@ class AviatorCommandSequencePostgresTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-SEED-LOCK-TEST-${UUID.randomUUID()}",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 50_000_000L, "INR"),
-                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, 25_000_000L, "INR"),
-                    JournalEntryDraft("HOUSE:GAME:$gameId", JournalEntryDirection.CREDIT, 25_000_000L, "INR"),
+                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 50_000_000L, "PKR"),
+                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, 25_000_000L, "PKR"),
+                    JournalEntryDraft("HOUSE:GAME:$gameId", JournalEntryDirection.CREDIT, 25_000_000L, "PKR"),
                 ),
                 idempotencyKey = "IDEM-SEED-LOCK-${UUID.randomUUID()}",
                 correlationId = "corr-seed",
@@ -602,7 +602,7 @@ class AviatorCommandSequencePostgresTest {
                     handId = "hand_primary",
                     action = "PLACE_BET",
                     wagerMinor = 100L,
-                    currency = "INR",
+                    currency = "PKR",
                     correlationId = "corr-hold-earlier",
                 )
             )
@@ -854,7 +854,7 @@ class AviatorCommandSequencePostgresTest {
                         handId = "hand_primary",
                         action = "PLACE_BET",
                         wagerMinor = 100L,
-                        currency = "INR",
+                        currency = "PKR",
                         correlationId = "corr-pre-100-$i",
                     )
                 )
@@ -927,7 +927,7 @@ class AviatorCommandSequencePostgresTest {
                         handId = "hand_primary",
                         action = actionType,
                         wagerMinor = if (actionType == "PLACE_BET") 100L else null,
-                        currency = "INR",
+                        currency = "PKR",
                         correlationId = "corr-seeded-$i",
                     )
                 )
@@ -1057,19 +1057,19 @@ class AviatorCommandSequencePostgresTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-GOLDEN-SEQ-DEPOSIT-${UUID.randomUUID()}",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
                     JournalEntryDraft(
                         accountReference = "HOUSE:SEED",
                         direction = JournalEntryDirection.DEBIT,
                         amountMinorUnits = balanceBefore,
-                        currencyCode = "INR",
+                        currencyCode = "PKR",
                     ),
                     JournalEntryDraft(
                         accountReference = "PLAYER:$playerIdStr",
                         direction = JournalEntryDirection.CREDIT,
                         amountMinorUnits = balanceBefore,
-                        currencyCode = "INR",
+                        currencyCode = "PKR",
                     )
                 ),
                 correlationId = "corr-golden",
@@ -1087,7 +1087,7 @@ class AviatorCommandSequencePostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-seq-golden-1",
             )
         )
@@ -1105,7 +1105,7 @@ class AviatorCommandSequencePostgresTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, cancelAck.status)
-        assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+        assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
 
         val roundId2 = "rnd-seq-gld2-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
@@ -1123,7 +1123,7 @@ class AviatorCommandSequencePostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-seq-golden-2",
             )
         )
@@ -1156,7 +1156,7 @@ class AviatorCommandSequencePostgresTest {
         assertEquals(124L, cashOutAck.result?.payoutMinor)
 
         val expectedBalance = balanceBefore - wagerMinor + 124L
-        assertEquals(expectedBalance, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+        assertEquals(expectedBalance, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
 
         val roundId3 = "rnd-seq-gld3-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
@@ -1174,7 +1174,7 @@ class AviatorCommandSequencePostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-seq-golden-3",
             )
         )
@@ -1194,7 +1194,7 @@ class AviatorCommandSequencePostgresTest {
         )
         assertEquals(1, crashResult.settledBetsCount)
 
-        val finalBalance = ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR")
+        val finalBalance = ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR")
         assertEquals(expectedBalance - wagerMinor, finalBalance)
     }
 }

@@ -16,6 +16,7 @@ import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.identity.ServerEligibilityStore
 import com.slotting.admin.ledger.LedgerJournalStore
 import com.slotting.admin.ledger.LedgerPostingService
+import com.slotting.admin.ledger.LegacyIsoCurrencyPostingPolicy
 import com.slotting.admin.wallet.AuthoritativeWalletService
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.ObjectProvider
@@ -45,11 +46,16 @@ class AviatorServiceCompositionConfiguration {
         roles = setOf(AdminRole.SUPER_ADMIN),
     )
 
+    @Bean("legacyGameLedgerPostingService")
+    @ConditionalOnBean(LedgerJournalStore::class)
+    fun legacyGameLedgerPostingService(store: LedgerJournalStore, clock: Clock): LedgerPostingService =
+        LedgerPostingService(store = store, clock = clock, currencyPolicy = LegacyIsoCurrencyPostingPolicy)
+
     @Bean
     @ConditionalOnMissingBean
     fun durableGameWagerAndSettlementService(
         store: DurableGameWagerAndSettlementStore,
-        ledgerPostingService: LedgerPostingService,
+        legacyGameLedgerPostingService: LedgerPostingService,
         registrationStore: PlayerRegistrationStore,
         eligibilityStore: ServerEligibilityStore,
         aviatorSystemPrincipal: AuthenticatedPrincipal,
@@ -60,7 +66,7 @@ class AviatorServiceCompositionConfiguration {
         playAbuseDetectionStore: PlayAbuseDetectionStore,
     ): DurableGameWagerAndSettlementService = DurableGameWagerAndSettlementService(
         store = store,
-        ledgerService = ledgerPostingService,
+        ledgerService = legacyGameLedgerPostingService,
         registrationStore = registrationStore,
         eligibilityStore = eligibilityStore,
         adminPrincipal = aviatorSystemPrincipal,

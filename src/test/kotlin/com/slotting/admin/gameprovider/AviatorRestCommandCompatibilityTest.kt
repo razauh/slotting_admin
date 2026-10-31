@@ -62,12 +62,12 @@ class AviatorRestCommandCompatibilityTest {
             handId = "f",
             action = "BET",
             wagerMinor = 2000L, // 20.00 INR
-            currency = "INR",
+            currency = "PKR",
             correlationId = "c-aviator-001",
             expectedRoundVersion = 1L
         )
 
-        val initialBalance = store.getBalance(tenantId, authorizedPrincipal.id, "INR")
+        val initialBalance = store.getBalance(tenantId, authorizedPrincipal.id, "PKR")
         assertEquals(500000L, initialBalance)
 
         val result = service.processCommand(cmd)
@@ -78,7 +78,7 @@ class AviatorRestCommandCompatibilityTest {
         assertEquals(AviatorCommandAction.PLACE_BET, result.action)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, result.status)
         assertEquals(498000L, result.result?.accountMoneyAfterMinor)
-        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
         assertTrue(result.sequenceId > 0)
         assertEquals(2L, result.revision)
 
@@ -104,7 +104,7 @@ class AviatorRestCommandCompatibilityTest {
             handId = "f",
             action = "BET",
             wagerMinor = 2000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "c-sec-001",
             expectedRoundVersion = 1L
         )
@@ -152,21 +152,21 @@ class AviatorRestCommandCompatibilityTest {
             handId = "f",
             action = "BET",
             wagerMinor = 1000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "c-idemp",
             expectedRoundVersion = 1L
         )
 
         val firstAck = service.processCommand(cmd)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, firstAck.status)
-        assertEquals(499000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(499000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
 
         // Duplicate delivery (idempotent replay)
         val duplicateAck = service.processCommand(cmd)
         assertEquals(AviatorCommandAckStatus.DUPLICATE, duplicateAck.status)
         assertEquals(firstAck.sequenceId, duplicateAck.sequenceId)
         // Balance remains 499000L, no double debit!
-        assertEquals(499000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(499000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
 
         // Conflicting payload on same commandId -> CONFLICT
         val conflicting = cmd.copy(wagerMinor = 3000L)
@@ -192,13 +192,13 @@ class AviatorRestCommandCompatibilityTest {
             handId = "primary",
             action = "PLACE_BET",
             wagerMinor = 2000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "c-life",
             expectedRoundVersion = 1L
         )
         val betAck = service.processCommand(betCmd)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck.status)
-        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
 
         // 2. CASH_OUT at 2.50x
         val cashOutCmd = AviatorRestCommand(
@@ -209,7 +209,7 @@ class AviatorRestCommandCompatibilityTest {
             handId = "primary",
             action = "CASHOUT",
             wagerMinor = 2000L,
-            currency = "INR",
+            currency = "PKR",
             cashOutMultiplier = 2.50,
             correlationId = "c-life",
             expectedRoundVersion = 2L
@@ -218,6 +218,6 @@ class AviatorRestCommandCompatibilityTest {
             service.processCommand(cashOutCmd)
         }
         assertEquals(AuthErrorCode.FORBIDDEN, cashOutAck.code)
-        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "INR"))
+        assertEquals(498000L, store.getBalance(tenantId, authorizedPrincipal.id, "PKR"))
     }
 }

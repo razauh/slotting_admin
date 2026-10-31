@@ -71,7 +71,7 @@ class FairnessEnvelopePostgresTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc013-envelope"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val keyBytes = ByteArray(32) { (it + 1).toByte() }
     private val rotatedKeyBytes = ByteArray(32) { (it + 101).toByte() }
 

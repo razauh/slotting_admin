@@ -11,7 +11,7 @@
   "expectedRoundVersion": 1,
   "accountMoney": {
     "amountMinor": 2000,
-    "currency": "INR"
+    "currency": "PKR"
   },
   "autoCashOutMultiplier": "2.50x"
 }

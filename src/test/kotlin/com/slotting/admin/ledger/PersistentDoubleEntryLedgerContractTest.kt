@@ -201,7 +201,7 @@ class PersistentDoubleEntryLedgerContractTest {
             transactionReference = "TX-MISMATCH-1",
             currencyCode = "USD",
             entries = listOf(
-                JournalEntryDraft("ACC-1", JournalEntryDirection.DEBIT, 100L, "EUR"),
+                JournalEntryDraft("ACC-1", JournalEntryDirection.DEBIT, 100L, "PKR"),
                 JournalEntryDraft("ACC-2", JournalEntryDirection.CREDIT, 100L, "USD"),
             ),
             idempotencyKey = "IDEM-MISMATCH-1",

@@ -226,7 +226,7 @@ class AviatorSocketReconciliationCompatibilityService(
         // Generate baseline snapshot from authoritative ledger state
         val now = clock.instant()
         val timestamp = now.toEpochMilli()
-        val balance = store.getBalance(tenantId, playerId, "INR")
+        val balance = store.getBalance(tenantId, playerId, "PKR")
         val sequenceId = sequenceCounter.get()
 
         val snapshot = AviatorSocketSnapshot(
@@ -238,7 +238,7 @@ class AviatorSocketReconciliationCompatibilityService(
             primaryHand = AviatorHandSnapshot(),
             secondaryHand = AviatorHandSnapshot(),
             userBalanceMinor = balance,
-            currency = "INR",
+            currency = "PKR",
             recentMultipliers = listOf(1.50, 2.10, 1.15),
             serverSeedHash = sha256("seed:$roundId")
         )

@@ -218,7 +218,7 @@ class AviatorGameRestController(
         return try {
             val principal = resolvePrincipal(tenantIdHeader, sessionToken, authHeader, principalAttr)
             val resolvedWager = request.accountMoney?.amountMinor ?: request.wagerMinorUnits
-            val resolvedCurrency = request.accountMoney?.currency ?: request.currencyCode ?: "INR"
+            val resolvedCurrency = request.accountMoney?.currency ?: request.currencyCode ?: "PKR"
             val resolvedCausationId = request.causationId ?: request.commandId
             val resolvedCorrelationId = request.correlationId ?: request.commandId
             val resolvedProtocolVersion = request.protocolVersion ?: "1.2.0"

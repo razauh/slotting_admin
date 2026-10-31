@@ -175,10 +175,10 @@ class AviatorCommandClaimPostgresTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-CLAIM-SEED-${UUID.randomUUID()}",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, amount, "INR"),
-                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, amount, "INR"),
+                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, amount, "PKR"),
+                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, amount, "PKR"),
                 ),
                 idempotencyKey = "IDEM-CLAIM-SEED-${UUID.randomUUID()}",
                 correlationId = "corr-claim-seed",
@@ -284,7 +284,7 @@ class AviatorCommandClaimPostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = 60L,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-key-stable-1",
             )
         )
@@ -328,10 +328,10 @@ class AviatorCommandClaimPostgresTest {
                                         principal = adminPrincipal,
                                         tenantId = tenantId,
                                         transactionReference = txRef,
-                                        currencyCode = "INR",
+                                        currencyCode = "PKR",
                                         entries = listOf(
-                                            JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 60L, "INR"),
-                                            JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 60L, "INR"),
+                                            JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 60L, "PKR"),
+                                            JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 60L, "PKR"),
                                         ),
                                         idempotencyKey = placeBetKey,
                                         correlationId = "corr-claim-race",
@@ -389,10 +389,10 @@ class AviatorCommandClaimPostgresTest {
                     principal = adminPrincipal,
                     tenantId = tenantId,
                     transactionReference = txRef,
-                    currencyCode = "INR",
+                    currencyCode = "PKR",
                     entries = listOf(
-                        JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 60L, "INR"),
-                        JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 60L, "INR"),
+                        JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 60L, "PKR"),
+                        JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 60L, "PKR"),
                     ),
                     idempotencyKey = placeBetKey,
                     correlationId = "corr-conflict",
@@ -415,10 +415,10 @@ class AviatorCommandClaimPostgresTest {
                         principal = adminPrincipal,
                         tenantId = tenantId,
                         transactionReference = txRef,
-                        currencyCode = "INR",
+                        currencyCode = "PKR",
                         entries = listOf(
-                            JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 61L, "INR"),
-                            JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 61L, "INR"),
+                            JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.DEBIT, 61L, "PKR"),
+                            JournalEntryDraft("ESCROW:GAME:$gameId", JournalEntryDirection.CREDIT, 61L, "PKR"),
                         ),
                         idempotencyKey = placeBetKey,
                         correlationId = "corr-conflict",
@@ -667,7 +667,7 @@ class AviatorCommandClaimPostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-tc006-golden-bet-1",
             )
         )
@@ -689,7 +689,7 @@ class AviatorCommandClaimPostgresTest {
         assertEquals(expectedWinMinor, cashOutAck.result?.payoutMinor)
         assertEquals(
             startingBalance - wagerMinor + expectedWinMinor,
-            ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"),
+            ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"),
         )
 
         val lossRound = "rnd-tc006-golden-loss"
@@ -703,7 +703,7 @@ class AviatorCommandClaimPostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-tc006-golden-bet-2",
             )
         )

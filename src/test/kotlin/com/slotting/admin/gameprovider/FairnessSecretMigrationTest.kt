@@ -71,7 +71,7 @@ class FairnessSecretMigrationTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc014-migration"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val keyV1 = ByteArray(32) { (it + 1).toByte() }
     private val keyV2 = ByteArray(32) { (it + 91).toByte() }

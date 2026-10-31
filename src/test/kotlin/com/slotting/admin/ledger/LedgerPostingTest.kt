@@ -200,14 +200,14 @@ class LedgerPostingTest {
     @Test
     fun `LEDGER-002-T003 Posting idempotency survives concurrency, duplicate delivery, and dependency failure`() {
         val entries = listOf(
-            JournalEntryDraft("ACC-1", JournalEntryDirection.DEBIT, 2500L, "EUR"),
-            JournalEntryDraft("ACC-2", JournalEntryDirection.CREDIT, 2500L, "EUR"),
+            JournalEntryDraft("ACC-1", JournalEntryDirection.DEBIT, 2500L, "PKR"),
+            JournalEntryDraft("ACC-2", JournalEntryDirection.CREDIT, 2500L, "PKR"),
         )
         val command = PostTransactionCommand(
             principal = securityPrincipal,
             tenantId = "tenant-01",
             transactionReference = "TX-CONCURRENT-001",
-            currencyCode = "EUR",
+            currencyCode = "PKR",
             entries = entries,
             idempotencyKey = "IDEM-CONCURRENCY-001",
             correlationId = "corr-conc",
@@ -258,14 +258,14 @@ class LedgerPostingTest {
     @Test
     fun `LEDGER-002-T004 Posting idempotency remains compatible, recoverable, observable, and lifecycle-safe`() {
         val entries = listOf(
-            JournalEntryDraft("ACC-AUDIT-1", JournalEntryDirection.DEBIT, 5000L, "GBP"),
-            JournalEntryDraft("ACC-AUDIT-2", JournalEntryDirection.CREDIT, 5000L, "GBP"),
+            JournalEntryDraft("ACC-AUDIT-1", JournalEntryDirection.DEBIT, 5000L, "USD"),
+            JournalEntryDraft("ACC-AUDIT-2", JournalEntryDirection.CREDIT, 5000L, "USD"),
         )
         val command = PostTransactionCommand(
             principal = adminPrincipal,
             tenantId = "tenant-01",
             transactionReference = "TX-AUDIT-001",
-            currencyCode = "GBP",
+            currencyCode = "USD",
             entries = entries,
             idempotencyKey = "IDEM-AUDIT-001",
             correlationId = "corr-audit-99",
@@ -284,7 +284,7 @@ class LedgerPostingTest {
                     tenantId = "tenant-01",
                     accountReference = "ACC-AUDIT-1",
                     amountMinorUnits = 1000L,
-                    currencyCode = "GBP",
+                    currencyCode = "USD",
                 )
             )
         }

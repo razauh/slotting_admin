@@ -5,6 +5,7 @@ import com.slotting.admin.auth.AuditEvent
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.OutboxEvent
 import com.slotting.admin.auth.PrincipalKind
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.Currency
 import java.util.UUID
@@ -300,5 +301,88 @@ object IsoCurrencyValidator {
             )
         }
         return trimmed
+    }
+}
+
+object SupportedAlphaCurrencyPolicy {
+    val supportedCurrencies: Set<String> = setOf("PKR", "USD")
+    const val minorUnitScale: Int = 2
+    const val defaultAccountCreationCurrency: String = "PKR"
+    private val ISO_PATTERN: Regex = Regex("^[A-Z]{3}$")
+
+    fun isSupported(code: String?): Boolean {
+        if (code == null) return false
+        val trimmed = code.trim()
+        if (!trimmed.matches(ISO_PATTERN)) return false
+        return supportedCurrencies.contains(trimmed)
+    }
+
+    fun validate(code: String?): String {
+        val trimmed = code?.trim().orEmpty()
+        if (trimmed.isEmpty()) {
+            throw InvalidCurrencyException(
+                "Currency is required for new financial commands and cannot be missing or blank",
+                mapOf("providedCode" to (code ?: "null"), "supportedCurrencies" to supportedCurrencies)
+            )
+        }
+        if (!trimmed.matches(ISO_PATTERN)) {
+            throw InvalidCurrencyException(
+                "Malformed ISO currency code: '${provided(code)}'. Must be a 3-letter uppercase code.",
+                mapOf("providedCode" to (code ?: "null"), "supportedCurrencies" to supportedCurrencies)
+            )
+        }
+        if (!supportedCurrencies.contains(trimmed)) {
+            throw InvalidCurrencyException(
+                "Unsupported alpha currency code: '$code'. Only PKR and USD are supported.",
+                mapOf("providedCode" to code, "supportedCurrencies" to supportedCurrencies)
+            )
+        }
+        return trimmed
+    }
+
+    private fun provided(code: String?): String = code ?: "null"
+
+    fun resolveAccountCreationCurrency(requested: String?): String {
+        if (requested.isNullOrBlank()) return defaultAccountCreationCurrency
+        return validate(requested)
+    }
+
+    fun parseMajorUnitsText(text: String?): Long {
+        val raw = text?.trim().orEmpty()
+        if (text == null) {
+            throw InvalidAmountException(
+                "Monetary amount is required and cannot be missing",
+                mapOf("providedAmount" to "null")
+            )
+        }
+        if (raw.isEmpty()) {
+            throw InvalidAmountException(
+                "Monetary amount cannot be blank",
+                mapOf("providedAmount" to text)
+            )
+        }
+        val decimal = try {
+            BigDecimal(raw)
+        } catch (e: NumberFormatException) {
+            throw InvalidAmountException(
+                "Malformed monetary amount: '$raw'",
+                mapOf("providedAmount" to text)
+            )
+        }
+        if (decimal.stripTrailingZeros().scale() > minorUnitScale) {
+            throw InvalidAmountException(
+                "Monetary amount cannot be represented exactly in $minorUnitScale-decimal-digit minor units without rounding: '$raw'",
+                mapOf("providedAmount" to text)
+            )
+        }
+        val minorValue = decimal.movePointRight(minorUnitScale).stripTrailingZeros()
+        return try {
+            minorValue.longValueExact()
+        } catch (e: ArithmeticException) {
+            throw InvalidAmountException(
+                "Monetary amount overflows the long minor-unit range: '$raw'",
+                mapOf("providedAmount" to text)
+            )
+        }
     }
 }

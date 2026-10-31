@@ -48,7 +48,7 @@ class AuthoritativeGameSnapshotAndSocketContractTest {
     private val player1IdStr = player1Uuid.toString()
     private val player2Uuid = UUID.fromString("22222222-2222-2222-2222-222222222222")
     private val player2IdStr = player2Uuid.toString()
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val player1Principal = AuthenticatedPrincipal(
         id = player1IdStr,

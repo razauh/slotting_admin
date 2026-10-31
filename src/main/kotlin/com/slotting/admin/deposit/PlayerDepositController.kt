@@ -5,6 +5,8 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.provider.PaymentMethodUnavailableException
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -14,7 +16,7 @@ import java.util.UUID
 data class CreateDepositIntentRequest(
     val methodId: String,
     val amountMinorUnits: Long,
-    val currencyCode: String,
+    val currencyCode: String? = null,
     val customerIdentifier: String,
     val methodExpectedVersion: Long = 1L,
     val idempotencyKey: String,
@@ -46,10 +48,11 @@ class PlayerDepositController(
                 mapOf("error" to "INVALID_MONEY", "message" to "Deposit amount must be strictly positive")
             )
         }
-        val validCurrencies = setOf("PKR", "INR", "USD", "EUR", "GBP")
-        if (!validCurrencies.contains(request.currencyCode)) {
+        val normalizedCurrencyCode = try {
+            SupportedAlphaCurrencyPolicy.validate(request.currencyCode)
+        } catch (e: InvalidCurrencyException) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
-                mapOf("error" to "INVALID_MONEY", "message" to "Unsupported currency code")
+                mapOf("error" to "INVALID_MONEY", "message" to (e.message ?: "Unsupported currency code"))
             )
         }
 
@@ -64,7 +67,7 @@ class PlayerDepositController(
             },
             methodId = request.methodId,
             amountMinorUnits = request.amountMinorUnits,
-            currencyCode = request.currencyCode,
+            currencyCode = normalizedCurrencyCode,
             customerIdentifier = request.customerIdentifier,
             methodExpectedVersion = request.methodExpectedVersion,
             idempotencyKey = request.idempotencyKey,

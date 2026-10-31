@@ -69,7 +69,7 @@ class AviatorCrashLockProofTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc048-locks"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuids = (1..5).map { UUID.randomUUID() }
 
     private val adminPrincipal = AuthenticatedPrincipal(

@@ -2,6 +2,7 @@ package com.slotting.admin.withdrawal
 
 import com.slotting.admin.auth.*
 import com.slotting.admin.provider.*
+import com.slotting.admin.wallet.InvalidCurrencyException
 import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Duration
@@ -207,6 +208,47 @@ class AuthoritativeWithdrawalContractTest {
     }
 
     // =========================================================================
+    // 2a. Alpha monetary policy (VER-011): unsupported currency rejected with no reservation
+    // =========================================================================
+
+    @Test
+    fun `test02a unsupported INR currency is rejected before any reservation is created`() {
+        val store = InMemoryAuthoritativeWithdrawalStore()
+        store.setAuthoritativeBalance("tenant-pk-1", playerAId, "INR", 500_000L)
+        val methodStore = InMemoryPaymentMethodStore()
+        methodStore.saveMethod(activeWithdrawalMethod)
+
+        val service = AuthoritativeWithdrawalService(
+            withdrawalStore = store,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            clock = clock,
+        )
+
+        val dest = sampleDestination(playerAId)
+        store.saveDestination(dest)
+
+        val ex = assertFailsWith<InvalidCurrencyException> {
+            service.createQuote(
+                CreateAuthoritativeQuoteCommand(
+                    principal = playerAPrincipal,
+                    sessionId = "sess-1",
+                    tenantId = "tenant-pk-1",
+                    ownerId = playerAId,
+                    currencyCode = "INR",
+                    methodId = "BANK_PK",
+                    destinationId = dest.destinationId,
+                    grossAmountMinorUnits = 100_000L,
+                    idempotencyKey = "quote-inr-policy",
+                )
+            )
+        }
+        assertTrue(ex.errorCode == "INVALID_CURRENCY")
+
+        assertTrue(store.cachedQuoteCount("tenant-pk-1") == 0 && store.cachedReservationCount("tenant-pk-1") == 0)
+    }
+
+    // =========================================================================
     // 2. Fee Boundary Scenario
     // =========================================================================
 
@@ -320,6 +362,157 @@ class AuthoritativeWithdrawalContractTest {
                     destinationId = destB.destinationId,
                     stepUpToken = null,
                     idempotencyKey = "req-dest-mismatch",
+                )
+            )
+        }
+    }
+
+    // =========================================================================
+    // 3b. Idempotent replay scoping (VER follow-up): owner + payload binding
+    // =========================================================================
+
+    @Test
+    fun `test03b replay with same key scoped by tenant returns owner request and rejects foreign owner reuse`() {
+        val store = InMemoryAuthoritativeWithdrawalStore()
+        store.setAuthoritativeBalance("tenant-pk-1", playerAId, "PKR", 500_000L)
+        val methodStore = InMemoryPaymentMethodStore()
+        methodStore.saveMethod(activeWithdrawalMethod.copy(minWithdrawalMinorUnits = 1_000L))
+
+        val service = AuthoritativeWithdrawalService(
+            withdrawalStore = store,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            clock = clock,
+        )
+
+        val dest = sampleDestination(playerAId)
+        store.saveDestination(dest)
+
+        val quote = service.createQuote(
+            CreateAuthoritativeQuoteCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                currencyCode = "PKR",
+                methodId = "BANK_PK",
+                destinationId = dest.destinationId,
+                grossAmountMinorUnits = 9_000L,
+                idempotencyKey = "quote-replay-scope",
+            )
+        )
+
+        val first = service.createWithdrawalRequest(
+            CreateAuthoritativeWithdrawalRequestCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                quoteId = quote.quoteId,
+                destinationId = dest.destinationId,
+                stepUpToken = null,
+                idempotencyKey = "req-replay-scope",
+            )
+        )
+
+        val second = service.createWithdrawalRequest(
+            CreateAuthoritativeWithdrawalRequestCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                quoteId = quote.quoteId,
+                destinationId = dest.destinationId,
+                stepUpToken = null,
+                idempotencyKey = "req-replay-scope",
+            )
+        )
+        assertTrue(second.requestId == first.requestId)
+
+        val foreignOwner = CreateAuthoritativeWithdrawalRequestCommand(
+            principal = playerAPrincipal.copy(kind = PrincipalKind.ADMIN),
+            sessionId = "sess-1",
+            tenantId = "tenant-pk-1",
+            ownerId = UUID.randomUUID(),
+            quoteId = quote.quoteId,
+            destinationId = dest.destinationId,
+            stepUpToken = null,
+            idempotencyKey = "req-replay-scope",
+        )
+        val ex = assertFailsWith<AuthenticationFailure.Rejected> {
+            service.createWithdrawalRequest(foreignOwner)
+        }
+        assertTrue(ex.code == AuthErrorCode.FORBIDDEN)
+    }
+
+    @Test
+    fun `test03c replay with same key but different quote payload conflicts`() {
+        val store = InMemoryAuthoritativeWithdrawalStore()
+        store.setAuthoritativeBalance("tenant-pk-1", playerAId, "PKR", 900_000L)
+        val methodStore = InMemoryPaymentMethodStore()
+        methodStore.saveMethod(activeWithdrawalMethod.copy(minWithdrawalMinorUnits = 1_000L))
+
+        val service = AuthoritativeWithdrawalService(
+            withdrawalStore = store,
+            paymentMethodStore = methodStore,
+            sessions = sessionDir,
+            clock = clock,
+        )
+
+        val dest = sampleDestination(playerAId)
+        store.saveDestination(dest)
+
+        val quote1 = service.createQuote(
+            CreateAuthoritativeQuoteCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                currencyCode = "PKR",
+                methodId = "BANK_PK",
+                destinationId = dest.destinationId,
+                grossAmountMinorUnits = 9_000L,
+                idempotencyKey = "quote-payload-1",
+            )
+        )
+        val quote2 = service.createQuote(
+            CreateAuthoritativeQuoteCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                currencyCode = "PKR",
+                methodId = "BANK_PK",
+                destinationId = dest.destinationId,
+                grossAmountMinorUnits = 9_500L,
+                idempotencyKey = "quote-payload-2",
+            )
+        )
+
+        service.createWithdrawalRequest(
+            CreateAuthoritativeWithdrawalRequestCommand(
+                principal = playerAPrincipal,
+                sessionId = "sess-1",
+                tenantId = "tenant-pk-1",
+                ownerId = playerAId,
+                quoteId = quote1.quoteId,
+                destinationId = dest.destinationId,
+                stepUpToken = null,
+                idempotencyKey = "req-payload-scope",
+            )
+        )
+
+        assertFailsWith<RequestPayloadConflictException> {
+            service.createWithdrawalRequest(
+                CreateAuthoritativeWithdrawalRequestCommand(
+                    principal = playerAPrincipal,
+                    sessionId = "sess-1",
+                    tenantId = "tenant-pk-1",
+                    ownerId = playerAId,
+                    quoteId = quote2.quoteId,
+                    destinationId = dest.destinationId,
+                    stepUpToken = null,
+                    idempotencyKey = "req-payload-scope",
                 )
             )
         }

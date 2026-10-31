@@ -52,7 +52,7 @@ class ConcurrentRaceHarnessContractTest {
 
     private val now = Instant.parse("2026-10-12T10:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
-    private val currency = "INR"
+    private val currency = "PKR"
     private val gameId = "AVIATOR"
 
     private fun adminFor(tenantId: String) = AuthenticatedPrincipal(

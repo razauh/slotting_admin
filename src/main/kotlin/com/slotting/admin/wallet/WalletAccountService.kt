@@ -171,7 +171,7 @@ internal class WalletAccountService(
         WalletAccountBinding.checkBound()
         validatePrincipal(command.principal, command.tenantId)
 
-        val normalizedCurrency = IsoCurrencyValidator.validate(command.currencyCode)
+        val normalizedCurrency = SupportedAlphaCurrencyPolicy.resolveAccountCreationCurrency(command.currencyCode)
 
         if (command.initialBalanceMinorUnits < 0L) {
             throw InvalidAmountException(
@@ -280,7 +280,7 @@ internal class WalletAccountService(
         WalletAccountBinding.checkBound()
         validatePrincipal(command.principal, command.tenantId)
 
-        val normalizedCurrency = IsoCurrencyValidator.validate(command.currencyCode)
+        val normalizedCurrency = SupportedAlphaCurrencyPolicy.validate(command.currencyCode)
 
         if (command.amountMinorUnits <= 0L) {
             throw InvalidAmountException(
@@ -369,10 +369,27 @@ internal class WalletAccountService(
 
             val now = Instant.now(clock)
 
+            val debitedAvailable = try {
+                Math.subtractExact(sourceAccount.availableBalanceMinorUnits, command.amountMinorUnits)
+            } catch (e: ArithmeticException) {
+                throw InvalidAmountException(
+                    "Monetary arithmetic overflow while debiting the source account",
+                    mapOf("availableMinorUnits" to sourceAccount.availableBalanceMinorUnits, "amountMinorUnits" to command.amountMinorUnits)
+                )
+            }
+            val creditedAvailable = try {
+                Math.addExact(destAccount.availableBalanceMinorUnits, command.amountMinorUnits)
+            } catch (e: ArithmeticException) {
+                throw InvalidAmountException(
+                    "Monetary arithmetic overflow while crediting the destination account",
+                    mapOf("availableMinorUnits" to destAccount.availableBalanceMinorUnits, "amountMinorUnits" to command.amountMinorUnits)
+                )
+            }
+
             // Debit source
             val updatedSource = sourceAccount.copy(
                 currentBalanceMinorUnits = sourceAccount.currentBalanceMinorUnits - command.amountMinorUnits,
-                availableBalanceMinorUnits = sourceAccount.availableBalanceMinorUnits - command.amountMinorUnits,
+                availableBalanceMinorUnits = debitedAvailable,
                 version = sourceAccount.version + 1,
                 updatedAt = now
             )
@@ -380,7 +397,7 @@ internal class WalletAccountService(
             // Credit destination
             val updatedDest = destAccount.copy(
                 currentBalanceMinorUnits = destAccount.currentBalanceMinorUnits + command.amountMinorUnits,
-                availableBalanceMinorUnits = destAccount.availableBalanceMinorUnits + command.amountMinorUnits,
+                availableBalanceMinorUnits = creditedAvailable,
                 version = destAccount.version + 1,
                 updatedAt = now
             )
@@ -449,7 +466,7 @@ internal class WalletAccountService(
         WalletAccountBinding.checkBound()
         validatePrincipal(command.principal, command.tenantId)
 
-        val normalizedCurrency = IsoCurrencyValidator.validate(command.currencyCode)
+        val normalizedCurrency = SupportedAlphaCurrencyPolicy.validate(command.currencyCode)
 
         if (command.amountMinorUnits <= 0L) {
             throw InvalidAmountException(
@@ -561,7 +578,7 @@ internal class WalletAccountService(
         WalletAccountBinding.checkBound()
         validatePrincipal(command.principal, command.tenantId)
 
-        val normalizedCurrency = IsoCurrencyValidator.validate(command.currencyCode)
+        val normalizedCurrency = SupportedAlphaCurrencyPolicy.validate(command.currencyCode)
 
         if (command.amountMinorUnits <= 0L) {
             throw InvalidAmountException(

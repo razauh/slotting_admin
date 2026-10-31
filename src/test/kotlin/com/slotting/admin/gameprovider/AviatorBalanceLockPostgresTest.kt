@@ -59,7 +59,7 @@ class AviatorBalanceLockPostgresTest {
     private val now = Instant.parse("2026-10-05T10:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc007-balance"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerId = "player-tc007"
     private val playerAccount = "PLAYER:$playerId"
 

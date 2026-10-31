@@ -138,10 +138,10 @@ class AviatorAuthenticationContractTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-SEED-VICTIM-01",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 100000L, "INR"),
-                    JournalEntryDraft("PLAYER:$victimPlayerId", JournalEntryDirection.CREDIT, 100000L, "INR"),
+                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 100000L, "PKR"),
+                    JournalEntryDraft("PLAYER:$victimPlayerId", JournalEntryDirection.CREDIT, 100000L, "PKR"),
                 ),
                 idempotencyKey = "IDEM-SEED-VICTIM-01",
                 correlationId = "corr-seed-victim",
@@ -188,7 +188,7 @@ class AviatorAuthenticationContractTest {
 
     @Test
     fun `GivenForgedUuidToken_WhenProtectedEndpointsCalled_Then401AndNoAuthorityCalls`() {
-        val initialVictimBalance = ledgerStore.findBalance(tenantId, "PLAYER:$victimPlayerId", "INR")
+        val initialVictimBalance = ledgerStore.findBalance(tenantId, "PLAYER:$victimPlayerId", "PKR")
         assertEquals(100000L, initialVictimBalance)
 
         val tokenHeaders = listOf(
@@ -244,7 +244,7 @@ class AviatorAuthenticationContractTest {
                     handId = "hand_primary",
                     action = "PLACE_BET",
                     wagerMinorUnits = 5000L,
-                    currencyCode = "INR",
+                    currencyCode = "PKR",
                 ),
                 sessionToken = sessionToken,
                 authHeader = authHeader,
@@ -292,7 +292,7 @@ class AviatorAuthenticationContractTest {
             assertEquals(HttpStatus.UNAUTHORIZED, commandResult.statusCode)
         }
 
-        val finalVictimBalance = ledgerStore.findBalance(tenantId, "PLAYER:$victimPlayerId", "INR")
+        val finalVictimBalance = ledgerStore.findBalance(tenantId, "PLAYER:$victimPlayerId", "PKR")
         assertEquals(initialVictimBalance, finalVictimBalance)
         assertTrue(gameStore.findBetsForRound(tenantId, "AVIATOR", "rnd-auth-test-01").isEmpty())
     }
@@ -426,10 +426,10 @@ class AviatorAuthenticationContractTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-SEED-VERIFIED-01",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 75000L, "INR"),
-                    JournalEntryDraft("PLAYER:$verifiedPlayerId", JournalEntryDirection.CREDIT, 75000L, "INR"),
+                    JournalEntryDraft("SYSTEM:CASH", JournalEntryDirection.DEBIT, 75000L, "PKR"),
+                    JournalEntryDraft("PLAYER:$verifiedPlayerId", JournalEntryDirection.CREDIT, 75000L, "PKR"),
                 ),
                 idempotencyKey = "IDEM-SEED-VERIFIED-01",
                 correlationId = "corr-seed-verified",

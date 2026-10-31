@@ -87,10 +87,17 @@ data class ProjectedBatchApplicationResult(
 class LedgerProjectionService(
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    // Key: "tenantId:accountReference" -> AccountBalanceProjection
     private val projections = ConcurrentHashMap<String, AccountBalanceProjection>()
     private val auditLogs = mutableListOf<AuditEvent>()
     private val processedBatches = ConcurrentHashMap<String, UUID>() // "tenantId:batchId" -> batchId
+
+    private fun projectionKey(tenantId: String, accountReference: String, currencyCode: String): String =
+        "$tenantId:$accountReference:$currencyCode"
+
+    private fun projectionsForReference(tenantId: String, accountReference: String): List<AccountBalanceProjection> =
+        projections.entries
+            .filter { it.key.startsWith("$tenantId:$accountReference:") }
+            .map { it.value }
 
     /**
      * Atomically apply a posted journal batch to the account balance projections.
@@ -128,7 +135,7 @@ class LedgerProjectionService(
             // Already applied - return existing projected state for affected accounts
             val affectedRefs = batch.entries.map { it.accountReference }.distinct()
             val existingProjections = affectedRefs.mapNotNull { ref ->
-                projections["$tenantId:$ref"]
+                projections[projectionKey(tenantId, ref, batch.currencyCode)]
             }
             return ProjectedBatchApplicationResult(
                 resultId = UUID.randomUUID(),
@@ -141,9 +148,8 @@ class LedgerProjectionService(
             )
         }
 
-        // 4. Optimistic locking check per ADR-002
         for ((accRef, expectedVer) in expectedAccountVersions) {
-            val key = "$tenantId:$accRef"
+            val key = projectionKey(tenantId, accRef, batch.currencyCode)
             val current = projections[key]
             val actualVer = current?.version ?: 0L
             if (actualVer != expectedVer) {
@@ -164,25 +170,50 @@ class LedgerProjectionService(
                 throw ProjectionInvalidException("Entry currency '${entry.currencyCode}' mismatch with batch currency '${batch.currencyCode}'")
             }
             val sign = if (entry.direction == JournalEntryDirection.CREDIT) 1L else -1L
-            val delta = entry.amountMinorUnits * sign
-            deltasByAccount[entry.accountReference] = (deltasByAccount[entry.accountReference] ?: 0L) + delta
+            val delta = try {
+                Math.multiplyExact(entry.amountMinorUnits, sign)
+            } catch (e: ArithmeticException) {
+                throw ProjectionInvalidException("Arithmetic overflow detected in journal entry delta")
+            }
+            deltasByAccount[entry.accountReference] = try {
+                Math.addExact(deltasByAccount[entry.accountReference] ?: 0L, delta)
+            } catch (e: ArithmeticException) {
+                throw ProjectionInvalidException("Arithmetic overflow detected in per-account delta accumulation")
+            }
         }
 
-        // Commit updated projections
+        // Pre-validate every account commit (all-or-nothing) before mutating the projection store
+        val validatedCommits = mutableListOf<AccountBalanceProjection>()
         for ((accRef, delta) in deltasByAccount) {
-            val key = "$tenantId:$accRef"
+            val key = projectionKey(tenantId, accRef, batch.currencyCode)
             val current = projections[key]
             val currentBalance = current?.balanceMinorUnits ?: 0L
             val currentVer = current?.version ?: 0L
-            val newProjection = AccountBalanceProjection(
-                tenantId = tenantId,
-                accountReference = accRef,
-                currencyCode = batch.currencyCode,
-                balanceMinorUnits = currentBalance + delta,
-                version = currentVer + 1L,
-                lastAppliedBatchId = batch.batchId,
-                lastUpdated = now,
+            val committedBalance = try {
+                Math.addExact(currentBalance, delta)
+            } catch (e: ArithmeticException) {
+                throw ProjectionInvalidException("Arithmetic overflow detected while committing projection balance")
+            }
+            val newVersion = try {
+                Math.addExact(currentVer, 1L)
+            } catch (e: ArithmeticException) {
+                throw ProjectionInvalidException("Arithmetic overflow detected while bumping projection version")
+            }
+            validatedCommits.add(
+                AccountBalanceProjection(
+                    tenantId = tenantId,
+                    accountReference = accRef,
+                    currencyCode = batch.currencyCode,
+                    balanceMinorUnits = committedBalance,
+                    version = newVersion,
+                    lastAppliedBatchId = batch.batchId,
+                    lastUpdated = now,
+                )
             )
+        }
+
+        for (newProjection in validatedCommits) {
+            val key = projectionKey(tenantId, newProjection.accountReference, newProjection.currencyCode)
             projections[key] = newProjection
             updatedList.add(newProjection)
         }
@@ -235,39 +266,47 @@ class LedgerProjectionService(
 
         val now = Instant.now(clock)
         val rebuiltBalances = mutableMapOf<String, Long>()
+        val rebuiltLiveVersions = mutableMapOf<String, Long>()
+        val rebuiltLastBatches = mutableMapOf<String, UUID>()
         val rebuiltCurrencies = mutableMapOf<String, String>()
-        val rebuiltVersions = mutableMapOf<String, Long>()
         var totalEntries = 0
 
-        // Chronological replay
         val sortedBatches = journalBatches
             .filter { it.tenantId == tenantId && (it.status == JournalBatchStatus.POSTED || it.status == JournalBatchStatus.COMPENSATED) }
             .sortedBy { it.createdAt }
 
         for (batch in sortedBatches) {
             for (entry in batch.entries) {
+                val partitionKey = "${entry.accountReference}:${entry.currencyCode}"
                 totalEntries++
                 val sign = if (entry.direction == JournalEntryDirection.CREDIT) 1L else -1L
-                val delta = entry.amountMinorUnits * sign
-                rebuiltBalances[entry.accountReference] = (rebuiltBalances[entry.accountReference] ?: 0L) + delta
-                rebuiltCurrencies[entry.accountReference] = entry.currencyCode
-                rebuiltVersions[entry.accountReference] = (rebuiltVersions[entry.accountReference] ?: 0L) + 1L
+                val delta = Math.multiplyExact(entry.amountMinorUnits, sign)
+                rebuiltBalances[partitionKey] = try {
+                    Math.addExact(rebuiltBalances[partitionKey] ?: 0L, delta)
+                } catch (e: ArithmeticException) {
+                    throw ProjectionInvalidException("Arithmetic overflow detected while rebuilding journal state")
+                }
+                rebuiltLiveVersions[partitionKey] = (rebuiltLiveVersions[partitionKey] ?: 0L) + 1L
+                rebuiltLastBatches[partitionKey] = batch.batchId
+                rebuiltCurrencies[partitionKey] = entry.currencyCode
             }
         }
 
-        // Atomically overwrite projections to match rebuilt journal state exactly
         projections.keys.filter { it.startsWith("$tenantId:") }.forEach { projections.remove(it) }
         processedBatches.keys.filter { it.startsWith("$tenantId:") }.forEach { processedBatches.remove(it) }
 
-        for ((accRef, balance) in rebuiltBalances) {
-            val key = "$tenantId:$accRef"
-            projections[key] = AccountBalanceProjection(
+        for ((partitionKey, balance) in rebuiltBalances) {
+            val accRef = partitionKey.substringBeforeLast(':')
+            val currencyCode = rebuiltCurrencies[partitionKey]
+                ?: throw ProjectionInvalidException("Rebuilt partition '${partitionKey}' has no authoritative currency")
+            val separatorIndex = "$tenantId:$accRef:$currencyCode"
+            projections[separatorIndex] = AccountBalanceProjection(
                 tenantId = tenantId,
                 accountReference = accRef,
-                currencyCode = rebuiltCurrencies[accRef] ?: "USD",
+                currencyCode = currencyCode,
                 balanceMinorUnits = balance,
-                version = rebuiltVersions[accRef] ?: 1L,
-                lastAppliedBatchId = sortedBatches.lastOrNull()?.batchId,
+                version = rebuiltLiveVersions[partitionKey] ?: 1L,
+                lastAppliedBatchId = rebuiltLastBatches[partitionKey],
                 lastUpdated = now,
             )
         }
@@ -307,6 +346,7 @@ class LedgerProjectionService(
         principal: AuthenticatedPrincipal?,
         tenantId: String,
         accountReference: String,
+        currencyCode: String? = null,
     ): AccountBalanceProjection? {
         LedgerProjectionBinding.checkBound()
 
@@ -314,17 +354,26 @@ class LedgerProjectionService(
         if (authPrincipal.tenantId != tenantId) {
             throw ProjectionForbiddenException("Cross-tenant projection query forbidden")
         }
-        return projections["$tenantId:$accountReference"]
+        if (currencyCode != null) {
+            return projections[projectionKey(tenantId, accountReference, currencyCode)]
+        }
+        val candidates = projectionsForReference(tenantId, accountReference)
+        if (candidates.size == 1) return candidates[0]
+        return null
     }
 
     /**
      * Test-only helper to simulate an uncoordinated split or crash drift to prove reconciliation recovery.
      */
-    fun simulateCrashSplit(tenantId: String, accountReference: String, driftAmountMinorUnits: Long) {
-        val key = "$tenantId:$accountReference"
-        val current = projections[key]
+    fun simulateCrashSplit(tenantId: String, accountReference: String, driftAmountMinorUnits: Long, currencyCode: String? = null) {
+        val current = if (currencyCode != null) {
+            projections[projectionKey(tenantId, accountReference, currencyCode)]
+        } else {
+            val candidates = projectionsForReference(tenantId, accountReference)
+            if (candidates.size != 1) null else candidates[0]
+        }
         if (current != null) {
-            projections[key] = current.copy(
+            projections[projectionKey(tenantId, accountReference, current.currencyCode)] = current.copy(
                 balanceMinorUnits = current.balanceMinorUnits + driftAmountMinorUnits
             )
         }

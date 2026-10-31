@@ -420,8 +420,8 @@ class DurableGameWagerAndSettlementService(
                 )
             }
 
-        // 4. Currency validation (Strict INR for Aviator)
-        if (command.currency != "INR") {
+        // 4. Currency validation (alpha policy: PKR/USD)
+        if (!command.currency.equals("PKR", ignoreCase = true) && !command.currency.equals("USD", ignoreCase = true)) {
             return recordAndReturnRejection(
                 command = command,
                 ownerId = playerId,

@@ -13,11 +13,11 @@
     "handStatus": "ACCEPTED",
     "wager": {
       "amountMinor": 2000,
-      "currency": "INR"
+      "currency": "PKR"
     },
     "accountMoneyAfter": {
       "amountMinor": 498000,
-      "currency": "INR"
+      "currency": "PKR"
     },
     "cashOutMultiplier": null,
     "payout": null

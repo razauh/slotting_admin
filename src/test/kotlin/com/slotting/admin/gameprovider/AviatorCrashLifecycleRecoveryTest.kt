@@ -69,7 +69,7 @@ class AviatorCrashLifecycleRecoveryTest {
     private val now = Instant.parse("2026-10-08T10:00:00Z")
     private val tenantId = "tenant-tc012-recovery"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val playerUuid = UUID.randomUUID()
     private val playerIdStr = playerUuid.toString()

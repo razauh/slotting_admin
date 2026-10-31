@@ -8,7 +8,7 @@ data class CrashBetLimits(
     val schemaVersion: Int = 1,
     val minWagerMinor: Long = 1000L,
     val maxWagerMinor: Long = 10000000L,
-    val currency: String = "INR",
+    val currency: String = "PKR",
 )
 
 data class AviatorBootstrapResponse(
@@ -27,7 +27,7 @@ data class SnapshotUser(
     val userId: String,
     val userName: String,
     val balanceMinor: Long,
-    val currency: String = "INR",
+    val currency: String = "PKR",
 )
 
 data class SnapshotHand(
@@ -35,7 +35,7 @@ data class SnapshotHand(
     val betted: Boolean = false,
     val cashedOut: Boolean = false,
     val wagerMinor: Long? = null,
-    val currency: String = "INR",
+    val currency: String = "PKR",
     val cashOutMultiplier: Double? = null,
     val payoutMinor: Long? = null,
 )
@@ -50,7 +50,7 @@ data class FullSnapshot(
     val elapsedFlightSeconds: Double = 0.0,
     val sequenceId: Long = 0L,
     val roundVersion: Long = 1L,
-    val currency: String = "INR",
+    val currency: String = "PKR",
     val limits: CrashBetLimits = CrashBetLimits(),
     val user: SnapshotUser,
     val primaryHand: SnapshotHand,
@@ -89,7 +89,7 @@ sealed class SocketResumeOutcome {
 data class UserBetHistoryItem(
     val roundId: String,
     val wagerMinor: Long,
-    val currency: String = "INR",
+    val currency: String = "PKR",
     val cashedOut: Boolean,
     val cashoutAt: Double? = null,
     val payoutMinor: Long? = null,
@@ -100,7 +100,7 @@ data class TopHistoryItem(
     val roundId: String,
     val userName: String,
     val wagerMinor: Long,
-    val currency: String = "INR",
+    val currency: String = "PKR",
     val multiplier: Double,
     val payoutMinor: Long,
     val timestampMillis: Long,

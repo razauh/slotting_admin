@@ -79,7 +79,7 @@ class AviatorServiceCompositionTest {
 
     private val tenantId = "tenant-tc008-composition"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.randomUUID()
     private val playerIdStr = playerUuid.toString()
     private val now = Instant.parse("2026-10-05T10:00:00Z")

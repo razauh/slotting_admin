@@ -66,7 +66,7 @@ class AviatorCrossRepoCertificationContractTest {
     private val player1IdStr = player1Uuid.toString()
     private val player2Uuid = UUID.fromString("22222222-2222-2222-2222-222222222222")
     private val player2IdStr = player2Uuid.toString()
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val now = Instant.parse("2026-09-25T15:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
@@ -268,7 +268,7 @@ class AviatorCrossRepoCertificationContractTest {
             .andExpect(jsonPath("$.rulesVersion").value("1.0.0"))
             .andExpect(jsonPath("$.limits.minWagerMinor").value(1000))
             .andExpect(jsonPath("$.limits.maxWagerMinor").value(10000000))
-            .andExpect(jsonPath("$.limits.currency").value("INR"))
+            .andExpect(jsonPath("$.limits.currency").value("PKR"))
             .andExpect(jsonPath("$.activeRoundId").value("rnd-test-100"))
             .andExpect(jsonPath("$.phase").value("BET_COUNTDOWN"))
     }
@@ -285,7 +285,7 @@ class AviatorCrossRepoCertificationContractTest {
             .andExpect(jsonPath("$.schemaVersion").value(1))
             .andExpect(jsonPath("$.minWagerMinor").value(1000))
             .andExpect(jsonPath("$.maxWagerMinor").value(10000000))
-            .andExpect(jsonPath("$.currency").value("INR"))
+            .andExpect(jsonPath("$.currency").value("PKR"))
     }
 
     // =========================================================================
@@ -312,7 +312,7 @@ class AviatorCrossRepoCertificationContractTest {
               "expectedRoundVersion": 1,
               "accountMoney": {
                 "amountMinor": 2000,
-                "currency": "INR"
+                "currency": "PKR"
               },
               "autoCashOutMultiplier": "2.50"
             }
@@ -333,7 +333,7 @@ class AviatorCrossRepoCertificationContractTest {
             .andExpect(jsonPath("$.result.handStatus").value("ACCEPTED"))
             .andExpect(jsonPath("$.result.wagerMinor").value(2000))
             .andExpect(jsonPath("$.result.accountMoneyAfterMinor").value(98000))
-            .andExpect(jsonPath("$.result.currency").value("INR"))
+            .andExpect(jsonPath("$.result.currency").value("PKR"))
 
         // Ledger balance decreased by exactly 2000
         assertEquals(98000L, ledgerStore.findBalance(testTenantId, "PLAYER:$player1IdStr", currency))
@@ -356,7 +356,7 @@ class AviatorCrossRepoCertificationContractTest {
               "expectedRoundVersion": 1,
               "accountMoney": {
                 "amountMinor": 1500,
-                "currency": "INR"
+                "currency": "PKR"
               }
             }
         """.trimIndent()
@@ -404,7 +404,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 1000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 1000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -428,7 +428,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 5000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 5000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -456,7 +456,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 3000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 3000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -534,7 +534,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 2,
-              "accountMoney": { "amountMinor": 2000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 2000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -566,7 +566,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 999,
-              "accountMoney": { "amountMinor": 1000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 1000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -597,7 +597,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 1000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 1000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -722,7 +722,7 @@ class AviatorCrossRepoCertificationContractTest {
             .andExpect(jsonPath("$.elapsedFlightSeconds").isNumber)
             .andExpect(jsonPath("$.user.userId").value(player1IdStr))
             .andExpect(jsonPath("$.user.balanceMinor").isNumber)
-            .andExpect(jsonPath("$.user.currency").value("INR"))
+            .andExpect(jsonPath("$.user.currency").value("PKR"))
             .andExpect(jsonPath("$.primaryHand.handId").value("hand_primary"))
             .andExpect(jsonPath("$.primaryHand.betted").value(false))
             .andExpect(jsonPath("$.secondaryHand.handId").value("hand_secondary"))
@@ -750,7 +750,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 1000, "currency": "INR" }
+              "accountMoney": { "amountMinor": 1000, "currency": "PKR" }
             }
         """.trimIndent()
 
@@ -802,7 +802,7 @@ class AviatorCrossRepoCertificationContractTest {
               "handId": "hand_primary",
               "action": "PLACE_BET",
               "expectedRoundVersion": 1,
-              "accountMoney": { "amountMinor": 2500, "currency": "INR" }
+              "accountMoney": { "amountMinor": 2500, "currency": "PKR" }
             }
         """.trimIndent()
 

@@ -54,7 +54,7 @@ class WithdrawalStepUpParityTest {
         safeAccountTitle = "Bank Account",
         safeAccountNumber = "DE89370400440532013000",
         iconUrl = "https://cdn.example.com/parity.png",
-        supportedCurrencies = listOf("EUR"),
+        supportedCurrencies = listOf("PKR"),
         allowsDeposit = true,
         allowsWithdrawal = true,
         minDepositMinorUnits = 10_000L,
@@ -82,7 +82,7 @@ class WithdrawalStepUpParityTest {
         methodStore.saveMethod(method)
 
         val withdrawalStore = InMemoryAuthoritativeWithdrawalStore()
-        withdrawalStore.setAuthoritativeBalance(tenantId, ownerId, "EUR", 10_000_000L)
+        withdrawalStore.setAuthoritativeBalance(tenantId, ownerId, "PKR", 10_000_000L)
         authoritativeService = AuthoritativeWithdrawalService(
             withdrawalStore = withdrawalStore,
             paymentMethodStore = methodStore,
@@ -126,7 +126,7 @@ class WithdrawalStepUpParityTest {
                 sessionId = "sess-parity",
                 tenantId = tenantId,
                 ownerId = ownerId,
-                currencyCode = "EUR",
+                currencyCode = "PKR",
                 methodId = method.methodId,
                 destinationId = parityDestinationId,
                 grossAmountMinorUnits = gross,

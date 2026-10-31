@@ -136,7 +136,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
                 safeAccountTitle = "Slotting Treasury",
                 safeAccountNumber = "PK36MEZN0001234567890123",
                 iconUrl = "https://cdn.slotting.internal/methods/bank.png",
-                supportedCurrencies = listOf("PKR", "INR"),
+                supportedCurrencies = listOf("PKR", "PKR"),
                 status = PaymentMethodStatus.ACTIVE,
                 minDepositMinorUnits = 50000L,
                 maxDepositMinorUnits = 50000000L,
@@ -231,11 +231,11 @@ class CashierAndWalletCrossRepoCertificationContractTest {
             PostTransactionCommand(
                 principal = adminPrincipal,
                 tenantId = testTenantId,
-                transactionReference = "TX-INIT-INR",
-                currencyCode = "INR",
+                transactionReference = "TX-INIT-USD",
+                currencyCode = "USD",
                 entries = listOf(
-                    JournalEntryDraft("SYSTEM_TREASURY", JournalEntryDirection.DEBIT, 250000L, "INR"),
-                    JournalEntryDraft(testPlayerId.toString(), JournalEntryDirection.CREDIT, 250000L, "INR"),
+                    JournalEntryDraft("SYSTEM_TREASURY", JournalEntryDirection.DEBIT, 250000L, "USD"),
+                    JournalEntryDraft(testPlayerId.toString(), JournalEntryDirection.CREDIT, 250000L, "USD"),
                 ),
                 idempotencyKey = "INIT-INR-001",
                 correlationId = "corr-init-inr",
@@ -244,7 +244,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
         )
 
         withdrawalStore.setAuthoritativeBalance(testTenantId, testPlayerId, "PKR", 750000L)
-        withdrawalStore.setAuthoritativeBalance(testTenantId, testPlayerId, "INR", 250000L)
+        withdrawalStore.setAuthoritativeBalance(testTenantId, testPlayerId, "USD", 250000L)
 
         val workflowStore = InMemoryDepositWorkflowStore()
         val sampleConfig = ProviderConfiguration("PROVIDER_EASYPAISA", ProviderEnvironment.SANDBOX, "https://sandbox.api.test/v1")
@@ -453,12 +453,13 @@ class CashierAndWalletCrossRepoCertificationContractTest {
         assertTrue(balances.isArray)
         assertEquals(2, balances.size())
 
-        val inrBal = balances.find { it.get("currencyCode").asText() == "INR" }
-        val pkrBal = balances.find { it.get("currencyCode").asText() == "PKR" }
-        assertNotNull(inrBal)
+        val pkrBal = balances.first { it.get("currencyCode").asText() == "PKR" }
+        val usdBal = balances.first { it.get("currencyCode").asText() == "USD" }
         assertNotNull(pkrBal)
-        assertEquals(250000L, inrBal!!.get("balanceMinorUnits").asLong())
-        assertEquals(750000L, pkrBal!!.get("balanceMinorUnits").asLong())
+        assertNotNull(usdBal)
+        assertEquals(750000L, pkrBal.get("balanceMinorUnits").asLong())
+        assertEquals(250000L, usdBal.get("balanceMinorUnits").asLong())
+        assertEquals(2, balances.size())
     }
 
     // =========================================================================

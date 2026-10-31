@@ -46,10 +46,10 @@ class AviatorFinancialFailpointMatrixTest {
                 principal = principal,
                 tenantId = tenantId,
                 transactionReference = AviatorCommandKeys.ledgerTransactionReference("WAGER", commandKey),
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
-                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 101L, "INR"),
-                    JournalEntryDraft("PLAYER:player-tc033", JournalEntryDirection.CREDIT, 101L, "INR"),
+                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 101L, "PKR"),
+                    JournalEntryDraft("PLAYER:player-tc033", JournalEntryDirection.CREDIT, 101L, "PKR"),
                 ),
                 idempotencyKey = commandKey,
                 correlationId = "corr-tc033-control",

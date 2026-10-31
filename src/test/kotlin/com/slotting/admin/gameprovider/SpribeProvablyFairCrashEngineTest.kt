@@ -116,10 +116,10 @@ class SpribeProvablyFairCrashEngineTest {
                     principal = adminPrincipal,
                     tenantId = tenantId,
                     transactionReference = "TX-SEED-$pid",
-                    currencyCode = "INR",
+                    currencyCode = "PKR",
                     entries = listOf(
-                        JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 1_000_000L, "INR"),
-                        JournalEntryDraft("PLAYER:$pid", JournalEntryDirection.CREDIT, 1_000_000L, "INR"),
+                        JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, 1_000_000L, "PKR"),
+                        JournalEntryDraft("PLAYER:$pid", JournalEntryDirection.CREDIT, 1_000_000L, "PKR"),
                     ),
                     idempotencyKey = "IDEM-SEED-$pid",
                     correlationId = "corr-seed-$pid",

@@ -58,6 +58,14 @@ class InMemoryAuthoritativeWithdrawalStore : AuthoritativeWithdrawalStore {
         balances[balKey(tenantId, ownerId, currencyCode)] = amount
     }
 
+    fun cachedQuoteCount(tenantId: String): Int {
+        return quotesById.values.count { it.tenantId == tenantId }
+    }
+
+    fun cachedReservationCount(tenantId: String): Int {
+        return reservations.values.count { it.tenantId == tenantId }
+    }
+
     @Synchronized
     override fun saveDestination(dest: PayoutDestinationRecord) {
         destinations[destKey(dest.tenantId, dest.destinationId)] = dest.copy()

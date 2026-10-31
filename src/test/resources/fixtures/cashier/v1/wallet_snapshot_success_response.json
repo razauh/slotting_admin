@@ -3,7 +3,7 @@
   "tenantId": "tenant-pk-1",
   "currencyBalances": [
     {
-      "currencyCode": "INR",
+      "currencyCode": "PKR",
       "balanceMinorUnits": 250000
     },
     {

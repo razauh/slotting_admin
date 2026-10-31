@@ -83,7 +83,7 @@ class AviatorAuthoritativeContractTest {
         assertEquals("PLACE_BET", placeBetPrimary.get("action").asText())
         assertEquals("hand_primary", placeBetPrimary.get("handId").asText())
         assertEquals(2000L, placeBetPrimary.get("accountMoney").get("amountMinor").asLong())
-        assertEquals("INR", placeBetPrimary.get("accountMoney").get("currency").asText())
+        assertEquals("PKR", placeBetPrimary.get("accountMoney").get("currency").asText())
 
         val cancelBet = loadFixtureJson("fixtures/aviator/v1/command_cancel_bet.json")
         assertEquals("CANCEL_BET", cancelBet.get("action").asText())
@@ -116,7 +116,7 @@ class AviatorAuthoritativeContractTest {
 
     @Test
     fun `Scenario 1 - Duplicate command returns cached ack with DUPLICATE status without mutating balance twice`() {
-        val initialBal = store.getBalance(tenantId, playerId, "INR")
+        val initialBal = store.getBalance(tenantId, playerId, "PKR")
         val cmd = AviatorRestCommand(
             tenantId = tenantId,
             principal = authorizedPrincipal,
@@ -125,14 +125,14 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 2000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-dup-001",
             expectedRoundVersion = 1L
         )
 
         val firstAck = commandService.processCommand(cmd)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, firstAck.status)
-        assertEquals(initialBal - 2000L, store.getBalance(tenantId, playerId, "INR"))
+        assertEquals(initialBal - 2000L, store.getBalance(tenantId, playerId, "PKR"))
 
         // Re-submit identical command
         val dupAck = commandService.processCommand(cmd)
@@ -140,7 +140,7 @@ class AviatorAuthoritativeContractTest {
         assertEquals(firstAck.commandId, dupAck.commandId)
         assertEquals(firstAck.sequenceId, dupAck.sequenceId)
         // Balance remains unchanged (no double deduction)
-        assertEquals(initialBal - 2000L, store.getBalance(tenantId, playerId, "INR"))
+        assertEquals(initialBal - 2000L, store.getBalance(tenantId, playerId, "PKR"))
     }
 
     // =========================================================================
@@ -159,7 +159,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 1000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-stale-001",
             expectedRoundVersion = 1L // Expected 1L but round is already at 3L
         )
@@ -176,7 +176,7 @@ class AviatorAuthoritativeContractTest {
 
     @Test
     fun `Scenario 3 - Lost ACK can be recovered via exact result lookup without duplicate charge`() {
-        val initialBal = store.getBalance(tenantId, playerId, "INR")
+        val initialBal = store.getBalance(tenantId, playerId, "PKR")
         val cmd = AviatorRestCommand(
             tenantId = tenantId,
             principal = authorizedPrincipal,
@@ -185,14 +185,14 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 3000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-lost-001",
             expectedRoundVersion = 1L
         )
 
         val originalAck = commandService.processCommand(cmd)
         assertEquals(AviatorCommandAckStatus.ACCEPTED, originalAck.status)
-        assertEquals(initialBal - 3000L, store.getBalance(tenantId, playerId, "INR"))
+        assertEquals(initialBal - 3000L, store.getBalance(tenantId, playerId, "PKR"))
 
         // Exact result lookup
         val lookedUpAck = commandService.getCommandResult(tenantId, authorizedPrincipal, "rnd-crash-100", "cmd-lost-001")
@@ -216,7 +216,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 1000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-proto-future",
             protocolVersion = "3.0.0", // Major version incompatible with 1.x
             expectedRoundVersion = 1L
@@ -242,7 +242,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 1000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-rules-001",
             rulesVersion = "2.0.0-incompatible", // Incompatible rules version
             expectedRoundVersion = 1L
@@ -287,7 +287,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "STEAL_MONEY",
             wagerMinor = 1000L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-bad-enum",
             expectedRoundVersion = 1L
         )
@@ -315,7 +315,7 @@ class AviatorAuthoritativeContractTest {
                 "action": "PLACE_BET",
                 "accountMoney": {
                     "amountMinor": 100.5,
-                    "currency": "INR"
+                    "currency": "PKR"
                 }
             }
         """.trimIndent()
@@ -353,7 +353,7 @@ class AviatorAuthoritativeContractTest {
                 "action": "PLACE_BET",
                 "accountMoney": {
                     "amountMinor": 99999999999999999999999999999999,
-                    "currency": "INR"
+                    "currency": "PKR"
                 }
             }
         """.trimIndent()
@@ -409,7 +409,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "PLACE_BET",
             wagerMinor = 2500L,
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-place",
             expectedRoundVersion = 1L
         )
@@ -425,7 +425,7 @@ class AviatorAuthoritativeContractTest {
             handId = "hand_primary",
             action = "CANCEL_BET",
             wagerMinor = null, // Client does not send amount!
-            currency = "INR",
+            currency = "PKR",
             correlationId = "corr-cancel",
             expectedRoundVersion = 2L
         )

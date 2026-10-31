@@ -58,7 +58,7 @@
       "iconUrl": "https://cdn.slotting.internal/methods/bank.png",
       "supportedCurrencies": [
         "PKR",
-        "INR"
+        "PKR"
       ],
       "allowsDeposit": true,
       "allowsWithdrawal": true,

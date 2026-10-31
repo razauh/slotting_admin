@@ -61,7 +61,7 @@ class AviatorPostgresIntegrationTest {
     private val gameId = "AVIATOR"
     private val playerUuid = UUID.fromString("22222222-2222-2222-2222-222222222222")
     private val playerIdStr = playerUuid.toString()
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val adminPrincipal = AuthenticatedPrincipal(
         id = "admin-ci-01",

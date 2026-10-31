@@ -5,6 +5,8 @@ import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.provider.PaymentMethodUnavailableException
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -60,6 +62,14 @@ class PlayerWithdrawalController(
         if (request.grossAmountMinorUnits <= 0) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
                 mapOf("error" to "INVALID_MONEY", "message" to "Gross amount must be strictly positive")
+            )
+        }
+
+        try {
+            SupportedAlphaCurrencyPolicy.validate(request.currencyCode)
+        } catch (e: InvalidCurrencyException) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+                mapOf("error" to "INVALID_MONEY", "message" to (e.message ?: "Unsupported currency code"))
             )
         }
 
@@ -214,6 +224,8 @@ class PlayerWithdrawalController(
             }
         } catch (e: StaleQuoteException) {
             ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "STALE_QUOTE", "message" to e.message))
+        } catch (e: RequestPayloadConflictException) {
+            ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "IDEMPOTENCY_CONFLICT", "message" to e.message))
         } catch (e: DestinationMismatchException) {
             ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(mapOf("error" to "DESTINATION_MISMATCH", "message" to e.message))
         } catch (e: UnverifiedDestinationException) {

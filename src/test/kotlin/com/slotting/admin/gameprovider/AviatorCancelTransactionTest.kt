@@ -66,7 +66,7 @@ class AviatorCancelTransactionTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc009-cancel"
     private val gameId = "AVIATOR"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerUuid = UUID.randomUUID()
     private val playerIdStr = playerUuid.toString()
 

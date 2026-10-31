@@ -11,6 +11,6 @@
   "expectedRoundVersion": 2,
   "accountMoney": {
     "amountMinor": 5000,
-    "currency": "INR"
+    "currency": "PKR"
   }
 }

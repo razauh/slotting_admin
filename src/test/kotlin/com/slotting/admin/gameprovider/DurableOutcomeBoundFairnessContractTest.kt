@@ -56,7 +56,7 @@ class DurableOutcomeBoundFairnessContractTest {
     private val gameId = "AVIATOR"
     private val playerUuid = UUID.fromString("11111111-1111-1111-1111-111111111111")
     private val playerIdStr = playerUuid.toString()
-    private val currency = "INR"
+    private val currency = "PKR"
 
     private val adminPrincipal = AuthenticatedPrincipal(
         id = "admin-sys-01",

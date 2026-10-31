@@ -468,19 +468,19 @@ class AviatorRoundCreationPostgresTest {
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-GOLDEN-DEPOSIT-${UUID.randomUUID()}",
-                currencyCode = "INR",
+                currencyCode = "PKR",
                 entries = listOf(
                     JournalEntryDraft(
                         accountReference = "HOUSE:SEED",
                         direction = JournalEntryDirection.DEBIT,
                         amountMinorUnits = balanceBefore,
-                        currencyCode = "INR",
+                        currencyCode = "PKR",
                     ),
                     JournalEntryDraft(
                         accountReference = "PLAYER:$playerIdStr",
                         direction = JournalEntryDirection.CREDIT,
                         amountMinorUnits = balanceBefore,
-                        currencyCode = "INR",
+                        currencyCode = "PKR",
                     )
                 ),
                 correlationId = "corr-golden",
@@ -498,7 +498,7 @@ class AviatorRoundCreationPostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-golden-1",
             )
         )
@@ -516,7 +516,7 @@ class AviatorRoundCreationPostgresTest {
             )
         )
         assertEquals(AviatorCommandAckStatus.ACCEPTED, cancelAck.status)
-        assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+        assertEquals(balanceBefore, ledgerService.store.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
 
         val roundId2 = "rnd-gld2-${UUID.randomUUID().toString().take(6)}"
         closeActiveRoundsFor(jdbc, tenantId, gameId)
@@ -534,7 +534,7 @@ class AviatorRoundCreationPostgresTest {
                 handId = "hand_primary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-golden-2",
             )
         )
@@ -549,7 +549,7 @@ class AviatorRoundCreationPostgresTest {
                 handId = "hand_secondary",
                 action = "PLACE_BET",
                 wagerMinor = wagerMinor,
-                currency = "INR",
+                currency = "PKR",
                 correlationId = "corr-bet-golden-3",
             )
         )

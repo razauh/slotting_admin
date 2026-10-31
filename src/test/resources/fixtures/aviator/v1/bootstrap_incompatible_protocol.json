@@ -8,7 +8,7 @@
   "limits": {
     "minWagerMinor": 1000,
     "maxWagerMinor": 10000000,
-    "currency": "INR"
+    "currency": "PKR"
   },
   "activeRoundId": "rnd-crash-100",
   "phase": "BETTING"

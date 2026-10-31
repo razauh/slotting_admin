@@ -31,7 +31,7 @@ class WalletAuthorityAndReceiptContractTest {
     private val now = Instant.parse("2026-10-15T12:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-tc44"
-    private val currency = "INR"
+    private val currency = "PKR"
     private val playerId = "player-wallet-tc44"
 
     private val playerPrincipal = AuthenticatedPrincipal(
