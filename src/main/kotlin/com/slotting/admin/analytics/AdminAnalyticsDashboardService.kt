@@ -173,15 +173,15 @@ class AdminAnalyticsDashboardService(
         val financialMetricsByCurrency = mutableMapOf<String, List<DashboardMetricCard>>()
 
         for ((curr, currProjs) in projectionsByCurrency) {
-            val totalWagers = currProjs.sumOf { it.totalWagersMinor }
-            val wagerCount = currProjs.sumOf { it.wagerCount }
-            val totalPayouts = currProjs.sumOf { it.totalPayoutsMinor }
-            val payoutCount = currProjs.sumOf { it.payoutCount }
-            val ggr = totalWagers - totalPayouts
-            val totalDeposits = currProjs.sumOf { it.totalDepositsMinor }
-            val depositCount = currProjs.sumOf { it.depositCount }
-            val totalWithdrawals = currProjs.sumOf { it.totalWithdrawalsCompletedMinor }
-            val withdrawalCount = currProjs.sumOf { it.withdrawalCompletedCount }
+            val totalWagers = sumExact(currProjs.map { it.totalWagersMinor }, "wagers", curr)
+            val wagerCount = sumExact(currProjs.map { it.wagerCount }, "wagerCount", curr)
+            val totalPayouts = sumExact(currProjs.map { it.totalPayoutsMinor }, "payouts", curr)
+            val payoutCount = sumExact(currProjs.map { it.payoutCount }, "payoutCount", curr)
+            val ggr = subtractExact(totalWagers, totalPayouts, "ggr", curr)
+            val totalDeposits = sumExact(currProjs.map { it.totalDepositsMinor }, "deposits", curr)
+            val depositCount = sumExact(currProjs.map { it.depositCount }, "depositCount", curr)
+            val totalWithdrawals = sumExact(currProjs.map { it.totalWithdrawalsCompletedMinor }, "withdrawals", curr)
+            val withdrawalCount = sumExact(currProjs.map { it.withdrawalCompletedCount }, "withdrawalCount", curr)
 
             financialMetricsByCurrency[curr] = listOf(
                 DashboardMetricCard(
@@ -324,4 +324,23 @@ class AdminAnalyticsDashboardService(
             unsupportedMetrics = unsupportedMetrics,
         )
     }
+
+    private fun sumExact(values: List<Long>, metric: String, currency: String): Long {
+        var total = 0L
+        for (value in values) {
+            total = try {
+                Math.addExact(total, value)
+            } catch (e: ArithmeticException) {
+                throw IllegalStateException("Analytics aggregate overflow for $metric in $currency")
+            }
+        }
+        return total
+    }
+
+    private fun subtractExact(left: Long, right: Long, metric: String, currency: String): Long =
+        try {
+            Math.subtractExact(left, right)
+        } catch (e: ArithmeticException) {
+            throw IllegalStateException("Analytics aggregate overflow for $metric in $currency")
+        }
 }

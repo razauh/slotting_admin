@@ -7,6 +7,8 @@ import com.slotting.admin.auth.AuthErrorCode
 import com.slotting.admin.auth.AuthenticatedPrincipal
 import com.slotting.admin.auth.AuthenticationFailure
 import com.slotting.admin.auth.OutboxEvent
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
@@ -204,7 +206,8 @@ class AviatorSocketReconciliationCompatibilityService(
         tenantId: String,
         principal: AuthenticatedPrincipal?,
         roundId: String,
-        correlationId: String
+        correlationId: String,
+        requestedCurrency: String? = null,
     ): AviatorSocketSnapshot {
         AviatorSocketReconciliationCompatibilityBinding.checkBound()
 
@@ -223,10 +226,12 @@ class AviatorSocketReconciliationCompatibilityService(
             return existing
         }
 
+        val currency = resolveCurrency(requestedCurrency)
+
         // Generate baseline snapshot from authoritative ledger state
         val now = clock.instant()
         val timestamp = now.toEpochMilli()
-        val balance = store.getBalance(tenantId, playerId, "PKR")
+        val balance = store.getBalance(tenantId, playerId, currency)
         val sequenceId = sequenceCounter.get()
 
         val snapshot = AviatorSocketSnapshot(
@@ -238,7 +243,7 @@ class AviatorSocketReconciliationCompatibilityService(
             primaryHand = AviatorHandSnapshot(),
             secondaryHand = AviatorHandSnapshot(),
             userBalanceMinor = balance,
-            currency = "PKR",
+            currency = currency,
             recentMultipliers = listOf(1.50, 2.10, 1.15),
             serverSeedHash = sha256("seed:$roundId")
         )
@@ -321,5 +326,14 @@ class AviatorSocketReconciliationCompatibilityService(
 
         store.saveSnapshot(tenantId, roundId, playerId, updated)
         return updated
+    }
+
+    private fun resolveCurrency(requestedCurrency: String?): String {
+        if (requestedCurrency.isNullOrBlank()) return SupportedAlphaCurrencyPolicy.defaultAccountCreationCurrency
+        return try {
+            SupportedAlphaCurrencyPolicy.validate(requestedCurrency.trim().uppercase())
+        } catch (e: InvalidCurrencyException) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
     }
 }

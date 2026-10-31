@@ -9,6 +9,8 @@ import com.slotting.admin.auth.PrincipalKind
 import com.slotting.admin.identity.PlayerRegistrationStore
 import com.slotting.admin.ledger.LedgerJournalStore
 import com.slotting.admin.wallet.AuthoritativeWalletService
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.Clock
@@ -73,11 +75,16 @@ class AuthoritativeGameSnapshotAndEventService(
         return CrashBetLimits()
     }
 
-    fun getMyInfo(tenantId: String, principal: AuthenticatedPrincipal?): SnapshotUser {
+    fun getMyInfo(
+        tenantId: String,
+        principal: AuthenticatedPrincipal?,
+        requestedCurrency: String? = null,
+    ): SnapshotUser {
         AuthoritativeGameSnapshotBinding.checkBound()
         val p = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         if (p.tenantId != tenantId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        val balance = ledgerStore.findBalance(tenantId, "PLAYER:${p.id}", "PKR")
+        val currency = resolvePlayerCurrency(tenantId, p.id, requestedCurrency)
+        val balance = ledgerStore.findBalance(tenantId, "PLAYER:${p.id}", currency)
         val playerUuid = try { UUID.fromString(p.id) } catch (e: Exception) { null }
         val registration = playerUuid?.let { registrationStore.findById(tenantId, it) }
         val userName = registration?.maskedEmail ?: p.id
@@ -85,7 +92,7 @@ class AuthoritativeGameSnapshotAndEventService(
             userId = p.id,
             userName = userName,
             balanceMinor = balance,
-            currency = "PKR",
+            currency = currency,
         )
     }
 
@@ -137,11 +144,12 @@ class AuthoritativeGameSnapshotAndEventService(
         principal: AuthenticatedPrincipal?,
         gameId: String,
         roundId: String? = null,
+        requestedCurrency: String? = null,
     ): FullSnapshot {
         AuthoritativeGameSnapshotBinding.checkBound()
         val p = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         if (p.tenantId != tenantId) throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
-        return getAuthoritativeSnapshotForOwner(tenantId, p, p.id, gameId, roundId)
+        return getAuthoritativeSnapshotForOwner(tenantId, p, p.id, gameId, roundId, requestedCurrency)
     }
 
     fun getAuthoritativeSnapshotForOwner(
@@ -150,6 +158,7 @@ class AuthoritativeGameSnapshotAndEventService(
         targetOwnerId: String,
         gameId: String,
         roundId: String? = null,
+        requestedCurrency: String? = null,
     ): FullSnapshot {
         AuthoritativeGameSnapshotBinding.checkBound()
         val p = principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
@@ -161,16 +170,17 @@ class AuthoritativeGameSnapshotAndEventService(
         }
 
         val now = clock.instant()
-        val balance = ledgerStore.findBalance(tenantId, "PLAYER:$targetOwnerId", "PKR")
-
         val round = if (roundId != null) {
             gameStore.findRound(tenantId, gameId, roundId)
         } else {
             findActiveRound(tenantId, gameId)
         }
 
-        val primaryHand = buildHandSnapshot(tenantId, gameId, round?.roundId, targetOwnerId, "hand_primary")
-        val secondaryHand = buildHandSnapshot(tenantId, gameId, round?.roundId, targetOwnerId, "hand_secondary")
+        val currency = resolveSnapshotCurrency(tenantId, gameId, targetOwnerId, round?.roundId, requestedCurrency)
+        val balance = ledgerStore.findBalance(tenantId, "PLAYER:$targetOwnerId", currency)
+
+        val primaryHand = buildHandSnapshot(tenantId, gameId, round?.roundId, targetOwnerId, "hand_primary", currency)
+        val secondaryHand = buildHandSnapshot(tenantId, gameId, round?.roundId, targetOwnerId, "hand_secondary", currency)
 
         val serverSeedHash = round?.let {
             fairnessStore.findCommitment(tenantId, gameId, it.roundId)?.commitmentHash
@@ -194,19 +204,51 @@ class AuthoritativeGameSnapshotAndEventService(
             elapsedFlightSeconds = elapsedFlightSeconds,
             sequenceId = seqId,
             roundVersion = round?.roundVersion ?: 1L,
-            currency = "PKR",
-            limits = CrashBetLimits(),
+            currency = currency,
+            limits = CrashBetLimits(currency = currency),
             user = SnapshotUser(
                 userId = targetOwnerId,
                 userName = userName,
                 balanceMinor = balance,
-                currency = "PKR",
+                currency = currency,
             ),
             primaryHand = primaryHand,
             secondaryHand = secondaryHand,
             history = historyList,
             serverSeedHash = serverSeedHash,
         )
+    }
+
+    private fun resolvePlayerCurrency(tenantId: String, ownerId: String, requestedCurrency: String?): String {
+        val betCurrency = gameStore.findBetsForOwner(tenantId, ownerId, 1)
+            .firstOrNull()
+            ?.currencyCode
+        return betCurrency ?: resolveRequestedCurrency(requestedCurrency)
+    }
+
+    private fun resolveSnapshotCurrency(
+        tenantId: String,
+        gameId: String,
+        ownerId: String,
+        roundId: String?,
+        requestedCurrency: String?,
+    ): String {
+        if (roundId != null) {
+            val primary = gameStore.findBet(tenantId, gameId, roundId, ownerId, "hand_primary")
+            val secondary = gameStore.findBet(tenantId, gameId, roundId, ownerId, "hand_secondary")
+            val betCurrency = primary?.currencyCode ?: secondary?.currencyCode
+            if (betCurrency != null) return betCurrency
+        }
+        return resolveRequestedCurrency(requestedCurrency)
+    }
+
+    private fun resolveRequestedCurrency(requestedCurrency: String?): String {
+        if (requestedCurrency.isNullOrBlank()) return SupportedAlphaCurrencyPolicy.defaultAccountCreationCurrency
+        return try {
+            SupportedAlphaCurrencyPolicy.validate(requestedCurrency.trim().uppercase())
+        } catch (e: InvalidCurrencyException) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+        }
     }
 
     fun getRoundHistory(tenantId: String, gameId: String, limit: Int): List<RoundHistoryEntry> {
@@ -409,12 +451,14 @@ class AuthoritativeGameSnapshotAndEventService(
         gameId: String,
         roundId: String?,
         ownerId: String,
-        handId: String
+        handId: String,
+        fallbackCurrency: String,
     ): SnapshotHand {
         if (roundId == null) {
-            return SnapshotHand(handId = handId)
+            return SnapshotHand(handId = handId, currency = fallbackCurrency)
         }
-        val bet = gameStore.findBet(tenantId, gameId, roundId, ownerId, handId) ?: return SnapshotHand(handId = handId)
+        val bet = gameStore.findBet(tenantId, gameId, roundId, ownerId, handId)
+            ?: return SnapshotHand(handId = handId, currency = fallbackCurrency)
         val settlement = gameStore.findSettlement(tenantId, bet.betId)
 
         return SnapshotHand(

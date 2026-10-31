@@ -97,13 +97,14 @@ class AviatorGameRestController(
     @GetMapping("/my-info")
     fun getMyInfo(
         @RequestHeader(name = "X-Tenant-Id", required = false, defaultValue = "default") tenantIdHeader: String,
+        @RequestParam(required = false) currency: String? = null,
         @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String? = null,
         @RequestHeader(name = "Authorization", required = false) authHeader: String? = null,
         @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal? = null,
     ): ResponseEntity<Any> {
         return try {
             val principal = resolvePrincipal(tenantIdHeader, sessionToken, authHeader, principalAttr)
-            val info = snapshotAndEventService.getMyInfo(tenantIdHeader, principal)
+            val info = snapshotAndEventService.getMyInfo(tenantIdHeader, principal, currency)
             ResponseEntity.ok(info)
         } catch (e: AuthenticationFailure.Rejected) {
             handleAuthFailure(e)
@@ -162,6 +163,7 @@ class AviatorGameRestController(
         @RequestParam(required = false, defaultValue = "AVIATOR") gameId: String,
         @RequestParam(required = false) roundId: String? = null,
         @RequestParam(name = "round_id", required = false) roundIdSnake: String? = null,
+        @RequestParam(required = false) currency: String? = null,
         @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String? = null,
         @RequestHeader(name = "Authorization", required = false) authHeader: String? = null,
         @RequestAttribute(name = "authenticatedPrincipal", required = false) principalAttr: AuthenticatedPrincipal? = null,
@@ -174,7 +176,8 @@ class AviatorGameRestController(
                 tenantId = tenantIdHeader,
                 principal = principal,
                 gameId = gameId.uppercase(),
-                roundId = targetRoundId
+                roundId = targetRoundId,
+                requestedCurrency = currency,
             )
             ResponseEntity.ok(snapshot)
         } catch (e: AuthenticationFailure.Rejected) {
@@ -218,7 +221,7 @@ class AviatorGameRestController(
         return try {
             val principal = resolvePrincipal(tenantIdHeader, sessionToken, authHeader, principalAttr)
             val resolvedWager = request.accountMoney?.amountMinor ?: request.wagerMinorUnits
-            val resolvedCurrency = request.accountMoney?.currency ?: request.currencyCode ?: "PKR"
+            val resolvedCurrency = request.accountMoney?.currency ?: request.currencyCode ?: ""
             val resolvedCausationId = request.causationId ?: request.commandId
             val resolvedCorrelationId = request.correlationId ?: request.commandId
             val resolvedProtocolVersion = request.protocolVersion ?: "1.2.0"

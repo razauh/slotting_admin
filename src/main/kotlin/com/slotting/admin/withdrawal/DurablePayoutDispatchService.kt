@@ -52,7 +52,7 @@ class DurablePayoutDispatchService(
         }
 
         val request = withdrawalStore.findRequest(command.tenantId, command.requestId)
-            ?: throw IllegalArgumentException("Withdrawal request ${command.requestId} not found for tenant ${command.tenantId}")
+            ?: throw IllegalArgumentException("Withdrawal request not found for this tenant")
 
         if (request.reviewState != WithdrawalReviewState.APPROVED) {
             throw IllegalStateException("Cannot stage payout for withdrawal request ${command.requestId}: review state is ${request.reviewState}, expected APPROVED")

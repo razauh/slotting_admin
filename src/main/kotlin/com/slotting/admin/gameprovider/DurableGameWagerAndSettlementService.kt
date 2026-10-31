@@ -16,6 +16,8 @@ import com.slotting.admin.ledger.AccountLockTimeoutException
 import com.slotting.admin.ledger.InsufficientAccountBalanceException
 import com.slotting.admin.ledger.LedgerPostingService
 import com.slotting.admin.ledger.PostTransactionCommand
+import com.slotting.admin.wallet.InvalidCurrencyException
+import com.slotting.admin.wallet.SupportedAlphaCurrencyPolicy
 import io.micrometer.core.instrument.MeterRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -420,20 +422,7 @@ class DurableGameWagerAndSettlementService(
                 )
             }
 
-        // 4. Currency validation (alpha policy: PKR/USD)
-        if (!command.currency.equals("PKR", ignoreCase = true) && !command.currency.equals("USD", ignoreCase = true)) {
-            return recordAndReturnRejection(
-                command = command,
-                ownerId = playerId,
-                gameId = gameId,
-                code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
-                message = "Unsupported currency: ${command.currency}",
-                roundVersion = round.roundVersion,
-                fp = fp,
-            )
-        }
-
-        // 5. Optimistic concurrency round version check
+        // 4. Optimistic concurrency round version check
         if (command.expectedRoundVersion != null && command.expectedRoundVersion != round.roundVersion) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.STALE)
         }
@@ -457,10 +446,31 @@ class DurableGameWagerAndSettlementService(
             }
         }
 
+        // 5. Currency policy: new bets bind the requested wallet currency; existing
+        //    bet actions use the currency stored on the bet and never the client selection.
+        val effectiveCommand = if (canonicalAction == AviatorCommandAction.PLACE_BET) {
+            val normalized = try {
+                SupportedAlphaCurrencyPolicy.validate(command.currency.trim().uppercase())
+            } catch (e: InvalidCurrencyException) {
+                return recordAndReturnRejection(
+                    command = command,
+                    ownerId = playerId,
+                    gameId = gameId,
+                    code = AviatorCommandRejectionCode.OUT_OF_LIMITS,
+                    message = "Unsupported currency: ${command.currency}",
+                    roundVersion = round.roundVersion,
+                    fp = fp,
+                )
+            }
+            command.copy(currency = normalized)
+        } else {
+            command
+        }
+
         return when (canonicalAction) {
-            AviatorCommandAction.PLACE_BET -> handlePlaceBet(command, playerId, gameId, round, fp, todayStr)
-            AviatorCommandAction.CANCEL_BET -> handleCancelBet(command, playerId, gameId, round, fp)
-            AviatorCommandAction.CASH_OUT -> handleCashOut(command, playerId, gameId, round, fp, receivedAt)
+            AviatorCommandAction.PLACE_BET -> handlePlaceBet(effectiveCommand, playerId, gameId, round, fp, todayStr)
+            AviatorCommandAction.CANCEL_BET -> handleCancelBet(effectiveCommand, playerId, gameId, round, fp)
+            AviatorCommandAction.CASH_OUT -> handleCashOut(effectiveCommand, playerId, gameId, round, fp, receivedAt)
         }
     }
 

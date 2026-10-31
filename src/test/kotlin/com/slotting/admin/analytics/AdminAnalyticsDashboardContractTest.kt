@@ -574,6 +574,105 @@ class AdminAnalyticsDashboardContractTest {
         assertEquals(1L, health.pagedAlertsCount)
     }
 
+    @Test
+    fun `TC-007-R1 PKR and USD totals remain separate and are never combined`() {
+        seedSettledRound("tc007-pkr", LocalDate.of(2026, 9, 26), 10_000L, 0L, "PKR")
+        seedSettledRound("tc007-usd", LocalDate.of(2026, 9, 26), 2_500L, 0L, "USD")
+
+        val response = dashboardService.queryDashboard(
+            AdminAnalyticsQuery(
+                principal = auditorPrincipal,
+                sessionId = validSessionId,
+                rangePreset = TimeRangePreset.DAILY,
+                currency = null,
+            )
+        )
+
+        val pkrWagers = response.financialMetricsByCurrency["PKR"]!!.first { it.metricId == "METRIC-WAGER-VOL" }
+        val usdWagers = response.financialMetricsByCurrency["USD"]!!.first { it.metricId == "METRIC-WAGER-VOL" }
+        assertEquals(10_000L, pkrWagers.amountMinor)
+        assertEquals(2_500L, usdWagers.amountMinor)
+        assertNotEquals(12_500L, pkrWagers.amountMinor)
+        assertNotEquals(12_500L, usdWagers.amountMinor)
+        assertEquals("PKR", pkrWagers.currency)
+        assertEquals("USD", usdWagers.currency)
+    }
+
+    @Test
+    fun `TC-007-R3 large exact USD amount remains exact in admin export`() {
+        val exactAmount = 9_007_199_254_740_993L
+        seedSettledRound("tc007-large-usd", LocalDate.of(2026, 9, 26), exactAmount, 0L, "USD")
+
+        val response = dashboardService.queryDashboard(
+            AdminAnalyticsQuery(
+                principal = auditorPrincipal,
+                sessionId = validSessionId,
+                rangePreset = TimeRangePreset.DAILY,
+                currency = "USD",
+            )
+        )
+
+        val usdWagers = response.financialMetricsByCurrency["USD"]!!.first { it.metricId == "METRIC-WAGER-VOL" }
+        assertEquals(exactAmount, usdWagers.amountMinor)
+        assertEquals("USD", usdWagers.currency)
+    }
+
+    @Test
+    fun `TC-007-R4 historical INR row stays labelled INR and is never relabelled`() {
+        seedSettledRound("tc007-legacy-inr", LocalDate.of(2026, 9, 26), 12_345L, 0L, "INR")
+
+        val response = dashboardService.queryDashboard(
+            AdminAnalyticsQuery(
+                principal = auditorPrincipal,
+                sessionId = validSessionId,
+                rangePreset = TimeRangePreset.DAILY,
+                currency = null,
+            )
+        )
+
+        val inrWagers = response.financialMetricsByCurrency["INR"]!!.first { it.metricId == "METRIC-WAGER-VOL" }
+        assertEquals(12_345L, inrWagers.amountMinor)
+        assertEquals("INR", inrWagers.currency)
+        assertFalse(response.financialMetricsByCurrency.containsKey("PKR"))
+    }
+
+    @Test
+    fun `TC-007-R5 aggregate Long overflow is rejected instead of wrapping`() {
+        val date = LocalDate.of(2026, 9, 26)
+        store.saveOrUpdateProjection(
+            DailyProjectionRecord(
+                tenantId = tenantId,
+                dateBucket = date,
+                currency = "USD",
+                totalWagersMinor = Long.MAX_VALUE,
+                lastProcessedFactTime = fixedNow,
+                updatedAt = fixedNow,
+            )
+        )
+        store.saveOrUpdateProjection(
+            DailyProjectionRecord(
+                tenantId = tenantId,
+                dateBucket = date.minusDays(1),
+                currency = "USD",
+                totalWagersMinor = 1L,
+                lastProcessedFactTime = fixedNow,
+                updatedAt = fixedNow,
+            )
+        )
+
+        val error = assertThrows(IllegalStateException::class.java) {
+            dashboardService.queryDashboard(
+                AdminAnalyticsQuery(
+                    principal = auditorPrincipal,
+                    sessionId = validSessionId,
+                    rangePreset = TimeRangePreset.WEEKLY,
+                    currency = "USD",
+                )
+            )
+        }
+        assertTrue(error.message!!.contains("overflow"))
+    }
+
     // -------------------------------------------------------------
     // Helper Methods
     // -------------------------------------------------------------

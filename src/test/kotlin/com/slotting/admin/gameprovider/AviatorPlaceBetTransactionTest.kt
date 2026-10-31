@@ -386,16 +386,16 @@ class AviatorPlaceBetTransactionTest {
         )
     }
 
-    private fun seedFunds(amount: Long) {
+    private fun seedFunds(amount: Long, currencyCode: String = currency) {
         ledgerService.postTransaction(
             PostTransactionCommand(
                 principal = adminPrincipal,
                 tenantId = tenantId,
                 transactionReference = "TX-TC008-SEED-${UUID.randomUUID()}",
-                currencyCode = currency,
+                currencyCode = currencyCode,
                 entries = listOf(
-                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, amount, currency),
-                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, amount, currency),
+                    JournalEntryDraft("HOUSE:SEED", JournalEntryDirection.DEBIT, amount, currencyCode),
+                    JournalEntryDraft("PLAYER:$playerIdStr", JournalEntryDirection.CREDIT, amount, currencyCode),
                 ),
                 idempotencyKey = "IDEM-TC008-SEED-${UUID.randomUUID()}",
                 correlationId = "corr-tc008-seed",
@@ -446,7 +446,13 @@ class AviatorPlaceBetTransactionTest {
             idempotencyKey,
         ) ?: 0
 
-    private fun placeBetCommand(commandId: String, roundId: String, handId: String, wagerMinor: Long) =
+    private fun placeBetCommand(
+        commandId: String,
+        roundId: String,
+        handId: String,
+        wagerMinor: Long,
+        currencyCode: String = currency,
+    ) =
         AviatorRestCommand(
             tenantId = tenantId,
             principal = playerPrincipal,
@@ -455,9 +461,54 @@ class AviatorPlaceBetTransactionTest {
             handId = handId,
             action = "PLACE_BET",
             wagerMinor = wagerMinor,
-            currency = currency,
+            currency = currencyCode,
             correlationId = "corr-$commandId",
         )
+
+    private fun flyRound(roundId: String, multiplier: BigDecimal = BigDecimal("2.0000")) {
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                currentMultiplier = multiplier,
+                crashMultiplier = BigDecimal("10.0000"),
+            )
+        )
+    }
+
+    private fun cashOutCommand(roundId: String, commandId: String, currencyCode: String = currency) =
+        AviatorRestCommand(
+            tenantId = tenantId,
+            principal = playerPrincipal,
+            commandId = commandId,
+            roundId = roundId,
+            handId = "hand_primary",
+            action = "CASH_OUT",
+            currency = currencyCode,
+            correlationId = "corr-$commandId",
+        )
+
+    private fun settlementCount(): Int =
+        jdbc.queryForObject(
+            "select count(*) from game_bet_settlement where tenant_id = ?",
+            Int::class.java,
+            tenantId,
+        ) ?: 0
+
+    private fun ledgerIsBalanced(): Boolean {
+        val imbalance = jdbc.queryForObject(
+            """
+            select count(*) from ledger_transaction
+            where tenant_id = ? and total_debits_minor_units <> total_credits_minor_units
+            """.trimIndent(),
+            Int::class.java,
+            tenantId,
+        ) ?: 0
+        return imbalance == 0
+    }
 
     private fun rootMessage(throwable: Throwable): String {
         val builder = StringBuilder()
@@ -1360,5 +1411,95 @@ class AviatorPlaceBetTransactionTest {
             assertTrue(lifecycleEvents.any { it.first == "ROUND_EXCLUSIVE" }, "iteration $iteration lifecycle must acquire the exclusive round lock")
         }
         pool.shutdown()
+    }
+
+    @Test
+    fun `TC-006-R1 supported PKR and USD bets reserve only their matching currency account`() {
+        seedFunds(10_000L, "PKR")
+        seedFunds(2_500L, "USD")
+        val roundId = "rnd-tc006-supported"
+        createRound(roundId)
+
+        val pkrAck = gameService.processCommand(
+            placeBetCommand("cmd-tc006-pkr", roundId, "hand_primary", 2_500L, "PKR")
+        )
+        val usdAck = gameService.processCommand(
+            placeBetCommand("cmd-tc006-usd", roundId, "hand_secondary", 2_500L, "USD")
+        )
+
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, pkrAck.status)
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, usdAck.status)
+        assertEquals("PKR", pkrAck.result?.currency)
+        assertEquals("USD", usdAck.result?.currency)
+        assertEquals(7_500L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "USD"))
+        assertEquals(2_500L, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", "PKR"))
+        assertEquals(2_500L, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", "USD"))
+        assertEquals("PKR", gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary")?.currencyCode)
+        assertEquals("USD", gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_secondary")?.currencyCode)
+    }
+
+    @Test
+    fun `TC-006-R2 INR bet with forged snapshot balance is rejected without debit`() {
+        seedFunds(10_000L, "PKR")
+        val roundId = "rnd-tc006-inr-denied"
+        createRound(roundId)
+
+        val ack = gameService.processCommand(
+            placeBetCommand("cmd-tc006-inr", roundId, "hand_primary", 2_500L, "INR")
+        )
+
+        assertEquals(AviatorCommandAckStatus.REJECTED, ack.status)
+        assertEquals(AviatorCommandRejectionCode.OUT_OF_LIMITS, ack.rejection?.code)
+        assertEquals(10_000L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
+        assertEquals(0L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "INR"))
+        assertNull(gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary"))
+        assertEquals(0, settlementCount())
+    }
+
+    @Test
+    fun `TC-006-R3 PKR bet settles in stored PKR when client selects USD for cashout`() {
+        seedFunds(10_000L, "PKR")
+        seedFunds(2_500L, "USD")
+        val roundId = "rnd-tc006-switched"
+        createRound(roundId)
+
+        val betAck = gameService.processCommand(
+            placeBetCommand("cmd-tc006-switched-bet", roundId, "hand_primary", 2_500L, "PKR")
+        )
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, betAck.status)
+        flyRound(roundId, BigDecimal("2.0000"))
+
+        val cashOutAck = gameService.processCommand(
+            cashOutCommand(roundId, "cmd-tc006-switched-cashout", "USD")
+        )
+
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, cashOutAck.status)
+        assertEquals("PKR", cashOutAck.result?.currency)
+        assertEquals(5_000L, cashOutAck.result?.payoutMinor)
+        assertEquals(12_500L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
+        assertEquals(2_500L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "USD"))
+        assertEquals("PKR", gameStore.findBet(tenantId, gameId, roundId, playerIdStr, "hand_primary")?.currencyCode)
+        assertTrue(ledgerIsBalanced())
+    }
+
+    @Test
+    fun `TC-006-R4 duplicate cashout at crash boundary yields one terminal settlement and balanced journal`() {
+        seedFunds(10_000L, "PKR")
+        val roundId = "rnd-tc006-boundary-replay"
+        createRound(roundId)
+        gameService.processCommand(placeBetCommand("cmd-tc006-replay-bet", roundId, "hand_primary", 2_500L, "PKR"))
+        flyRound(roundId, BigDecimal("1.5000"))
+
+        val command = cashOutCommand(roundId, "cmd-tc006-replay-cashout", "PKR")
+        val first = gameService.processCommand(command)
+        val second = gameService.processCommand(command)
+
+        assertEquals(AviatorCommandAckStatus.ACCEPTED, first.status)
+        assertEquals(first.sequenceId, second.sequenceId)
+        assertEquals(first.result?.payoutMinor, second.result?.payoutMinor)
+        assertEquals(1, settlementCount())
+        assertTrue(ledgerIsBalanced())
+        assertEquals(10_000L - 2_500L + 3_750L, ledgerStore.findBalance(tenantId, "PLAYER:$playerIdStr", "PKR"))
     }
 }
