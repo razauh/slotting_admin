@@ -184,8 +184,8 @@ class TruthfulProviderPortContractTest {
         // Missing credentials (null)
         val outcome = adapter.deposit(cmd, sampleConfig, credentials = null)
 
-        assertEquals(ProviderOutcomeStatus.UNAVAILABLE, outcome.status)
-        assertEquals("CREDENTIALS_UNAVAILABLE", outcome.rawResponseCode)
+        assertEquals(ProviderOutcomeStatus.DECLINED, outcome.status)
+        assertEquals("UNSUPPORTED_OPERATION", outcome.rawResponseCode)
         assertFalse(outcome.isAmbiguous)
     }
 
@@ -267,12 +267,13 @@ class TruthfulProviderPortContractTest {
         assertFalse(easypaisa.capabilities.supportsCancellation, "Easypaisa cancellation not established")
 
         val oneLinkRaast = OneLinkRaastAdapter()
-        assertTrue(oneLinkRaast.capabilities.supportsRequestToPay, "OneLink Raast supports RTP")
-        assertTrue(oneLinkRaast.capabilities.supportsCancellation, "OneLink Raast supports RTP cancellation")
+        assertFalse(oneLinkRaast.capabilities.supportsRequestToPay, "Unselected OneLink Raast pay-in remains unavailable")
+        assertFalse(oneLinkRaast.capabilities.supportsCancellation, "Unselected OneLink Raast cancellation remains unavailable")
         assertFalse(oneLinkRaast.capabilities.supportsStatusLookup, "OneLink Raast inquiry is not implemented")
-        assertTrue(oneLinkRaast.capabilities.supportsAliasInquiry, "OneLink Raast supports alias inquiry")
-        assertTrue(oneLinkRaast.capabilities.supportsTitleFetch, "OneLink Raast supports title fetch")
+        assertFalse(oneLinkRaast.capabilities.supportsAliasInquiry, "Unselected route does not advertise alias inquiry")
+        assertFalse(oneLinkRaast.capabilities.supportsTitleFetch, "Unselected route does not advertise title fetch")
         assertFalse(oneLinkRaast.capabilities.supportsPayout, "OneLink Raast P2M does not execute IBFT payout")
+        assertFalse(oneLinkRaast.capabilities.supportsDeposit, "Unselected OneLink Raast pay-in is explicitly disabled")
 
         val oneLinkIbft = OneLinkIbftAdapter()
         listOf(jazzCash, easypaisa, oneLinkRaast, oneLinkIbft, PayFastAdapter(), SafepayRaastAdapter()).forEach { adapter ->
@@ -283,7 +284,7 @@ class TruthfulProviderPortContractTest {
         }
         assertTrue(oneLinkIbft.capabilities.supportsPayout, "OneLink IBFT executes payout transfer")
         assertTrue(oneLinkIbft.capabilities.supportsTitleFetch, "OneLink IBFT supports title fetch")
-        assertFalse(oneLinkIbft.capabilities.supportsStatusLookup, "OneLink IBFT inquiry is not implemented")
+        assertTrue(oneLinkIbft.capabilities.supportsStatusLookup, "OneLink IBFT authenticated inquiry is implemented")
         assertFalse(oneLinkIbft.capabilities.supportsDeposit, "OneLink IBFT does not execute deposit")
     }
 
@@ -470,8 +471,9 @@ class TruthfulProviderPortContractTest {
             reason = "Expired timeout",
         )
 
-        val supportedCancel = oneLink.cancel(cancelCmd, sampleConfig, sampleCredentials)
-        assertEquals(ProviderOutcomeStatus.ACCEPTED, supportedCancel.status)
+        val disabledCancel = oneLink.cancel(cancelCmd, sampleConfig, sampleCredentials)
+        assertEquals(ProviderOutcomeStatus.DECLINED, disabledCancel.status)
+        assertEquals("UNSUPPORTED_OPERATION", disabledCancel.rawResponseCode)
 
         val easypaisa = EasypaisaAdapter()
         val unsupportedCancel = easypaisa.cancel(cancelCmd.copy(providerId = easypaisa.providerId), sampleConfig, sampleCredentials)

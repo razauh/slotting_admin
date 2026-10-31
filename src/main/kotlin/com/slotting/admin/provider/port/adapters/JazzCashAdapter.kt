@@ -18,7 +18,9 @@ import javax.crypto.spec.SecretKeySpec
  *
  * Payout is NOT inferred as part of this gateway API.
  */
-class JazzCashAdapter : PaymentProviderPort {
+class JazzCashAdapter(
+    private val httpClient: ProviderHttpClient = ProviderHttpClient(),
+) : PaymentProviderPort {
     override val providerId: String = "JAZZCASH"
     override val isProductionReady: Boolean = false
 
@@ -55,17 +57,63 @@ class JazzCashAdapter : PaymentProviderPort {
                 reason = "Currency '${command.currency}' is not supported by JazzCash (expected PKR)",
             )
         }
+        if (command.amountMinorUnits <= 0L) {
+            return ProviderOutcome.declined(
+                operationId = command.operationId,
+                code = "INVALID_AMOUNT",
+                reason = "Deposit amount must be a positive integer minor amount",
+            )
+        }
 
-        return ProviderOutcome.accepted(
-            operationId = command.operationId,
-            providerReference = "JC-TXN-${command.operationId}",
-            code = "MWALLET_PUSH_INITIATED",
-            evidence = mapOf(
-                "provider" to providerId,
-                "customerIdentifier" to command.customerIdentifier,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
+        val body = ProviderWireSupport.encode(
+            mapOf(
+                "pp_MerchantID" to credentials.merchantId,
+                "pp_Amount" to command.amountMinorUnits,
+                "pp_TxnCurrency" to command.currency,
+                "pp_TxnRefNo" to command.operationId.toString(),
+                "pp_Customer" to command.customerIdentifier,
+                "pp_IdempotencyKey" to command.idempotencyKey,
+                "pp_CorrelationId" to command.correlationId,
             )
         )
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "POST",
+                path = "/payment/v1/initiate",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey}",
+                    "Content-Type" to "application/json",
+                    "X-Request-ID" to command.correlationId,
+                    "Idempotency-Key" to command.idempotencyKey,
+                ),
+                body = body,
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(command.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body)
+            val reference = ProviderWireSupport.firstText(parsed, "pp_TxnRefNo", "transactionId", "reference", "providerReference", "id")
+            if (reference == null) {
+                return ProviderWireSupport.malformed(command.operationId)
+            }
+            ProviderWireSupport.pending(
+                operationId = command.operationId,
+                providerReference = reference,
+                code = "MWALLET_PUSH_PENDING",
+                evidence = mapOf(
+                    "provider" to providerId,
+                    "amountMinorUnits" to command.amountMinorUnits.toString(),
+                    "currency" to command.currency,
+                    "status" to "PENDING",
+                ),
+            )
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_INTERRUPTED", "Provider call was interrupted before a definitive response")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_UNKNOWN", "Provider call ended without a definitive response")
+        }
     }
 
     override fun payout(
@@ -136,6 +184,10 @@ class JazzCashAdapter : PaymentProviderPort {
             return CallbackVerificationResult(isValid = false, rejectionReason = "SIGNATURE_MISMATCH")
         }
 
+        val expectedMerchant = credentials.merchantId?.takeIf(String::isNotBlank)
+        if (expectedMerchant != null && fields["pp_MerchantID"] != expectedMerchant) {
+            return CallbackVerificationResult(isValid = false, rejectionReason = "MERCHANT_MISMATCH")
+        }
         val providerReference = fields["pp_TxnRefNo"]?.takeIf(String::isNotBlank)
             ?: return CallbackVerificationResult(isValid = false, rejectionReason = "MISSING_TRANSACTION_REFERENCE")
         val amountMinorUnits = fields["pp_Amount"]?.toLongOrNull()

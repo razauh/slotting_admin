@@ -46,6 +46,8 @@ data class FullSnapshot(
     val roundId: String? = null,
     val phase: String = "NONE",
     val serverTimeMillis: Long,
+    val phaseStartedAtMillis: Long? = null,
+    val phaseDeadlineAtMillis: Long? = null,
     val multiplier: Double = 1.00,
     val elapsedFlightSeconds: Double = 0.0,
     val sequenceId: Long = 0L,

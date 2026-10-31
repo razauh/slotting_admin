@@ -17,7 +17,9 @@ import javax.crypto.spec.SecretKeySpec
  * - Refund
  * - Webhook HMAC-SHA256 signature verification (`x-sfpy-signature`)
  */
-class SafepayRaastAdapter : PaymentProviderPort {
+class SafepayRaastAdapter(
+    private val httpClient: ProviderHttpClient = ProviderHttpClient(),
+) : PaymentProviderPort {
     private val objectMapper = ObjectMapper()
     override val providerId: String = "SAFEPAY_RAAST"
     override val isProductionReady: Boolean = false
@@ -25,7 +27,7 @@ class SafepayRaastAdapter : PaymentProviderPort {
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = true,
         supportsPayout = true,
-        supportsStatusLookup = false,
+        supportsStatusLookup = true,
         supportsCancellation = false,
         supportsRefund = false,
         supportsWebhookVerification = true,
@@ -55,18 +57,63 @@ class SafepayRaastAdapter : PaymentProviderPort {
                 reason = "Currency '${command.currency}' is not supported by Safepay (expected PKR)",
             )
         }
+        if (command.amountMinorUnits <= 0L) {
+            return ProviderOutcome.declined(
+                operationId = command.operationId,
+                code = "INVALID_AMOUNT",
+                reason = "Deposit amount must be a positive integer minor amount",
+            )
+        }
 
-        // Truthful protocol mapping for checkout token creation
-        return ProviderOutcome.accepted(
-            operationId = command.operationId,
-            providerReference = "track_${command.operationId}",
-            code = "TOKEN_CREATED",
-            evidence = mapOf(
-                "provider" to providerId,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
+        val body = ProviderWireSupport.encode(
+            mapOf(
+                "amountMinorUnits" to command.amountMinorUnits,
                 "currency" to command.currency,
+                "reference" to command.operationId.toString(),
+                "idempotencyKey" to command.idempotencyKey,
+                "callbackUrl" to command.callbackUrl,
+                "customerIdentifier" to command.customerIdentifier,
+                "correlationId" to command.correlationId,
             )
         )
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "POST",
+                path = "/api/v1/checkout/order",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey}",
+                    "Content-Type" to "application/json",
+                    "X-Request-ID" to command.correlationId,
+                    "Idempotency-Key" to command.idempotencyKey,
+                ),
+                body = body,
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(command.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body)
+            val reference = ProviderWireSupport.firstText(parsed, "tracker", "reference", "providerReference", "token", "id")
+            if (reference == null) {
+                return ProviderWireSupport.malformed(command.operationId)
+            }
+            ProviderWireSupport.pending(
+                operationId = command.operationId,
+                providerReference = reference,
+                code = "CHECKOUT_PENDING",
+                evidence = mapOf(
+                    "provider" to providerId,
+                    "amountMinorUnits" to command.amountMinorUnits.toString(),
+                    "currency" to command.currency,
+                    "status" to "PENDING",
+                ),
+            )
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_INTERRUPTED", "Provider call was interrupted before a definitive response")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_UNKNOWN", "Provider call ended without a definitive response")
+        }
     }
 
     override fun payout(
@@ -89,16 +136,63 @@ class SafepayRaastAdapter : PaymentProviderPort {
                 reason = "Currency '${command.currency}' is not supported by Safepay",
             )
         }
+        if (command.amountMinorUnits <= 0L) {
+            return ProviderOutcome.declined(
+                operationId = command.operationId,
+                code = "INVALID_AMOUNT",
+                reason = "Payout amount must be a positive integer minor amount",
+            )
+        }
 
-        return ProviderOutcome.accepted(
-            operationId = command.operationId,
-            providerReference = "payout_${command.operationId}",
-            code = "PAYOUT_QUEUED",
-            evidence = mapOf(
+        val body = ProviderWireSupport.encode(
+            mapOf(
+                "amountMinorUnits" to command.amountMinorUnits,
+                "currency" to command.currency,
+                "reference" to command.operationId.toString(),
                 "destinationAccount" to command.destinationAccount,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
+                "destinationTitle" to command.destinationTitle,
+                "idempotencyKey" to command.idempotencyKey,
+                "correlationId" to command.correlationId,
             )
         )
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "POST",
+                path = "/api/v1/payouts",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey}",
+                    "Content-Type" to "application/json",
+                    "X-Request-ID" to command.correlationId,
+                    "Idempotency-Key" to command.idempotencyKey,
+                ),
+                body = body,
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(command.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body)
+            val reference = ProviderWireSupport.firstText(parsed, "tracker", "reference", "providerReference", "payoutId", "id")
+            if (reference == null) {
+                return ProviderWireSupport.malformed(command.operationId)
+            }
+            ProviderOutcome.accepted(
+                operationId = command.operationId,
+                providerReference = reference,
+                code = "PAYOUT_QUEUED",
+                evidence = mapOf(
+                    "provider" to providerId,
+                    "amountMinorUnits" to command.amountMinorUnits.toString(),
+                    "currency" to command.currency,
+                    "status" to "PENDING",
+                )
+            )
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_INTERRUPTED", "Provider call was interrupted before a definitive response")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_UNKNOWN", "Provider call ended without a definitive response")
+        }
     }
 
     override fun queryStatus(
@@ -106,7 +200,72 @@ class SafepayRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        return ProviderOutcome.unavailable(query.operationId, "Safepay status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
+        if (credentials == null || credentials.apiKey.isNullOrBlank()) {
+            return ProviderOutcome.unavailable(query.operationId, "Safepay credentials not configured", "CREDENTIALS_UNAVAILABLE")
+        }
+        val reference = query.providerReference
+            ?: return ProviderOutcome.unavailable(query.operationId, "Provider reference is required for authenticated inquiry", "REFERENCE_UNAVAILABLE")
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "GET",
+                path = "/api/v1/payouts/$reference",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey}",
+                    "X-Request-ID" to query.idempotencyKey,
+                ),
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(query.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body) ?: return ProviderWireSupport.malformed(query.operationId)
+            val returnedReference = ProviderWireSupport.firstText(parsed, "tracker", "reference", "providerReference", "payoutId", "id")
+                ?: return ProviderWireSupport.malformed(query.operationId)
+            if (returnedReference != reference) {
+                return ProviderOutcome.declined(query.operationId, "REFERENCE_MISMATCH", "Authenticated inquiry returned a different provider reference")
+            }
+            val amount = ProviderWireSupport.firstLong(parsed, "amountMinorUnits", "amount")
+            val currency = ProviderWireSupport.firstText(parsed, "currency")
+            val status = ProviderWireSupport.status(parsed, "status", "eventType")
+            when (status) {
+                "PAID", "SUCCESS", "SUCCEEDED", "SETTLED", "COMPLETED" -> {
+                    if (amount == null || currency == null ||
+                        amount != query.expectedAmountMinorUnits ||
+                        !currency.equals(query.expectedCurrency, ignoreCase = true)
+                    ) {
+                        return ProviderOutcome.declined(query.operationId, "INQUIRY_MISMATCH", "Authenticated inquiry amount or currency does not match the operation")
+                    }
+                    ProviderOutcome.verifiedSettlement(
+                        operationId = query.operationId,
+                        providerReference = returnedReference,
+                        amountMinorUnits = amount,
+                        currency = currency,
+                        evidence = mapOf(
+                            "provider" to providerId,
+                            "status" to status,
+                            "amountMinorUnits" to amount.toString(),
+                            "currency" to currency,
+                        ),
+                    )
+                }
+                "FAILED", "DECLINED", "REJECTED", "CANCELLED" -> ProviderOutcome.failed(
+                    operationId = query.operationId,
+                    code = status,
+                    reason = "Provider inquiry reported a definitive failure",
+                )
+                else -> ProviderOutcome.pending(
+                    operationId = query.operationId,
+                    providerReference = returnedReference,
+                    code = status ?: "PENDING",
+                    reason = "Provider inquiry is not yet terminal",
+                )
+            }
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(query.operationId, "INQUIRY_INTERRUPTED", "Provider inquiry was interrupted")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(query.operationId, "INQUIRY_UNKNOWN", "Provider inquiry did not return a definitive result")
+        }
     }
 
     override fun cancel(

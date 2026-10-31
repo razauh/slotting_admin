@@ -37,7 +37,7 @@ management:
 
 slotting:
   schema:
-    supported-version: 66
+    supported-version: 67
   security:
     device-cap: 5
     max-travel-speed-kmh: 900

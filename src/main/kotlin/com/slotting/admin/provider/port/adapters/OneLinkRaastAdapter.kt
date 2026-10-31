@@ -30,15 +30,15 @@ class OneLinkRaastAdapter : PaymentProviderPort {
     override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
-        supportsDeposit = true,
+        supportsDeposit = false,
         supportsPayout = false,
         supportsStatusLookup = false,
-        supportsCancellation = true,
+        supportsCancellation = false,
         supportsRefund = false,
-        supportsWebhookVerification = true,
-        supportsRequestToPay = true,
-        supportsAliasInquiry = true,
-        supportsTitleFetch = true,
+        supportsWebhookVerification = false,
+        supportsRequestToPay = false,
+        supportsAliasInquiry = false,
+        supportsTitleFetch = false,
         supportedCurrencies = setOf("PKR"),
     )
 
@@ -47,35 +47,10 @@ class OneLinkRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null || credentials.clientId.isNullOrBlank() && credentials.apiKey.isNullOrBlank()) {
-            return ProviderOutcome.unavailable(
-                operationId = command.operationId,
-                reason = "1LINK Raast credentials not configured",
-                code = "CREDENTIALS_UNAVAILABLE",
-            )
-        }
-
-        if (!capabilities.supportedCurrencies.contains(command.currency)) {
-            return ProviderOutcome.declined(
-                operationId = command.operationId,
-                code = "CURRENCY_MISMATCH",
-                reason = "Currency '${command.currency}' is not supported by 1LINK Raast (expected PKR)",
-            )
-        }
-
-        // Truthful protocol mapping for RTP push
-        // In real network execution, this constructs JSON payload for /raast/p2m/v1/rtp
-        // Returns accepted or pending based on synchronous response
-        return ProviderOutcome.accepted(
+        return ProviderOutcome.declined(
             operationId = command.operationId,
-            providerReference = "RTP-${command.operationId}",
-            code = "RTP_INITIATED",
-            evidence = mapOf(
-                "provider" to providerId,
-                "rail" to "RAAST_P2M",
-                "customerIdentifier" to command.customerIdentifier,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
-            )
+            code = "UNSUPPORTED_OPERATION",
+            reason = "The 1LINK Raast pay-in rail is not selected or authorized in this deployment",
         )
     }
 
@@ -104,14 +79,10 @@ class OneLinkRaastAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        if (credentials == null) {
-            return ProviderOutcome.unavailable(command.operationId, "Credentials unavailable", "CREDENTIALS_UNAVAILABLE")
-        }
-        return ProviderOutcome.accepted(
+        return ProviderOutcome.declined(
             operationId = command.operationId,
-            providerReference = command.providerReference ?: "RTP-${command.operationId}",
-            code = "RTP_CANCELLED",
-            evidence = mapOf("reason" to command.reason)
+            code = "UNSUPPORTED_OPERATION",
+            reason = "The 1LINK Raast rail is not selected or authorized in this deployment",
         )
     }
 

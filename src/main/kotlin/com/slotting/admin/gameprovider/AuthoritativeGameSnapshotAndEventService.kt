@@ -200,6 +200,8 @@ class AuthoritativeGameSnapshotAndEventService(
             roundId = round?.roundId,
             phase = round?.phase?.name ?: "NONE",
             serverTimeMillis = now.toEpochMilli(),
+            phaseStartedAtMillis = round?.phaseStartedAt?.toEpochMilli(),
+            phaseDeadlineAtMillis = round?.phaseDeadlineAt?.toEpochMilli(),
             multiplier = round?.currentMultiplier?.toDouble() ?: 1.00,
             elapsedFlightSeconds = elapsedFlightSeconds,
             sequenceId = seqId,

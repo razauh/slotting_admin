@@ -13,14 +13,16 @@ import java.util.UUID
  *
  * Does not process player pay-in/deposits directly (handled via Raast or merchant gateways).
  */
-class OneLinkIbftAdapter : PaymentProviderPort {
+class OneLinkIbftAdapter(
+    private val httpClient: ProviderHttpClient = ProviderHttpClient(),
+) : PaymentProviderPort {
     override val providerId: String = "ONELINK_IBFT"
     override val isProductionReady: Boolean = false
 
     override val capabilities: ProviderAdapterCapabilities = ProviderAdapterCapabilities(
         supportsDeposit = false,
         supportsPayout = true,
-        supportsStatusLookup = false,
+        supportsStatusLookup = true,
         supportsCancellation = false,
         supportsRefund = false,
         supportsWebhookVerification = false,
@@ -62,17 +64,65 @@ class OneLinkIbftAdapter : PaymentProviderPort {
                 reason = "Currency '${command.currency}' is not supported by 1LINK IBFT (expected PKR)",
             )
         }
+        if (command.amountMinorUnits <= 0L) {
+            return ProviderOutcome.declined(
+                operationId = command.operationId,
+                code = "INVALID_AMOUNT",
+                reason = "Payout amount must be a positive integer minor amount",
+            )
+        }
 
-        return ProviderOutcome.accepted(
-            operationId = command.operationId,
-            providerReference = "IBFT-STAN-${command.operationId}",
-            code = "TRANSFER_INITIATED",
-            evidence = mapOf(
-                "provider" to providerId,
+        val body = ProviderWireSupport.encode(
+            mapOf(
+                "clientId" to credentials.clientId,
+                "amountMinorUnits" to command.amountMinorUnits,
+                "currency" to command.currency,
+                "reference" to command.operationId.toString(),
                 "destinationAccount" to command.destinationAccount,
-                "amountMinorUnits" to command.amountMinorUnits.toString(),
+                "destinationTitle" to command.destinationTitle,
+                "destinationBankCode" to command.destinationBankCode,
+                "idempotencyKey" to command.idempotencyKey,
+                "correlationId" to command.correlationId,
             )
         )
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "POST",
+                path = "/ibft/v1/transfers",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey ?: credentials.clientId}",
+                    "Content-Type" to "application/json",
+                    "X-Request-ID" to command.correlationId,
+                    "Idempotency-Key" to command.idempotencyKey,
+                ),
+                body = body,
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(command.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body)
+            val reference = ProviderWireSupport.firstText(parsed, "transferId", "reference", "providerReference", "transactionId", "id")
+            if (reference == null) {
+                return ProviderWireSupport.malformed(command.operationId)
+            }
+            ProviderOutcome.accepted(
+                operationId = command.operationId,
+                providerReference = reference,
+                code = "TRANSFER_PENDING",
+                evidence = mapOf(
+                    "provider" to providerId,
+                    "amountMinorUnits" to command.amountMinorUnits.toString(),
+                    "currency" to command.currency,
+                    "status" to "PENDING",
+                )
+            )
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_INTERRUPTED", "Provider call was interrupted before a definitive response")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(command.operationId, "TRANSPORT_UNKNOWN", "Provider call ended without a definitive response")
+        }
     }
 
     override fun queryStatus(
@@ -80,7 +130,72 @@ class OneLinkIbftAdapter : PaymentProviderPort {
         config: ProviderConfiguration,
         credentials: ProviderCredentials?,
     ): ProviderOutcome {
-        return ProviderOutcome.unavailable(query.operationId, "OneLink IBFT status inquiry is not implemented", "STATUS_INQUIRY_UNIMPLEMENTED")
+        if (credentials == null || credentials.clientId.isNullOrBlank()) {
+            return ProviderOutcome.unavailable(query.operationId, "1LINK IBFT credentials not configured", "CREDENTIALS_UNAVAILABLE")
+        }
+        val reference = query.providerReference
+            ?: return ProviderOutcome.unavailable(query.operationId, "Provider reference is required for authenticated inquiry", "REFERENCE_UNAVAILABLE")
+        return try {
+            val response = httpClient.execute(
+                config = config,
+                method = "GET",
+                path = "/ibft/v1/transfers/$reference",
+                headers = mapOf(
+                    "Authorization" to "Bearer ${credentials.apiKey ?: credentials.clientId}",
+                    "X-Request-ID" to query.idempotencyKey,
+                ),
+            )
+            if (response.statusCode !in 200..299) {
+                return ProviderWireSupport.httpFailure(query.operationId, response.statusCode)
+            }
+            val parsed = ProviderWireSupport.parse(response.body) ?: return ProviderWireSupport.malformed(query.operationId)
+            val returnedReference = ProviderWireSupport.firstText(parsed, "transferId", "reference", "providerReference", "transactionId", "id")
+                ?: return ProviderWireSupport.malformed(query.operationId)
+            if (returnedReference != reference) {
+                return ProviderOutcome.declined(query.operationId, "REFERENCE_MISMATCH", "Authenticated inquiry returned a different provider reference")
+            }
+            val amount = ProviderWireSupport.firstLong(parsed, "amountMinorUnits", "amount")
+            val currency = ProviderWireSupport.firstText(parsed, "currency")
+            val status = ProviderWireSupport.status(parsed, "status", "eventType")
+            when (status) {
+                "PAID", "SUCCESS", "SUCCEEDED", "SETTLED", "COMPLETED" -> {
+                    if (amount == null || currency == null ||
+                        amount != query.expectedAmountMinorUnits ||
+                        !currency.equals(query.expectedCurrency, ignoreCase = true)
+                    ) {
+                        return ProviderOutcome.declined(query.operationId, "INQUIRY_MISMATCH", "Authenticated inquiry amount or currency does not match the operation")
+                    }
+                    ProviderOutcome.verifiedSettlement(
+                        operationId = query.operationId,
+                        providerReference = returnedReference,
+                        amountMinorUnits = amount,
+                        currency = currency,
+                        evidence = mapOf(
+                            "provider" to providerId,
+                            "status" to status,
+                            "amountMinorUnits" to amount.toString(),
+                            "currency" to currency,
+                        ),
+                    )
+                }
+                "FAILED", "DECLINED", "REJECTED", "CANCELLED" -> ProviderOutcome.failed(
+                    operationId = query.operationId,
+                    code = status,
+                    reason = "Provider inquiry reported a definitive failure",
+                )
+                else -> ProviderOutcome.pending(
+                    operationId = query.operationId,
+                    providerReference = returnedReference,
+                    code = status ?: "PENDING",
+                    reason = "Provider inquiry is not yet terminal",
+                )
+            }
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            ProviderWireSupport.ambiguous(query.operationId, "INQUIRY_INTERRUPTED", "Provider inquiry was interrupted")
+        } catch (_: Exception) {
+            ProviderWireSupport.ambiguous(query.operationId, "INQUIRY_UNKNOWN", "Provider inquiry did not return a definitive result")
+        }
     }
 
     override fun cancel(

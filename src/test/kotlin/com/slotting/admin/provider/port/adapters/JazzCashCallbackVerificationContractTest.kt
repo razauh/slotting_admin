@@ -138,6 +138,44 @@ class JazzCashCallbackVerificationContractTest {
         assertEquals(50_000L, ledgerStore.findBalance(tenantId, "player:wallet:${UUID.nameUUIDFromBytes("player".toByteArray())}", "PKR"))
     }
 
+    @Test
+    fun `TC-022 merchant tenant reference and environment are bound before any ledger credit`() {
+        val (service, workflowStore, ledgerStore) = serviceFixture()
+        val signed = signedFields()
+
+        val otherMerchant = signed.toMutableMap().apply {
+            this["pp_MerchantID"] = "OTHER-MERCHANT"
+            this["pp_SecureHash"] = adapter.calculateSecureHash(this, secret)
+        }
+        val merchantMismatch = adapter.verifyCallback(
+            ProviderCallbackPayload("JAZZCASH", "", emptyMap(), otherMerchant),
+            config(),
+            credentials(),
+        )
+        assertEquals("MERCHANT_MISMATCH", merchantMismatch.rejectionReason)
+        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
+
+        val foreignTenant = runCatching {
+            service.processCallback(command(signed, "evt-foreign-tenant").copy(tenantId = "tenant-other"))
+        }
+        assertTrue(foreignTenant.isFailure)
+        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
+
+        val wrongReference = signed.toMutableMap().apply {
+            this["pp_TxnRefNo"] = "JC-TXN-unknown"
+            this["pp_SecureHash"] = adapter.calculateSecureHash(this, secret)
+        }
+        val unknownIntent = runCatching { service.processCallback(command(wrongReference, "evt-unknown-ref")) }
+        assertTrue(unknownIntent.isFailure)
+        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
+
+        val productionGuard = runCatching {
+            com.slotting.admin.provider.port.ProductionProviderGuard.assertProductionReady(adapter, "PRODUCTION")
+        }
+        assertTrue(productionGuard.isFailure)
+        assertEquals(0, ledgerStore.findAllLegsForTenant(tenantId).size)
+    }
+
     private fun serviceFixture(): Triple<DurableDepositWorkflowService, InMemoryDepositWorkflowStore, InMemoryLedgerJournalStore> {
         val workflowStore = InMemoryDepositWorkflowStore()
         workflowStore.saveIntent(

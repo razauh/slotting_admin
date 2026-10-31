@@ -10,7 +10,11 @@ import com.slotting.admin.provider.port.ProviderEnvironment
 import com.slotting.admin.provider.port.ProviderOutcome
 import com.slotting.admin.provider.port.ProviderPayoutCommand
 import com.slotting.admin.provider.port.ProviderStatusQuery
+import com.slotting.admin.provider.port.ProviderHttpClient
+import com.slotting.admin.provider.port.RecordingTransport
 import com.slotting.admin.provider.port.adapters.AdversarialTestPaymentAdapter
+import com.slotting.admin.provider.port.adapters.OneLinkIbftAdapter
+import com.slotting.admin.provider.port.httpResponse
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -77,17 +81,17 @@ class DurablePayoutDispatchPostgresTest {
         environment = ProviderEnvironment.SANDBOX,
         baseUrl = "https://sandbox.api.test/v1",
     )
-    private val credentials = ProviderCredentials(merchantId = "MERCHANT-01", apiKey = "api-key-test")
+    private val credentials = ProviderCredentials(merchantId = "MERCHANT-01", clientId = "client-1", apiKey = "api-key-test")
 
     private fun ledger() = LedgerPostingService(JdbcLedgerJournalStore(jdbc), clock = clock)
 
-    private fun service(port: PaymentProviderPort) = DurablePayoutDispatchService(
+    private fun service(port: PaymentProviderPort, providerId: String = "ADVERSARIAL_TEST") = DurablePayoutDispatchService(
         dispatchStore = dispatchStore,
         withdrawalStore = withdrawalStore,
         ledgerPostingService = ledger(),
-        providerPorts = mapOf("ADVERSARIAL_TEST" to port),
+        providerPorts = mapOf(providerId to port),
         credentialsResolver = { _, _ -> credentials },
-        configResolver = { _, _ -> config },
+        configResolver = { _, _ -> config.copy(providerId = providerId) },
         providerEnabled = { _, _ -> true },
         clock = clock,
     )
@@ -137,13 +141,13 @@ class DurablePayoutDispatchPostgresTest {
         )
     }
 
-    private fun stage(service: DurablePayoutDispatchService, req: AuthoritativeWithdrawalRequest, key: String): PayoutDispatchIntentRecord {
+    private fun stage(service: DurablePayoutDispatchService, req: AuthoritativeWithdrawalRequest, key: String, providerId: String = "ADVERSARIAL_TEST"): PayoutDispatchIntentRecord {
         withdrawalStore.saveRequest(req)
         return service.stageDispatchIntent(
             StagePayoutDispatchCommand(
                 tenantId = req.tenantId,
                 requestId = req.requestId,
-                providerId = "ADVERSARIAL_TEST",
+                providerId = providerId,
                 idempotencyKey = key,
             )
         )
@@ -192,6 +196,39 @@ class DurablePayoutDispatchPostgresTest {
             tenantId,
             req.requestId,
         ))
+    }
+
+    @Test
+    fun `TC-023-RED-1 accepted payout then dropped reply is settled exactly once by authenticated inquiry`() {
+        val tenantId = "tenant-tc023-${UUID.randomUUID()}"
+        val ownerId = UUID.randomUUID()
+        seedWallet(tenantId, ownerId, "PKR", 100_000L)
+        val req = request(tenantId, ownerId)
+        var calls = 0
+        val transport = RecordingTransport {
+            calls += 1
+            when (calls) {
+                1 -> httpResponse(200, """{"transferId":"IB1","status":"PENDING"}""")
+                else -> httpResponse(200, """{"transferId":"IB1","status":"PAID","amountMinorUnits":47500,"currency":"PKR"}""")
+            }
+        }
+        val adapter = OneLinkIbftAdapter(ProviderHttpClient(transport.transport()))
+        val service = service(adapter, "ONELINK_IBFT")
+        val staged = stage(service, req, "stage-tc023-${UUID.randomUUID()}", "ONELINK_IBFT")
+
+        val dispatch = service.dispatchNext("worker-tc023", Duration.ofMinutes(5))
+        assertNotNull(dispatch)
+        assertEquals(PayoutDispatchStatus.AMBIGUOUS_RECONCILING, dispatch.status)
+        assertEquals("IB1", dispatch.providerReference)
+
+        val reconciled = service.reconcilePayout(tenantId, staged.intentId, "operator-tc023")
+        assertEquals(PayoutDispatchStatus.SUCCEEDED, reconciled.newStatus)
+        assertEquals("TX-PAYOUT-${staged.intentId}", reconciled.ledgerTransactionReference)
+        assertEquals(1, ledgerCount(staged.intentId))
+
+        val replay = service.reconcilePayout(tenantId, staged.intentId, "operator-tc023")
+        assertEquals("ALREADY_FINALIZED_SUCCESS", replay.actionTaken)
+        assertEquals(1, ledgerCount(staged.intentId))
     }
 
     @Test
