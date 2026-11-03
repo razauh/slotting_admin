@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Diagnostics</title>
+<style>
+  body { font: 14px/1.5 system-ui, Arial, sans-serif; margin: 24px; background: #f5f7fa; color: #1b2430; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 0; }
+  section { background: white; border: 1px solid #d8e0ea; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; margin: 8px 0 2px; font-weight: 600; }
+  input { padding: 6px; border: 1px solid #b9c4d0; border-radius: 4px; min-width: 220px; }
+  button { margin-top: 10px; padding: 8px 14px; background: #2752d8; color: white; border: 0; border-radius: 4px; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  th, td { border: 1px solid #d8e0ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .state-error { color: #b3261e; font-weight: 600; }
+  .state-empty { color: #5f6b7a; font-style: italic; }
+  .missing { color: #b3261e; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h1>Admin Diagnostics</h1>
+<section id="errorState" class="hidden state-error" role="alert"></section>
+<section>
+  <h2>Search diagnostic events</h2>
+  <form id="searchForm">
+    <label for="from">From (ISO instant)</label>
+    <input id="from" name="from" placeholder="2026-10-31T00:00:00Z" autocomplete="off">
+    <label for="to">To (ISO instant)</label>
+    <input id="to" name="to" placeholder="2026-11-01T00:00:00Z" autocomplete="off">
+    <label for="severity">Severity</label>
+    <input id="severity" name="severity" placeholder="ERROR" autocomplete="off">
+    <label for="correlationId">Correlation ID</label>
+    <input id="correlationId" name="correlationId" autocomplete="off">
+    <label for="roundId">Round ID</label>
+    <input id="roundId" name="roundId" autocomplete="off">
+    <label for="betId">Bet ID</label>
+    <input id="betId" name="betId" autocomplete="off">
+    <label for="paymentId">Payment ID</label>
+    <input id="paymentId" name="paymentId" autocomplete="off">
+    <button type="submit">Search</button>
+    <button type="button" id="nextPage" class="hidden">Next page</button>
+  </form>
+  <p id="resultState" class="state-empty hidden"></p>
+  <table id="resultsTable" class="hidden">
+    <thead>
+      <tr><th>Occurred at</th><th>Event type</th><th>Severity</th><th>Correlation</th><th>Round</th><th>Bet</th><th>Payment</th><th>Delivery</th><th></th></tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</section>
+<section id="detailSection" class="hidden">
+  <h2>Event detail</h2>
+  <p id="detailMissing" class="missing"></p>
+  <table>
+    <tbody id="detailBody"></tbody>
+  </table>
+  <h2>Related lifecycle events</h2>
+  <p id="relatedEmpty" class="state-empty hidden">No related events were found.</p>
+  <table id="relatedTable">
+    <tbody id="relatedBody"></tbody>
+  </table>
+</section>
+<script>
+  var nextCursor = null;
+
+  function requireAuthInputs() {
+    var tenantId = window.prompt('Tenant ID:');
+    if (tenantId === null) return null;
+    var sessionId = window.prompt('Admin session ID:');
+    if (sessionId === null) return null;
+    return { tenantId: tenantId, sessionId: sessionId };
+  }
+
+  function showError(message) {
+    var box = document.getElementById('errorState');
+    box.textContent = message;
+    box.classList.remove('hidden');
+  }
+
+  function clearError() {
+    var box = document.getElementById('errorState');
+    box.textContent = '';
+    box.classList.add('hidden');
+  }
+
+  function showEmpty(message) {
+    var note = document.getElementById('resultState');
+    note.textContent = message;
+    note.classList.remove('hidden');
+    document.getElementById('resultsTable').classList.add('hidden');
+  }
+
+  function cell(value) {
+    var td = document.createElement('td');
+    td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+    return td;
+  }
+
+  function money(amountMinor, currency) {
+    if (amountMinor === null || amountMinor === undefined || !currency) return '—';
+    return currency + ' ' + String(amountMinor) + ' minor units';
+  }
+
+  function renderRows(rows) {
+    var body = document.getElementById('resultsBody');
+    body.textContent = '';
+    rows.forEach(function (entry) {
+      var tr = document.createElement('tr');
+      tr.appendChild(cell(entry.occurredAt));
+      tr.appendChild(cell(entry.eventType));
+      tr.appendChild(cell(entry.severity));
+      tr.appendChild(cell(entry.correlationId));
+      tr.appendChild(cell(entry.roundId));
+      tr.appendChild(cell(entry.betId));
+      tr.appendChild(cell(entry.paymentId));
+      tr.appendChild(cell(entry.deliveryState));
+      var action = document.createElement('td');
+      var link = document.createElement('button');
+      link.textContent = 'Detail';
+      link.addEventListener('click', function () { openDetail(entry.eventId); });
+      action.appendChild(link);
+      tr.appendChild(action);
+      body.appendChild(tr);
+    });
+    document.getElementById('resultsTable').classList.remove('hidden');
+  }
+
+  function detailRow(label, value) {
+    var tr = document.createElement('tr');
+    var th = document.createElement('th');
+    th.textContent = label;
+    var td = document.createElement('td');
+    td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+    tr.appendChild(th);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function openDetail(eventId) {
+    var auth = requireAuthInputs();
+    if (!auth) return;
+    clearError();
+    fetch('/api/admin/diagnostics/events/' + encodeURIComponent(eventId), {
+      headers: { 'X-Tenant-Id': auth.tenantId, 'X-Session-Id': auth.sessionId }
+    }).then(function (response) {
+      if (response.status === 401) throw new Error('Please sign in again (session expired).');
+      if (response.status === 403) throw new Error('You do not have permission to view this event.');
+      if (response.status === 404) throw new Error('No diagnostic event with this ID exists in your tenant.');
+      if (response.status === 503) throw new Error('The diagnostics service is temporarily unavailable. Try again.');
+      if (!response.ok) throw new Error('The diagnostics service returned an unexpected error.');
+      return response.json();
+    }).then(function (detail) {
+      var section = document.getElementById('detailSection');
+      var body = document.getElementById('detailBody');
+      body.textContent = '';
+      body.appendChild(detailRow('Event type', detail.eventType));
+      body.appendChild(detailRow('Severity', detail.severity));
+      body.appendChild(detailRow('Occurred at', detail.occurredAt));
+      body.appendChild(detailRow('Correlation', detail.correlationId));
+      body.appendChild(detailRow('Round', detail.roundId));
+      body.appendChild(detailRow('Bet', detail.betId));
+      body.appendChild(detailRow('Payment', detail.paymentId));
+      body.appendChild(detailRow('Amount', money(detail.amountMinorUnits, detail.currency)));
+      body.appendChild(detailRow('Delivery state', detail.deliveryState));
+      body.appendChild(detailRow('Message', detail.message));
+      var missing = document.getElementById('detailMissing');
+      if (detail.missingLifecycleStages && detail.missingLifecycleStages.length > 0) {
+        missing.textContent = 'Missing lifecycle stages (not observed, not assumed): ' + detail.missingLifecycleStages.join(', ');
+      } else {
+        missing.textContent = '';
+      }
+      var relatedBody = document.getElementById('relatedBody');
+      relatedBody.textContent = '';
+      var related = detail.relatedEvents || [];
+      document.getElementById('relatedTable').classList.toggle('hidden', related.length === 0);
+      document.getElementById('relatedEmpty').classList.toggle('hidden', related.length > 0);
+      related.forEach(function (entry) {
+        var tr = document.createElement('tr');
+        tr.appendChild(cell(entry.occurredAt));
+        tr.appendChild(cell(entry.eventType));
+        tr.appendChild(cell(entry.deliveryState));
+        relatedBody.appendChild(tr);
+      });
+      section.classList.remove('hidden');
+    }).catch(function (failure) {
+      showError(failure.message);
+    });
+  }
+
+  function runSearch(cursor) {
+    var auth = requireAuthInputs();
+    if (!auth) return;
+    clearError();
+    var params = new URLSearchParams();
+    var from = document.getElementById('from').value.trim();
+    var to = document.getElementById('to').value.trim();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    ['severity', 'correlationId', 'roundId', 'betId', 'paymentId'].forEach(function (name) {
+      var value = document.getElementById(name).value.trim();
+      if (value) params.set(name, value);
+    });
+    params.set('limit', '50');
+    if (cursor) params.set('cursor', cursor);
+    fetch('/api/admin/diagnostics/search?' + params.toString(), {
+      headers: { 'X-Tenant-Id': auth.tenantId, 'X-Session-Id': auth.sessionId }
+    }).then(function (response) {
+      if (response.status === 401) throw new Error('Please sign in again (session expired).');
+      if (response.status === 403) throw new Error('You do not have permission to search diagnostics.');
+      if (response.status === 503) throw new Error('The diagnostics service is temporarily unavailable. Try again.');
+      if (!response.ok) throw new Error('The diagnostics service returned an unexpected error.');
+      return response.json();
+    }).then(function (result) {
+      nextCursor = result.nextCursor;
+      document.getElementById('nextPage').classList.toggle('hidden', !result.nextCursor);
+      if (!result.entries || result.entries.length === 0) {
+        showEmpty('No diagnostic events matched these filters.');
+        return;
+      }
+      document.getElementById('resultState').classList.add('hidden');
+      renderRows(result.entries);
+    }).catch(function (failure) {
+      showEmpty('');
+      showError(failure.message);
+    });
+  }
+
+  document.getElementById('searchForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    runSearch(null);
+  });
+  document.getElementById('nextPage').addEventListener('click', function () {
+    if (nextCursor) runSearch(nextCursor);
+  });
+</script>
+</body>
+</html>

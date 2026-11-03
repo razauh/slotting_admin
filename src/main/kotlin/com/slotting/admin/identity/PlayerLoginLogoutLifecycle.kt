@@ -235,7 +235,15 @@ class PlayerSessionService(
     private val challengeTtl: Duration = Duration.ofMinutes(5),
     private val challengeGenerator: (String, UUID, String, Duration, Instant) -> UnpredictableChallengeService.IssuedChallenge =
         UnpredictableChallengeService::generateChallenge,
+    val securityDiagnostics: com.slotting.admin.observability.SecurityAuditDiagnosticProjector =
+        com.slotting.admin.observability.NoOpSecurityAuditDiagnosticProjector,
 ) {
+    private fun projectSecurityAudit(facts: com.slotting.admin.observability.SecurityAuditFacts) {
+        try {
+            securityDiagnostics.project(facts)
+        } catch (ignored: Exception) {
+        }
+    }
     fun login(command: LoginPlayerCommand): LoginPlayerResult = synchronized(sessionStore) {
         PlayerLoginLogoutBinding.checkBound()
 
@@ -295,6 +303,19 @@ class PlayerSessionService(
             if (sessionStore is InMemoryPlayerSessionStore) {
                 sessionStore.audit.add(failureEvent)
             }
+            projectSecurityAudit(
+                com.slotting.admin.observability.SecurityAuditFacts(
+                    eventType = "PLAYER_LOGIN_FAILED_CREDENTIALS",
+                    outcome = com.slotting.admin.observability.SecurityAuditOutcome.FAILED,
+                    actorType = "ANONYMOUS",
+                    tenantId = command.tenantId,
+                    actorId = null,
+                    opaqueSessionId = null,
+                    correlationId = command.correlationId,
+                    causationId = command.causationId,
+                    safeMetadata = mapOf("reasonCode" to AuthErrorCode.INVALID.name, "result" to "DENIED"),
+                )
+            )
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
@@ -425,6 +446,16 @@ class PlayerSessionService(
         )
 
         sessionStore.saveSession(session, command.idempotencyKey, command, result)
+        projectSecurityAudit(
+            com.slotting.admin.observability.SecurityAuditProjections.fromAuditEvent(
+                audit = auditEvent,
+                outcome = com.slotting.admin.observability.SecurityAuditOutcome.SUCCEEDED,
+                actorType = "PLAYER",
+                actorId = candidate.playerId.toString(),
+                opaqueSessionId = sessionId.toString(),
+                safeMetadata = mapOf("result" to "AUTHENTICATED"),
+            )
+        )
         return result
     }
 
@@ -595,6 +626,16 @@ class PlayerSessionService(
             sessionStore.audit.add(auditEvent)
             sessionStore.outbox.add(outboxEvent)
         }
+        projectSecurityAudit(
+            com.slotting.admin.observability.SecurityAuditProjections.fromAuditEvent(
+                audit = auditEvent,
+                outcome = com.slotting.admin.observability.SecurityAuditOutcome.SUCCEEDED,
+                actorType = "PLAYER",
+                actorId = command.playerId.toString(),
+                opaqueSessionId = command.sessionId.toString(),
+                safeMetadata = mapOf("result" to "TERMINATED"),
+            )
+        )
         return result
     }
 
@@ -611,6 +652,18 @@ class PlayerSessionService(
         val now = clock.instant()
         if (now.isAfter(session.expiresAt)) {
             session.state = SessionState.EXPIRED
+            projectSecurityAudit(
+                com.slotting.admin.observability.SecurityAuditFacts(
+                    eventType = "PLAYER_SESSION_EXPIRED",
+                    outcome = com.slotting.admin.observability.SecurityAuditOutcome.EXPIRED,
+                    actorType = "PLAYER",
+                    tenantId = tenantId,
+                    actorId = session.playerId.toString(),
+                    opaqueSessionId = sessionId.toString(),
+                    correlationId = "security-expiry-$sessionId",
+                    safeMetadata = mapOf("reasonCode" to "SESSION_EXPIRED", "result" to "DENIED"),
+                )
+            )
             throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         }
 

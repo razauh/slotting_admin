@@ -118,12 +118,36 @@ class AdminMfaAuthenticator(
     private val store: AuthenticationStore,
     private val alerts: AlertSink,
     private val clock: Clock = Clock.systemUTC(),
+    val securityDiagnostics: com.slotting.admin.observability.SecurityAuditDiagnosticProjector =
+        com.slotting.admin.observability.NoOpSecurityAuditDiagnosticProjector,
     private val breakGlassDuration: Duration = Duration.ofMinutes(5),
     private val standardSessionDuration: Duration = Duration.ofHours(2),
     private val roleChangePolicy: RoleChangePolicy = RoleChangePolicy(dualControlRequired = true),
 ) {
     @Synchronized
     fun authenticate(command: AdminMfaCommand): AuthenticationResult {
+        try {
+            return authenticateGuarded(command)
+        } catch (rejected: AuthenticationFailure.Rejected) {
+            runCatching { securityDiagnostics.project(
+                com.slotting.admin.observability.SecurityAuditFacts(
+                    eventType = "ADMIN_MFA_DENIED",
+                    outcome = com.slotting.admin.observability.SecurityAuditOutcome.DENIED,
+                    actorType = if (command.principal?.kind == PrincipalKind.ADMIN) "ADMIN" else "ANONYMOUS",
+                    tenantId = command.principal?.tenantId ?: "unknown",
+                    actorId = command.principal?.id,
+                    opaqueSessionId = command.sessionId,
+                    correlationId = command.correlationId,
+                    causationId = command.causationId,
+                    safeMetadata = mapOf("reasonCode" to rejected.code.name, "result" to "DENIED"),
+                )
+            )
+            }
+            throw rejected
+        }
+    }
+
+    private fun authenticateGuarded(command: AdminMfaCommand): AuthenticationResult {
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
         val replay = store.findByIdempotency(principal.tenantId, command.idempotencyKey)
         if (replay != null) {
@@ -181,6 +205,20 @@ class AdminMfaAuthenticator(
         val audit = AuditEvent(UUID.randomUUID(), resultId, principal.tenantId, eventType, now, command.correlationId, command.causationId)
         val outbox = OutboxEvent(UUID.randomUUID(), resultId, principal.tenantId, eventType, now)
         store.save(result, principal.tenantId, principal.id, command.sessionId, setOf(command.requestedRole), command.idempotencyKey, fingerprint(command), audit, outbox)
+        runCatching { securityDiagnostics.project(
+            com.slotting.admin.observability.SecurityAuditProjections.fromAuditEvent(
+                audit = audit,
+                outcome = com.slotting.admin.observability.SecurityAuditOutcome.SUCCEEDED,
+                actorType = "ADMIN",
+                actorId = principal.id,
+                opaqueSessionId = command.sessionId,
+                safeMetadata = mapOf(
+                    "result" to "AUTHENTICATED",
+                    "requestedRole" to command.requestedRole.name,
+                    "approverId" to (approverId ?: ""),
+                ),
+            ))
+        }
         if (command.breakGlass) alerts.alert(audit.copy(type = "ADMIN_BREAK_GLASS_STARTED"))
         return result
     }

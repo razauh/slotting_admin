@@ -34,6 +34,9 @@ class DurablePayoutDispatchService(
     private val configResolver: (tenantId: String, providerId: String) -> ProviderConfiguration? = { _, _ -> null },
     private val providerEnabled: (tenantId: String, providerId: String) -> Boolean = { _, _ -> false },
     private val clock: Clock = Clock.systemUTC(),
+    val financialAudit: com.slotting.admin.observability.FinancialAuditProjector =
+        com.slotting.admin.observability.NoOpFinancialAuditProjector,
+    val testerGate: com.slotting.admin.observability.AlphaTesterGate = com.slotting.admin.observability.NoOpAlphaTesterGate,
 ) {
     private val log = LoggerFactory.getLogger(DurablePayoutDispatchService::class.java)
 
@@ -144,7 +147,32 @@ class DurablePayoutDispatchService(
         try {
             requireProviderReady(port, config, intent.providerId, requirePayout = true)
             val outcome = port.payout(payoutCmd, config, credentials)
-            return handleOutcome(intent, outcome)
+            return handleOutcome(intent, outcome).also { result ->
+                financialAudit.project(
+                    com.slotting.admin.observability.FinancialAuditEvent(
+                        tenantId = intent.tenantId,
+                        eventType = "PAYOUT_DISPATCHED",
+                        outcome = when (result.status) {
+                            PayoutDispatchStatus.SUCCEEDED -> com.slotting.admin.observability.FinancialAuditOutcome.CONFIRMED
+                            PayoutDispatchStatus.FAILED_FINAL -> com.slotting.admin.observability.FinancialAuditOutcome.FAILED
+                            else -> com.slotting.admin.observability.FinancialAuditOutcome.PENDING
+                        },
+                        correlationId = "corr-${intent.intentId}",
+                        paymentId = intent.intentId.toString(),
+                        operationId = result.providerReference,
+                        providerReference = result.providerReference,
+                        ledgerReference = result.ledgerTransactionReference,
+                        amountMinorUnits = intent.netPayoutAmountMinorUnits,
+                        currency = intent.currencyCode,
+                        safeDetail = result.failureReason ?: "Provider payout dispatch recorded",
+                        severity = if (result.status == PayoutDispatchStatus.FAILED_FINAL) {
+                            com.slotting.admin.observability.DiagnosticEventSeverity.WARN
+                        } else {
+                            com.slotting.admin.observability.DiagnosticEventSeverity.INFO
+                        },
+                    )
+                )
+            }
         } catch (e: Exception) {
             log.warn("Network drop or provider failure during dispatch for intent {}: {}", intent.intentId, e.message)
             val updated = intent.copy(
@@ -217,6 +245,7 @@ class DurablePayoutDispatchService(
         )
 
         val outcome = port.queryStatus(query, config, credentials)
+        projectReconciliation(intent, outcome)
 
         return when (outcome.status) {
             ProviderOutcomeStatus.ACCEPTED -> {
@@ -410,6 +439,47 @@ class DurablePayoutDispatchService(
                 updated
             }
         }
+    }
+
+    private fun isVerifiedAmountMismatch(intent: PayoutDispatchIntentRecord, outcome: ProviderOutcome): Boolean {
+        val verified = outcome.verifiedStatus ?: return false
+        return verified.amountMinorUnits != intent.netPayoutAmountMinorUnits || !verified.currency.equals(intent.currencyCode, ignoreCase = true)
+    }
+
+    private fun projectReconciliation(intent: PayoutDispatchIntentRecord, outcome: ProviderOutcome) {
+        financialAudit.project(
+            com.slotting.admin.observability.FinancialAuditEvent(
+                tenantId = intent.tenantId,
+                eventType = when {
+                    outcome.status == ProviderOutcomeStatus.ACCEPTED && isVerifiedAmountMismatch(intent, outcome) -> "PAYOUT_RECONCILE_MISMATCH"
+                    outcome.status == ProviderOutcomeStatus.ACCEPTED -> "PAYOUT_RECONCILE_CONFIRMED"
+                    outcome.status == ProviderOutcomeStatus.DECLINED || outcome.status == ProviderOutcomeStatus.FAILED -> "PAYOUT_RECONCILE_FAILED"
+                    else -> "PAYOUT_RECONCILE_PENDING"
+                },
+                outcome = when {
+                    outcome.status == ProviderOutcomeStatus.ACCEPTED && isVerifiedAmountMismatch(intent, outcome) ->
+                        com.slotting.admin.observability.FinancialAuditOutcome.MISMATCH
+                    outcome.status == ProviderOutcomeStatus.ACCEPTED -> com.slotting.admin.observability.FinancialAuditOutcome.CONFIRMED
+                    outcome.status == ProviderOutcomeStatus.DECLINED || outcome.status == ProviderOutcomeStatus.FAILED ->
+                        com.slotting.admin.observability.FinancialAuditOutcome.FAILED
+                    outcome.status == ProviderOutcomeStatus.PENDING -> com.slotting.admin.observability.FinancialAuditOutcome.PENDING
+                    else -> com.slotting.admin.observability.FinancialAuditOutcome.MISMATCH
+                },
+                correlationId = "corr-${intent.intentId}",
+                paymentId = intent.intentId.toString(),
+                operationId = outcome.providerReference,
+                providerReference = outcome.providerReference ?: intent.providerReference,
+                ledgerReference = null,
+                amountMinorUnits = outcome.verifiedStatus?.amountMinorUnits,
+                currency = outcome.verifiedStatus?.currency,
+                safeDetail = outcome.safeReason ?: "Authenticated provider inquiry outcome recorded",
+                severity = if (outcome.verifiedStatus != null && outcome.verifiedStatus.amountMinorUnits != intent.netPayoutAmountMinorUnits) {
+                    com.slotting.admin.observability.DiagnosticEventSeverity.WARN
+                } else {
+                    com.slotting.admin.observability.DiagnosticEventSeverity.INFO
+                },
+            )
+        )
     }
 
     private fun handleOutcome(intent: PayoutDispatchIntentRecord, outcome: ProviderOutcome): PayoutDispatchResult {

@@ -52,7 +52,14 @@ data class AuditQueryResult(
 
 interface AdminAuditStore {
     fun findByIdempotency(tenantId: String, key: String): Pair<String, AuditQueryResult>?
-    fun queryEvents(tenantId: String, eventType: String?, from: Instant, to: Instant, limit: Int): List<AuditRecord>
+    fun queryEvents(
+        tenantId: String,
+        eventType: String?,
+        from: Instant,
+        to: Instant,
+        limit: Int,
+        correlationId: String? = null,
+    ): List<AuditRecord>
     fun isLegalHoldActive(tenantId: String): Boolean
     fun findHoldVersion(tenantId: String, holdReference: String): Long?
     fun saveHold(
@@ -109,9 +116,12 @@ class AdminAuditService(
             AuditQueryAction.SEARCH, AuditQueryAction.EXPORT -> AdminPermission.READ_AUDIT
             AuditQueryAction.APPLY_LEGAL_HOLD, AuditQueryAction.RELEASE_LEGAL_HOLD -> AdminPermission.MANAGE_SECURITY
         }
+        val supportReadFallback = command.action == AuditQueryAction.SEARCH || command.action == AuditQueryAction.EXPORT
         if (!policy.isPermitted(principal, requiredPerm) &&
-            !policy.isPermitted(principal, AdminPermission.READ_SUPPORT) &&
-            !policy.isPermitted(principal, AdminPermission.MANAGE_SUPPORT)) {
+            (!supportReadFallback ||
+                (!policy.isPermitted(principal, AdminPermission.READ_SUPPORT) &&
+                    !policy.isPermitted(principal, AdminPermission.MANAGE_SUPPORT)))
+        ) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
 
@@ -124,15 +134,16 @@ class AdminAuditService(
 
         val resultId = UUID.randomUUID()
         val isHoldActive = store.isLegalHoldActive(command.tenantId)
+        val normalizedCorrelationId = command.correlationId?.trim()?.takeIf(String::isNotBlank)
 
         val (records, checksum, holdStateAfter, version) = when (command.action) {
             AuditQueryAction.SEARCH -> {
-                val recs = store.queryEvents(command.tenantId, command.eventType, command.from, command.to, command.limit)
+                val recs = store.queryEvents(command.tenantId, command.eventType, command.from, command.to, command.limit, normalizedCorrelationId)
                 val sanitized = recs.map { sanitize(it, isHoldActive) }
                 Quad(sanitized, null, isHoldActive, 1L)
             }
             AuditQueryAction.EXPORT -> {
-                val recs = store.queryEvents(command.tenantId, command.eventType, command.from, command.to, command.limit)
+                val recs = store.queryEvents(command.tenantId, command.eventType, command.from, command.to, command.limit, normalizedCorrelationId)
                 val sanitized = recs.map { sanitize(it, isHoldActive) }
                 val chk = computeExportChecksum(command.tenantId, sanitized)
                 Quad(sanitized, chk, isHoldActive, 1L)

@@ -15,14 +15,32 @@ class JdbcAdminAuditStore(private val jdbc: JdbcTemplate) : AdminAuditStore {
         { rs, _ -> rs.toResult() }, tenantId, key
     ).firstOrNull()
 
-    override fun queryEvents(tenantId: String, eventType: String?, from: Instant, to: Instant, limit: Int): List<AuditRecord> {
+    override fun queryEvents(
+        tenantId: String,
+        eventType: String?,
+        from: Instant,
+        to: Instant,
+        limit: Int,
+        correlationId: String?,
+    ): List<AuditRecord> {
         val hold = isLegalHoldActive(tenantId)
-        val sql = if (eventType == null) {
-            "select event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details::text from admin_audit_event where tenant_id = ? and occurred_at >= ? and occurred_at <= ? order by occurred_at desc limit ?"
-        } else {
-            "select event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details::text from admin_audit_event where tenant_id = ? and event_type = ? and occurred_at >= ? and occurred_at <= ? order by occurred_at desc limit ?"
+        val clauses = mutableListOf("(tenant_id = ?)", "occurred_at >= ?", "occurred_at <= ?")
+        val args = mutableListOf<Any>(tenantId, java.sql.Timestamp.from(from), java.sql.Timestamp.from(to))
+        if (eventType != null) {
+            clauses += "event_type = ?"
+            args += eventType
         }
-        val args = if (eventType == null) arrayOf(tenantId, from, to, limit) else arrayOf(tenantId, eventType, from, to, limit)
+        if (correlationId != null) {
+            clauses += "correlation_id = ?"
+            args += correlationId
+        }
+        val sql = buildString {
+            append("select event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details::text")
+            append(" from admin_audit_event where ")
+            append(clauses.joinToString(" and "))
+            append(" order by occurred_at desc, event_id asc limit ?")
+        }
+        args += limit
         return jdbc.query(sql, { rs, _ ->
             AuditRecord(
                 eventId = rs.getObject("event_id", UUID::class.java),
@@ -35,7 +53,7 @@ class JdbcAdminAuditStore(private val jdbc: JdbcTemplate) : AdminAuditStore {
                 redactedDetails = rs.getString("redacted_details"),
                 legalHold = hold,
             )
-        }, *args)
+        }, *args.toTypedArray())
     }
 
     override fun isLegalHoldActive(tenantId: String): Boolean =
@@ -66,12 +84,12 @@ class JdbcAdminAuditStore(private val jdbc: JdbcTemplate) : AdminAuditStore {
         if (currentVersion == null) {
             jdbc.update(
                 "insert into admin_audit_legal_hold(tenant_id, hold_reference, reason, approver_id, active, applied_at, server_version, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)",
-                tenantId, holdReference, reason, approverId, active, now, version, now
+                tenantId, holdReference, reason, approverId, active, java.sql.Timestamp.from(now), version, java.sql.Timestamp.from(now)
             )
         } else {
             jdbc.update(
                 "update admin_audit_legal_hold set reason = ?, approver_id = ?, active = ?, released_at = ?, server_version = ?, updated_at = ? where tenant_id = ? and hold_reference = ? and server_version = ?",
-                reason, approverId, active, if (active) null else now, version, now, tenantId, holdReference, currentVersion
+                reason, approverId, active, if (active) null else java.sql.Timestamp.from(now), version, java.sql.Timestamp.from(now), tenantId, holdReference, currentVersion
             )
         }
     }
@@ -87,19 +105,19 @@ class JdbcAdminAuditStore(private val jdbc: JdbcTemplate) : AdminAuditStore {
     ) {
         jdbc.update(
             "insert into admin_audit_query_result(result_id, tenant_id, query_fingerprint, evidence_reference, action, records_count, checksum_sha256, legal_hold_active, server_version, occurred_at, idempotency_key, correlation_id, causation_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            result.resultId, tenantId, queryFingerprint, result.evidenceReference, result.action.name, result.records.size, result.exportChecksumSha256, result.legalHoldActive, result.serverVersion, result.serverTime, idempotencyKey, audit.correlationId, audit.causationId
+            result.resultId, tenantId, queryFingerprint, result.evidenceReference, result.action.name, result.records.size, result.exportChecksumSha256, result.legalHoldActive, result.serverVersion, java.sql.Timestamp.from(result.serverTime), idempotencyKey, audit.correlationId, audit.causationId
         )
         jdbc.update(
             "insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)",
-            result.resultId, tenantId, "ADMIN_AUDIT", result.serverTime
+            result.resultId, tenantId, "ADMIN_AUDIT", java.sql.Timestamp.from(result.serverTime)
         )
         jdbc.update(
             "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
-            audit.eventId, audit.resultId, tenantId, audit.type, audit.occurredAt, audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit)
+            audit.eventId, audit.resultId, tenantId, audit.type, java.sql.Timestamp.from(audit.occurredAt), audit.correlationId, audit.causationId, com.slotting.admin.auth.RedactedEventJson.audit(audit)
         )
         jdbc.update(
             "insert into admin_outbox_event(event_id, result_id, tenant_id, event_type, created_at, payload) values (?, ?, ?, ?, ?, cast(? as jsonb))",
-            outbox.eventId, outbox.resultId, tenantId, outbox.type, outbox.createdAt, com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit)
+            outbox.eventId, outbox.resultId, tenantId, outbox.type, java.sql.Timestamp.from(outbox.createdAt), com.slotting.admin.auth.RedactedEventJson.outbox(outbox, audit)
         )
     }
 

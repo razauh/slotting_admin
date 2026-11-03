@@ -304,9 +304,15 @@ private class AuditMemoryStore : AdminAuditStore {
     val outbox = mutableListOf<OutboxEvent>()
 
     override fun findByIdempotency(tenantId: String, key: String) = synchronized(this) { results["$tenantId:$key"] }
-    override fun queryEvents(tenantId: String, eventType: String?, from: Instant, to: Instant, limit: Int) = synchronized(this) {
+    override fun queryEvents(tenantId: String, eventType: String?, from: Instant, to: Instant, limit: Int, correlationId: String?) = synchronized(this) {
         val hold = isLegalHoldActive(tenantId)
-        rawEvents.filter { it.tenantId == tenantId && (eventType == null || it.eventType == eventType) && !it.occurredAt.isBefore(from) && !it.occurredAt.isAfter(to) }
+        rawEvents.filter {
+            it.tenantId == tenantId &&
+                (eventType == null || it.eventType == eventType) &&
+                (correlationId == null || it.correlationId == correlationId) &&
+                !it.occurredAt.isBefore(from) && !it.occurredAt.isAfter(to)
+        }
+            .sortedWith(compareByDescending<AuditRecord> { it.occurredAt }.thenBy { it.eventId })
             .take(limit)
             .map { it.copy(legalHold = hold) }
     }

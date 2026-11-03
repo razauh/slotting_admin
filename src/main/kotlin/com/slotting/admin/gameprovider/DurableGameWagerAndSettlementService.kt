@@ -62,6 +62,8 @@ class DurableGameWagerAndSettlementService(
     val txManager: org.springframework.transaction.PlatformTransactionManager? = null,
     private val meterRegistry: MeterRegistry? = null,
     private val playAbuseDetectionStore: PlayAbuseDetectionStore? = null,
+    val lifecycleDiagnostics: GameLifecycleDiagnosticProjector = NoOpGameLifecycleDiagnosticProjector,
+    val testerGate: com.slotting.admin.observability.AlphaTesterGate = com.slotting.admin.observability.NoOpAlphaTesterGate,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
@@ -271,10 +273,39 @@ class DurableGameWagerAndSettlementService(
                 )
             )
             settledCount++
+            lifecycleDiagnostics.project(
+                GameLifecycleDiagnosticEvent(
+                    tenantId = command.tenantId,
+                    eventType = "GAME_BET_SETTLED_CRASH",
+                    outcome = GameLifecycleOutcome.SETTLED,
+                    correlationId = "corr-crash-${command.roundId}",
+                    roundId = command.roundId,
+                    betId = bet.betId.toString(),
+                    causationId = "caus-crash-${command.roundId}",
+                    authoritativeVersion = round.roundVersion,
+                    ledgerReference = txRef,
+                    amountMinorUnits = bet.wagerMinorUnits,
+                    currency = bet.currencyCode,
+                    safeReason = "Crash settlement loss recorded with ledger reference",
+                )
+            )
         }
 
         val authoritativeCrashMultiplier = round.crashMultiplier
             ?: throw CrashStateIntegrityException("CRASHED round ${round.roundId} has no authoritative crash multiplier")
+
+        lifecycleDiagnostics.project(
+            GameLifecycleDiagnosticEvent(
+                tenantId = command.tenantId,
+                eventType = "GAME_ROUND_CRASHED",
+                outcome = GameLifecycleOutcome.SETTLED,
+                correlationId = "corr-crash-${command.roundId}",
+                roundId = command.roundId,
+                causationId = "caus-crash-${command.roundId}",
+                authoritativeVersion = round.roundVersion,
+                safeReason = "Round crashed at authoritative multiplier $authoritativeCrashMultiplier with $settledCount settled bets",
+            )
+        )
 
         return SettleRoundCrashResult(
             roundId = round.roundId,
@@ -285,11 +316,14 @@ class DurableGameWagerAndSettlementService(
 
     fun processCommand(command: AviatorRestCommand): AviatorCommandAckResult {
         DurableGameWagerAndSettlementBinding.checkBound()
+        testerGate.assertTesterAllowed(command.principal)
         val receivedAt = clock.instant()
         val manager = txManager ?: return executeCommand(command, receivedAt)
         return try {
             requireNotNull(org.springframework.transaction.support.TransactionTemplate(manager).execute {
-                executeCommand(command, receivedAt)
+                executeCommand(command, receivedAt).also { ack ->
+                    projectCommandOutcome(command, ack)
+                }
             })
         } catch (failure: Exception) {
             if (!command.action.equals(AviatorCommandAction.PLACE_BET.name, ignoreCase = true) ||
@@ -350,7 +384,7 @@ class DurableGameWagerAndSettlementService(
             val version = store.findRoundForShare(command.tenantId, "AVIATOR", command.roundId)?.roundVersion
                 ?: command.expectedRoundVersion
                 ?: 1L
-            recordAndReturnRejection(
+            val rejectionAck = recordAndReturnRejection(
                 command = command,
                 ownerId = principal.id,
                 gameId = "AVIATOR",
@@ -360,6 +394,21 @@ class DurableGameWagerAndSettlementService(
                 fp = fingerprint,
                 retryable = true,
             )
+            lifecycleDiagnostics.project(
+                GameLifecycleDiagnosticEvent(
+                    tenantId = command.tenantId,
+                    eventType = "GAME_${command.action.uppercase()}_FAILED",
+                    outcome = GameLifecycleOutcome.FAILED,
+                    correlationId = command.correlationId,
+                    roundId = command.roundId,
+                    commandId = command.commandId,
+                    causationId = command.causationId,
+                    authoritativeVersion = version,
+                    safeReason = failure::class.simpleName ?: "UNKNOWN_FAILURE",
+                    severity = com.slotting.admin.observability.DiagnosticEventSeverity.ERROR,
+                )
+            )
+            rejectionAck
         })
     }
 
@@ -401,7 +450,21 @@ class DurableGameWagerAndSettlementService(
             if (stored.fingerprint != fp) {
                 throw AuthenticationFailure.Rejected(AuthErrorCode.CONFLICT)
             }
-            return objectMapper.readValue(stored.responseJson, AviatorCommandAckResult::class.java)
+            val replayedAck = objectMapper.readValue(stored.responseJson, AviatorCommandAckResult::class.java)
+            lifecycleDiagnostics.project(
+                GameLifecycleDiagnosticEvent(
+                    tenantId = command.tenantId,
+                    eventType = "GAME_${canonicalOrNull(command.action)}_REPLAYED",
+                    outcome = GameLifecycleOutcome.REPLAYED,
+                    correlationId = command.correlationId,
+                    roundId = command.roundId,
+                    commandId = command.commandId,
+                    causationId = command.causationId,
+                    authoritativeVersion = stored.roundVersion,
+                    safeReason = "Command already processed; returning the committed authoritative receipt",
+                )
+            )
+            return replayedAck
         }
 
         // 3. Resolve Round
@@ -810,6 +873,23 @@ class DurableGameWagerAndSettlementService(
         )
 
         recordReceipt(command, playerId, gameId, fp, ack, round.roundVersion)
+        lifecycleDiagnostics.project(
+            GameLifecycleDiagnosticEvent(
+                tenantId = command.tenantId,
+                eventType = "GAME_BET_ACCEPTED",
+                outcome = GameLifecycleOutcome.ACCEPTED,
+                correlationId = command.correlationId,
+                roundId = command.roundId,
+                betId = betRecord.betId.toString(),
+                commandId = command.commandId,
+                causationId = command.causationId,
+                authoritativeVersion = round.roundVersion,
+                ledgerReference = betRecord.ledgerReservationRef,
+                amountMinorUnits = betRecord.wagerMinorUnits,
+                currency = betRecord.currencyCode,
+                safeReason = "Bet accepted with durable escrow reservation",
+            )
+        )
         return ack
     }
 
@@ -960,6 +1040,23 @@ class DurableGameWagerAndSettlementService(
         )
 
         recordReceipt(command, playerId, gameId, fp, ack, round.roundVersion)
+        lifecycleDiagnostics.project(
+            GameLifecycleDiagnosticEvent(
+                tenantId = command.tenantId,
+                eventType = "GAME_BET_CANCELLED",
+                outcome = GameLifecycleOutcome.SETTLED,
+                correlationId = command.correlationId,
+                roundId = command.roundId,
+                betId = bet.betId.toString(),
+                commandId = command.commandId,
+                causationId = command.causationId,
+                authoritativeVersion = round.roundVersion,
+                ledgerReference = txRef,
+                amountMinorUnits = refundMinor,
+                currency = bet.currencyCode,
+                safeReason = "Bet cancelled and refunded with ledger reference",
+            )
+        )
         return ack
     }
 
@@ -1200,6 +1297,23 @@ class DurableGameWagerAndSettlementService(
         )
 
         recordReceipt(command, playerId, gameId, fp, ack, committedRound.roundVersion)
+        lifecycleDiagnostics.project(
+            GameLifecycleDiagnosticEvent(
+                tenantId = command.tenantId,
+                eventType = "GAME_CASH_OUT_ACCEPTED",
+                outcome = GameLifecycleOutcome.ACCEPTED,
+                correlationId = command.correlationId,
+                roundId = command.roundId,
+                betId = bet.betId.toString(),
+                commandId = command.commandId,
+                causationId = command.causationId,
+                authoritativeVersion = committedRound.roundVersion,
+                ledgerReference = txRef,
+                amountMinorUnits = payoutMinor,
+                currency = bet.currencyCode,
+                safeReason = "Cash-out paid with authoritative multiplier $authoritativeMultiplier and ledger reference",
+            )
+        )
         val detectionInput = CashOutDetectionInput(
             tenantId = command.tenantId,
             playerId = playerId,
@@ -1249,6 +1363,41 @@ class DurableGameWagerAndSettlementService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
         return objectMapper.readValue(receipt.responseJson, AviatorCommandAckResult::class.java)
+    }
+
+    private fun projectCommandOutcome(command: AviatorRestCommand, ack: AviatorCommandAckResult) {
+        val canonical = canonicalOrNull(command.action)
+        val isAccepted = ack.status == AviatorCommandAckStatus.ACCEPTED || ack.status == AviatorCommandAckStatus.ALREADY_PROCESSED
+        if (isAccepted) return
+        val outcome = GameLifecycleOutcome.REJECTED
+        val eventType = "GAME_${canonical}_REJECTED"
+        lifecycleDiagnostics.project(
+            GameLifecycleDiagnosticEvent(
+                tenantId = command.tenantId,
+                eventType = eventType,
+                outcome = outcome,
+                correlationId = command.correlationId,
+                roundId = command.roundId,
+                commandId = command.commandId,
+                causationId = command.causationId,
+                authoritativeVersion = ack.revision,
+                amountMinorUnits = ack.result?.wagerMinor,
+                currency = ack.result?.currency,
+                safeReason = ack.rejection?.safeMessage,
+                severity = if (outcome == GameLifecycleOutcome.REJECTED) {
+                    com.slotting.admin.observability.DiagnosticEventSeverity.WARN
+                } else {
+                    com.slotting.admin.observability.DiagnosticEventSeverity.INFO
+                },
+            )
+        )
+    }
+
+    private fun canonicalOrNull(action: String): String = when (action.uppercase().trim()) {
+        "BET", "PLACE_BET" -> "PLACE_BET"
+        "CANCEL", "CANCEL_BET" -> "CANCEL_BET"
+        "CASH_OUT", "CASHOUT" -> "CASH_OUT"
+        else -> action.uppercase().trim().takeIf(String::isNotBlank) ?: "UNKNOWN"
     }
 
     private fun recordReceipt(

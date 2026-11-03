@@ -27,6 +27,9 @@ open class DurableDepositWorkflowService(
     private val clock: Clock = Clock.systemUTC(),
     private val reconciliationAlerts: DepositReconciliationAlertSink = InMemoryDepositReconciliationAlertSink(),
     private val meterRegistry: MeterRegistry? = null,
+    val financialAudit: com.slotting.admin.observability.FinancialAuditProjector =
+        com.slotting.admin.observability.NoOpFinancialAuditProjector,
+    val testerGate: com.slotting.admin.observability.AlphaTesterGate = com.slotting.admin.observability.NoOpAlphaTesterGate,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val intentLocks = ConcurrentHashMap<UUID, Any>()
@@ -45,6 +48,7 @@ open class DurableDepositWorkflowService(
         intentLocks.computeIfAbsent(intentId) { Any() }
 
     open fun createIntent(command: CreateDepositIntentCommand): CreateDepositIntentResult {
+        testerGate.assertTesterAllowed(command.principal)
         // 1. Authentication check
         val principal = command.principal ?: throw AuthenticationFailure.Rejected(AuthErrorCode.UNAUTHENTICATED)
 
@@ -203,6 +207,23 @@ open class DurableDepositWorkflowService(
             updatedAt = clock.instant(),
         )
         workflowStore.updateIntent(updatedRecord, expectedVersion = initialRecord.serverVersion)
+        financialAudit.project(
+            com.slotting.admin.observability.FinancialAuditEvent(
+                tenantId = updatedRecord.tenantId,
+                eventType = "DEPOSIT_INITIATED",
+                outcome = when (updatedRecord.status) {
+                    DepositIntentStatus.PROVIDER_PENDING -> com.slotting.admin.observability.FinancialAuditOutcome.PENDING
+                    DepositIntentStatus.FAILED, DepositIntentStatus.AMBIGUOUS_RECONCILING -> com.slotting.admin.observability.FinancialAuditOutcome.FAILED
+                    else -> com.slotting.admin.observability.FinancialAuditOutcome.INITIATED
+                },
+                correlationId = "corr-${updatedRecord.intentId}",
+                paymentId = updatedRecord.intentId.toString(),
+                providerReference = updatedRecord.providerReference,
+                amountMinorUnits = updatedRecord.amountMinorUnits,
+                currency = updatedRecord.currencyCode,
+                safeDetail = "Deposit intent persisted before provider transport",
+            )
+        )
 
         return CreateDepositIntentResult(
             intentId = updatedRecord.intentId,
@@ -338,6 +359,20 @@ open class DurableDepositWorkflowService(
                     currentIntent.status,
                     currentIntent.ledgerTransactionReference,
                 )
+                financialAudit.project(
+                    com.slotting.admin.observability.FinancialAuditEvent(
+                        tenantId = currentIntent.tenantId,
+                        eventType = "DEPOSIT_CALLBACK_REPLAYED",
+                        outcome = com.slotting.admin.observability.FinancialAuditOutcome.REPLAYED,
+                        correlationId = "corr-${currentIntent.intentId}",
+                        paymentId = currentIntent.intentId.toString(),
+                        providerReference = currentIntent.providerReference,
+                        ledgerReference = currentIntent.ledgerTransactionReference,
+                        amountMinorUnits = currentIntent.amountMinorUnits,
+                        currency = currentIntent.currencyCode,
+                        safeDetail = "Replayed verified callback returned the committed ledger reference without a second credit",
+                    )
+                )
                 return DepositCallbackResult(
                     intentId = currentIntent.intentId,
                     providerTransactionId = currentIntent.providerReference,
@@ -350,6 +385,20 @@ open class DurableDepositWorkflowService(
             // If already settled, idempotent return with existing ledger reference
             if (currentIntent.status == DepositIntentStatus.SETTLED) {
                 workflowStore.updateInboxEvent(inboxRecord.copy(status = "PROCESSED", processedAt = clock.instant()))
+                financialAudit.project(
+                    com.slotting.admin.observability.FinancialAuditEvent(
+                        tenantId = currentIntent.tenantId,
+                        eventType = "DEPOSIT_CALLBACK_REPLAYED",
+                        outcome = com.slotting.admin.observability.FinancialAuditOutcome.REPLAYED,
+                        correlationId = "corr-${currentIntent.intentId}",
+                        paymentId = currentIntent.intentId.toString(),
+                        providerReference = currentIntent.providerReference,
+                        ledgerReference = currentIntent.ledgerTransactionReference,
+                        amountMinorUnits = currentIntent.amountMinorUnits,
+                        currency = currentIntent.currencyCode,
+                        safeDetail = "Replayed verified callback returned the committed ledger reference without a second credit",
+                    )
+                )
                 return DepositCallbackResult(
                     intentId = currentIntent.intentId,
                     providerTransactionId = currentIntent.providerReference,
@@ -407,6 +456,20 @@ open class DurableDepositWorkflowService(
                 )
                 reconciliationAlerts.sendAlert(currentIntent.tenantId, currentIntent.intentId, reason, detail)
                 workflowStore.updateInboxEvent(inboxRecord.copy(status = "QUARANTINED", processedAt = clock.instant()))
+                financialAudit.project(
+                    com.slotting.admin.observability.FinancialAuditEvent(
+                        tenantId = quarantined.tenantId,
+                        eventType = "DEPOSIT_CALLBACK_MISMATCH",
+                        outcome = com.slotting.admin.observability.FinancialAuditOutcome.MISMATCH,
+                        correlationId = "corr-${quarantined.intentId}",
+                        paymentId = quarantined.intentId.toString(),
+                        providerReference = quarantined.providerReference,
+                        amountMinorUnits = quarantined.amountMinorUnits,
+                        currency = quarantined.currencyCode,
+                        safeDetail = "$reason:${quarantined.failureReason ?: ""}".take(200),
+                        severity = com.slotting.admin.observability.DiagnosticEventSeverity.WARN,
+                    )
+                )
                 return DepositCallbackResult(
                     intentId = quarantined.intentId,
                     providerTransactionId = quarantined.providerReference,
@@ -452,6 +515,21 @@ open class DurableDepositWorkflowService(
             )
 
             val postingResult = ledgerPostingService.postTransaction(postCmd)
+            financialAudit.project(
+                com.slotting.admin.observability.FinancialAuditEvent(
+                    tenantId = currentIntent.tenantId,
+                    eventType = "DEPOSIT_CREDITED",
+                    outcome = com.slotting.admin.observability.FinancialAuditOutcome.CONFIRMED,
+                    correlationId = "corr-${currentIntent.intentId}",
+                    paymentId = currentIntent.intentId.toString(),
+                    operationId = validVerification.providerReference,
+                    providerReference = currentIntent.providerReference,
+                    ledgerReference = postingResult.transactionReference,
+                    amountMinorUnits = currentIntent.amountMinorUnits,
+                    currency = currentIntent.currencyCode,
+                    safeDetail = "Verified callback credited the wallet through the authoritative ledger",
+                )
+            )
 
             // Update intent to SETTLED
             val settledRecord = currentIntent.copy(
