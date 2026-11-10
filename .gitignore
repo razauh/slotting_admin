@@ -37,3 +37,4 @@ docs/migration-forward-fix-runbook.md
 # OS/editor files
 .DS_Store
 Thumbs.db
+.state/

@@ -39,6 +39,27 @@ Whenever a prohibited command needs to be run, create a purpose-specific
 to a log file inside `.logs/` instead of printing it in the terminal.
 
 
+## Local backend runs with Supabase
+
+Run the backend through the purpose-specific script so `.env.local` is sourced
+before Gradle starts:
+
+```bash
+cd /home/pc/Downloads/slot_app/slotting_admin
+bash .scripts/run-backend.sh
+```
+
+Do not run `./gradlew bootRun` directly for Supabase-backed runs; it does not
+load `.env.local`. Flyway runs automatically on startup and must reach schema
+version 67.
+
+To verify startup without leaving the server running:
+
+```bash
+cd /home/pc/Downloads/slot_app/slotting_admin
+bash .scripts/supabase-verify-backend.sh
+```
+
 ## Graph-first policy
 
 This repository has a local code knowledge graph in `graphify-out/`. Treat the

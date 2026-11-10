@@ -130,7 +130,7 @@ class AuthoritativeCatalogSyncTest {
         val launchCmd = AuthorizeGameLaunchCommand(
             tenantId = tenantId,
             providerId = providerId,
-            gameId = "game-starburst-01",
+            gameId = "game-aviator-02",
             playerId = "player-auth-100",
             jurisdictionCode = "MT",
             currencyCode = "USD",
@@ -210,7 +210,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "US-NV", // Not in supportedJurisdictions setOf("MT", "UK")
                     currencyCode = "USD",
@@ -225,7 +225,7 @@ class AuthoritativeCatalogSyncTest {
 
         // 3. Stale sync disables affected launch:
         // Set game-starburst-01's lastSynchronizedAt to 2 days in the past (> 86400s threshold)
-        val existingGame = catalogStore.findGame(tenantId, providerId, "game-starburst-01")!!
+        val existingGame = catalogStore.findGame(tenantId, providerId, "game-aviator-02")!!
         val staleGame = existingGame.copy(
             lastSynchronizedAt = now.minusSeconds(86400 * 2),
         )
@@ -237,7 +237,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "MT",
                     currencyCode = "USD",
@@ -249,7 +249,7 @@ class AuthoritativeCatalogSyncTest {
             )
         }.also { assertEquals(AuthErrorCode.FORBIDDEN, it.code) }
         // Verify game status transitioned to DISABLED_STALE_SYNC
-        val updatedGame = catalogStore.findGame(tenantId, providerId, "game-starburst-01")!!
+        val updatedGame = catalogStore.findGame(tenantId, providerId, "game-aviator-02")!!
         assertEquals(GameEnablementStatus.DISABLED_STALE_SYNC, updatedGame.enablementStatus)
         assertEquals(1, catalogStore.auditLogs.count { it.type == "GAME_LAUNCH_REJECTED_STALE_SYNC" })
 
@@ -267,7 +267,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "MT",
                     currencyCode = "USD",
@@ -285,7 +285,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "MT",
                     currencyCode = "USD",
@@ -303,7 +303,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "MT",
                     currencyCode = "USD",
@@ -321,7 +321,7 @@ class AuthoritativeCatalogSyncTest {
                 AuthorizeGameLaunchCommand(
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     playerId = "player-1",
                     jurisdictionCode = "MT",
                     currencyCode = "US",
@@ -390,7 +390,7 @@ class AuthoritativeCatalogSyncTest {
                     sessionId = "session-1",
                     tenantId = tenantId,
                     providerId = providerId,
-                    gameId = "game-starburst-01",
+                    gameId = "game-aviator-02",
                     newStatus = GameEnablementStatus.DISABLED_BY_OPERATOR,
                     reason = "Stale version test",
                     idempotencyKey = "idemp-stale-en-cmd",
@@ -453,7 +453,7 @@ class AuthoritativeCatalogSyncTest {
         val launchCmd = AuthorizeGameLaunchCommand(
             tenantId = tenantId,
             providerId = providerId,
-            gameId = "game-starburst-01",
+            gameId = "game-aviator-02",
             playerId = "player-conc-1",
             jurisdictionCode = "MT",
             currencyCode = "USD",
@@ -536,7 +536,7 @@ class AuthoritativeCatalogSyncTest {
         val launchCmd = AuthorizeGameLaunchCommand(
             tenantId = tenantId,
             providerId = providerId,
-            gameId = "game-starburst-01",
+            gameId = "game-aviator-02",
             playerId = "player-reboot-1",
             jurisdictionCode = "MT",
             currencyCode = "USD",
@@ -560,6 +560,85 @@ class AuthoritativeCatalogSyncTest {
             assertFalse(audit.type.contains("secret", ignoreCase = true))
             assertFalse(audit.type.contains("keySecret", ignoreCase = true))
         }
+    }
+
+    @Test
+    fun `GAME-002-01-T006 Reject non-Aviator catalog games`() {
+        val contractStore = CatalogSyncTestContractStore()
+        val catalogStore = CatalogSyncTestStore()
+        val sessions = CatalogSyncTestActiveSessionDirectory()
+        val service = AuthoritativeCatalogSyncService(
+            policy = AdminRbacPolicy(true),
+            sessions = sessions,
+            contractStore = contractStore,
+            store = catalogStore,
+            clock = clock,
+        )
+        registerTestSchema(contractStore)
+        val slotGame = ProviderCatalogGameDto(
+            gameId = "game-slot-01",
+            gameTitle = "Starburst Classic",
+            gameType = CasinoProviderType.SLOTS,
+            supportedJurisdictions = setOf("MT"),
+            rtpPercent = 96.5,
+            minBetMinorUnits = 10L,
+            maxBetMinorUnits = 100000L,
+        )
+        val failure = assertFailsWith<AuthenticationFailure.Rejected> {
+            service.synchronizeCatalog(
+                createSyncCommand().copy(
+                    games = listOf(slotGame),
+                    idempotencyKey = "idemp-slot-only",
+                )
+            )
+        }
+        assertEquals(AuthErrorCode.FORBIDDEN, failure.code)
+    }
+
+    @Test
+    fun `GAME-002-01-T007 Reject non-Aviator game launch`() {
+        val contractStore = CatalogSyncTestContractStore()
+        val catalogStore = CatalogSyncTestStore()
+        val sessions = CatalogSyncTestActiveSessionDirectory()
+        val service = AuthoritativeCatalogSyncService(
+            policy = AdminRbacPolicy(true),
+            sessions = sessions,
+            contractStore = contractStore,
+            store = catalogStore,
+            clock = clock,
+        )
+        catalogStore.saveGame(
+            CatalogGameEntry(
+                tenantId = tenantId,
+                providerId = providerId,
+                gameId = "game-slot-01",
+                gameTitle = "Starburst Classic",
+                gameType = CasinoProviderType.SLOTS,
+                supportedJurisdictions = setOf("MT"),
+                rtpPercent = 96.5,
+                minBetMinorUnits = 10L,
+                maxBetMinorUnits = 100000L,
+                enablementStatus = GameEnablementStatus.ENABLED,
+                lastSynchronizedAt = now,
+            )
+        )
+        val failure = assertFailsWith<AuthenticationFailure.Rejected> {
+            service.authorizeGameLaunch(
+                AuthorizeGameLaunchCommand(
+                    tenantId = tenantId,
+                    providerId = providerId,
+                    gameId = "game-slot-01",
+                    playerId = "player-1",
+                    jurisdictionCode = "MT",
+                    currencyCode = "EUR",
+                    requestedBetMinorUnits = 100L,
+                    idempotencyKey = "idemp-slot-launch",
+                    correlationId = "corr-slot-launch",
+                    causationId = "cause-slot-launch",
+                )
+            )
+        }
+        assertEquals(AuthErrorCode.FORBIDDEN, failure.code)
     }
 
     private fun registerTestSchema(contractStore: CanonicalCasinoProviderContractStore) {
@@ -611,11 +690,11 @@ class AuthoritativeCatalogSyncTest {
         providerId = providerId,
         games = listOf(
             ProviderCatalogGameDto(
-                gameId = "game-starburst-01",
-                gameTitle = "Starburst Classic",
-                gameType = CasinoProviderType.SLOTS,
+                gameId = "game-aviator-02",
+                gameTitle = "Aviator Crash 2",
+                gameType = CasinoProviderType.CRASH_AVIATOR,
                 supportedJurisdictions = setOf("MT", "UK"),
-                rtpPercent = 96.50,
+                rtpPercent = 97.00,
                 minBetMinorUnits = 10L,
                 maxBetMinorUnits = 100000L,
                 initialEnablement = GameEnablementStatus.ENABLED,

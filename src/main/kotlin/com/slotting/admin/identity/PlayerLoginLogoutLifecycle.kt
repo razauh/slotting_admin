@@ -153,7 +153,9 @@ interface PlayerSessionStore {
     fun consumeMfaChallenge(tenantId: String, challengeId: UUID)
 }
 
-class InMemoryPlayerSessionStore : PlayerSessionStore {
+class InMemoryPlayerSessionStore(
+    private val revocationWriter: SessionRevocationWriter = SessionRevocationWriter.NoOp,
+) : PlayerSessionStore {
     val idempotency = ConcurrentHashMap<String, Pair<Any, Any>>()
     val sessions = ConcurrentHashMap<UUID, PlayerSession>()
     val challenges = ConcurrentHashMap<UUID, MfaChallenge>()
@@ -195,6 +197,7 @@ class InMemoryPlayerSessionStore : PlayerSessionStore {
             if (it.tenantId == tenantId) {
                 it.state = SessionState.TERMINATED
                 it.terminatedAt = terminatedAt
+                revocationWriter.record(tenantId, sessionId, terminatedAt, "LOGOUT")
             }
         }
     }
@@ -205,6 +208,7 @@ class InMemoryPlayerSessionStore : PlayerSessionStore {
             if (it.tenantId == tenantId && it.playerId == playerId && it.state == SessionState.ACTIVE) {
                 it.state = SessionState.TERMINATED
                 it.terminatedAt = terminatedAt
+                revocationWriter.record(tenantId, it.sessionId, terminatedAt, "REVOKE_ALL")
                 count++
             }
         }

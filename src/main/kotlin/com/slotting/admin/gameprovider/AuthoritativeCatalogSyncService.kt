@@ -213,6 +213,10 @@ class AuthoritativeCatalogSyncService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
         }
 
+        if (command.games.any { it.gameType != CasinoProviderType.CRASH_AVIATOR }) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
+
         // 3. Idempotency check
         val fp = fingerprintSync(command)
         store.findSyncByIdempotency(command.tenantId, command.idempotencyKey)?.let { (cachedFp, cachedResult) ->
@@ -443,6 +447,10 @@ class AuthoritativeCatalogSyncService(
         } catch (_: Exception) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.DEPENDENCY_UNAVAILABLE)
         } ?: throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
+
+        if (game.gameType != CasinoProviderType.CRASH_AVIATOR) {
+            throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
+        }
 
         val now = clock.instant()
 
