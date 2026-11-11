@@ -65,6 +65,7 @@ class DurableGameWagerAndSettlementService(
     val lifecycleDiagnostics: GameLifecycleDiagnosticProjector = NoOpGameLifecycleDiagnosticProjector,
     val testerGate: com.slotting.admin.observability.AlphaTesterGate = com.slotting.admin.observability.NoOpAlphaTesterGate,
     private val roundHintPublisher: com.slotting.admin.realtime.RoundHintPublisher? = null,
+    private val depositGate: com.slotting.admin.rails.DepositGate? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
@@ -583,6 +584,9 @@ class DurableGameWagerAndSettlementService(
         fp: String,
         todayStr: String,
     ): AviatorCommandAckResult {
+        if (depositGate != null && depositGate.check(playerId).decision == com.slotting.admin.rails.GateDecision.DENIED) {
+            throw com.slotting.admin.rails.NoVerifiedDepositException()
+        }
         val now = clock.instant()
 
         // Phase check
@@ -938,6 +942,9 @@ class DurableGameWagerAndSettlementService(
         round: GameRoundRecord,
         fp: String,
     ): AviatorCommandAckResult {
+        if (depositGate != null && depositGate.check(playerId).decision == com.slotting.admin.rails.GateDecision.DENIED) {
+            throw com.slotting.admin.rails.NoVerifiedDepositException()
+        }
         val now = clock.instant()
 
         // Phase check: cancel is only valid during BET_COUNTDOWN
