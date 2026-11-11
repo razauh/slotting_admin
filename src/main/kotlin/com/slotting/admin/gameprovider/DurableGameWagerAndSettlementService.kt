@@ -64,6 +64,7 @@ class DurableGameWagerAndSettlementService(
     private val playAbuseDetectionStore: PlayAbuseDetectionStore? = null,
     val lifecycleDiagnostics: GameLifecycleDiagnosticProjector = NoOpGameLifecycleDiagnosticProjector,
     val testerGate: com.slotting.admin.observability.AlphaTesterGate = com.slotting.admin.observability.NoOpAlphaTesterGate,
+    private val roundHintPublisher: com.slotting.admin.realtime.RoundHintPublisher? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
@@ -174,13 +175,50 @@ class DurableGameWagerAndSettlementService(
                 existing
             }
         }
-        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        val result = txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        if (command.phase == GameRoundPhase.FLYING) {
+            try {
+                val players = store.findBetsForRound(command.tenantId, command.gameId, command.roundId).map { it.ownerId }.distinct()
+                roundHintPublisher?.publishRoundEvent(
+                    committed = true,
+                    event = com.slotting.admin.realtime.RoundPhaseEvent(
+                        tenantId = command.tenantId,
+                        gameId = command.gameId,
+                        roundId = command.roundId,
+                        phase = GameRoundPhase.FLYING.name,
+                        phaseVersion = clock.instant().toEpochMilli(),
+                        phaseDeadlineHint = command.phaseDeadlineAt?.toEpochMilli(),
+                    ),
+                    players = players,
+                )
+            } catch (error: Exception) {
+                logger.warn("realtime_hint_publish_skipped roundId={} phase=FLYING reason={}", command.roundId, error.javaClass.simpleName)
+            }
+        }
+        return result
     }
 
     fun settleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
         DurableGameWagerAndSettlementBinding.checkBound()
         val action = { executeSettleRoundCrash(command) }
-        return txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        val result = txManager?.let { org.springframework.transaction.support.TransactionTemplate(it).execute { action() } } ?: action()
+        try {
+            val players = store.findBetsForRound(command.tenantId, command.gameId, command.roundId).map { it.ownerId }.distinct()
+            roundHintPublisher?.publishRoundEvent(
+                committed = true,
+                event = com.slotting.admin.realtime.RoundPhaseEvent(
+                    tenantId = command.tenantId,
+                    gameId = command.gameId,
+                    roundId = command.roundId,
+                    phase = GameRoundPhase.CRASHED.name,
+                    phaseVersion = clock.instant().toEpochMilli(),
+                ),
+                players = players,
+            )
+        } catch (error: Exception) {
+            logger.warn("realtime_hint_publish_skipped roundId={} reason={}", command.roundId, error.javaClass.simpleName)
+        }
+        return result
     }
 
     private fun executeSettleRoundCrash(command: SettleRoundCrashCommand): SettleRoundCrashResult {
