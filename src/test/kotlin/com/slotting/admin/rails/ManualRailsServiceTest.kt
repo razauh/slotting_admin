@@ -38,6 +38,7 @@ class ManualRailsServiceTest {
             submissions.values.filter { it.tenantId == tenantId && it.status == status }
         override fun listMine(tenantId: String, playerId: String): List<DepositSubmission> =
             submissions.values.filter { it.tenantId == tenantId && it.playerId == playerId }
+        override fun revertApproval(id: String): Boolean = false
     }
 
     private fun submission(id: String, playerId: String, pkr: String) = DepositSubmission(

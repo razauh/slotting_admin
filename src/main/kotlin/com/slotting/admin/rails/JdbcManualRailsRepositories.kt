@@ -100,6 +100,16 @@ class JdbcDepositSubmissionRepository(
             listOf(tenantId, playerId),
         )
 
+    override fun revertApproval(id: String): Boolean =
+        openConnection().use { connection ->
+            connection.prepareStatement(
+                "update public.deposit_submissions set status = 'SUBMITTED', rate_applied = null, amount_usd = null, approved_by = null, approved_utc = null where id = ? and status = 'APPROVED'",
+            ).use { statement ->
+                statement.setObject(1, UUID.fromString(id))
+                statement.executeUpdate() == 1
+            }
+        }
+
     private fun query(sql: String, parameters: List<Any>): List<DepositSubmission> =
         openConnection().use { connection ->
             connection.prepareStatement(sql).use { statement ->

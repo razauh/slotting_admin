@@ -40,6 +40,8 @@ interface DepositSubmissionRepository {
     fun listByStatus(tenantId: String, status: SubmissionStatus): List<DepositSubmission>
 
     fun listMine(tenantId: String, playerId: String): List<DepositSubmission>
+
+    fun revertApproval(id: String): Boolean
 }
 
 enum class ApprovalOutcome {
