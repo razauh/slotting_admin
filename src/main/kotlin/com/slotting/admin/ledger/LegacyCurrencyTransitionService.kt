@@ -102,7 +102,7 @@ class LegacyCurrencyTransitionService(
         val walletByOwner = jdbc.query(
             "select tenant_id, owner_reference, currency_code, balance_minor_units from wallet_projection",
         ) { rs, _ ->
-            val key = "${rs.getString("tenant_id")}:PLAYER:${rs.getString("owner_reference")}:${rs.getString("currency_code")}"
+            val key = "${rs.getString("tenant_id")}:${rs.getString("owner_reference")}:${rs.getString("currency_code")}"
             key to rs.getLong("balance_minor_units")
         }.toMap()
 

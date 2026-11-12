@@ -47,8 +47,9 @@ open class InMemoryAuthoritativeWalletStore(
     private val receipts = ConcurrentHashMap<String, Pair<String, AuthoritativeStatementPage>>()
 
     override fun findBalances(tenantId: String, ownerReference: String): List<CurrencyBalance> {
+        val ledgerAccount = PlayerLedgerAccount.accountReference(ownerReference)
         val legs = ledgerStore.findAllLegsForTenant(tenantId)
-            .filter { it.accountReference == ownerReference }
+            .filter { it.accountReference == ledgerAccount }
         val byCurrency = legs.groupBy { it.currencyCode }
         if (byCurrency.isEmpty()) {
             return emptyList()
@@ -67,7 +68,7 @@ open class InMemoryAuthoritativeWalletStore(
     }
 
     override fun findBalance(tenantId: String, ownerReference: String, currencyCode: String): Long {
-        return ledgerStore.findBalance(tenantId, ownerReference, currencyCode)
+        return ledgerStore.findBalance(tenantId, PlayerLedgerAccount.accountReference(ownerReference), currencyCode)
     }
 
     override fun findLatestLedgerVersion(tenantId: String): Long {
@@ -84,8 +85,9 @@ open class InMemoryAuthoritativeWalletStore(
         fromTime: Instant?,
         toTime: Instant?,
     ): List<AuthoritativeStatementEntry> {
+        val ledgerAccount = PlayerLedgerAccount.accountReference(ownerReference)
         val legs = ledgerStore.findAllLegsForTenant(tenantId)
-            .filter { it.accountReference == ownerReference && it.currencyCode == currencyCode }
+            .filter { it.accountReference == ledgerAccount && it.currencyCode == currencyCode }
 
         var runningBalance = 0L
         val entries = mutableListOf<AuthoritativeStatementEntry>()
@@ -109,7 +111,7 @@ open class InMemoryAuthoritativeWalletStore(
                 AuthoritativeStatementEntry(
                     entryId = leg.entryId,
                     tenantId = tenantId,
-                    ownerReference = ownerReference,
+                    ownerReference = ledgerAccount,
                     currencyCode = currencyCode,
                     direction = leg.direction.name,
                     entryType = leg.narration ?: leg.direction.name,
@@ -196,11 +198,11 @@ open class JdbcAuthoritativeWalletStore(
 
         return jdbc.query(query, { rs, _ ->
             CurrencyBalance(rs.getString("currency_code"), rs.getLong("balance"))
-        }, tenantId, ownerReference)
+        }, tenantId, PlayerLedgerAccount.accountReference(ownerReference))
     }
 
     override fun findBalance(tenantId: String, ownerReference: String, currencyCode: String): Long {
-        return ledgerStore.findBalance(tenantId, ownerReference, currencyCode)
+        return ledgerStore.findBalance(tenantId, PlayerLedgerAccount.accountReference(ownerReference), currencyCode)
     }
 
     override fun findLatestLedgerVersion(tenantId: String): Long {
@@ -217,6 +219,7 @@ open class JdbcAuthoritativeWalletStore(
         fromTime: Instant?,
         toTime: Instant?,
     ): List<AuthoritativeStatementEntry> {
+        val ledgerAccount = PlayerLedgerAccount.accountReference(ownerReference)
         // Query from ledger_leg joined with ledger_transaction
         val query = """
             select l.leg_id, l.direction, l.amount_minor_units, l.narration, l.created_at,
@@ -237,7 +240,7 @@ open class JdbcAuthoritativeWalletStore(
                 val txRef = rs.getString("transaction_reference")
                 val version = rs.getLong("ledger_version")
             }
-        }, tenantId, ownerReference, currencyCode)
+        }, tenantId, ledgerAccount, currencyCode)
 
         var runningBalance = 0L
         val result = mutableListOf<AuthoritativeStatementEntry>()
@@ -258,7 +261,7 @@ open class JdbcAuthoritativeWalletStore(
                 AuthoritativeStatementEntry(
                     entryId = leg.legId,
                     tenantId = tenantId,
-                    ownerReference = ownerReference,
+                    ownerReference = ledgerAccount,
                     currencyCode = currencyCode,
                     direction = leg.direction,
                     entryType = leg.narration ?: leg.direction,
@@ -372,7 +375,7 @@ class AuthoritativeWalletService(
 
         // 3. Ownership / RBAC
         if (principal.kind == PrincipalKind.PLAYER) {
-            if (principal.id != query.ownerReference) {
+            if (principal.id != PlayerLedgerAccount.ownerId(query.ownerReference)) {
                 throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
             }
         } else if (principal.kind == PrincipalKind.ADMIN) {
@@ -382,7 +385,8 @@ class AuthoritativeWalletService(
             }
         }
 
-        if (query.ownerReference.isBlank() || query.ownerReference.length > 128) {
+        val ownerId = PlayerLedgerAccount.ownerId(query.ownerReference)
+        if (ownerId.isBlank() || ownerId.length > 128) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
         }
 
@@ -393,7 +397,7 @@ class AuthoritativeWalletService(
             throw AuthenticationFailure.Rejected(AuthErrorCode.STALE)
         }
 
-        val balances = store.findBalances(query.tenantId, query.ownerReference)
+        val balances = store.findBalances(query.tenantId, PlayerLedgerAccount.accountReference(query.ownerReference))
 
         val syncStatus = if (query.expectedLedgerVersion != null && query.expectedLedgerVersion > ledgerVersion) {
             WalletSyncStatus.STALE
@@ -425,7 +429,7 @@ class AuthoritativeWalletService(
 
         // 3. Ownership / RBAC
         if (principal.kind == PrincipalKind.PLAYER) {
-            if (principal.id != query.ownerReference) {
+            if (principal.id != PlayerLedgerAccount.ownerId(query.ownerReference)) {
                 throw AuthenticationFailure.Rejected(AuthErrorCode.FORBIDDEN)
             }
         } else if (principal.kind == PrincipalKind.ADMIN) {
@@ -435,7 +439,8 @@ class AuthoritativeWalletService(
             }
         }
 
-        if (query.ownerReference.isBlank() || query.ownerReference.length > 128 ||
+        val ownerId = PlayerLedgerAccount.ownerId(query.ownerReference)
+        if (ownerId.isBlank() || ownerId.length > 128 ||
             !query.currencyCode.matches(Regex("^[A-Z]{3}$")) ||
             query.limit !in 1..100) {
             throw AuthenticationFailure.Rejected(AuthErrorCode.INVALID)
@@ -466,7 +471,7 @@ class AuthoritativeWalletService(
 
         val entries = store.queryStatementEntries(
             tenantId = query.tenantId,
-            ownerReference = query.ownerReference,
+            ownerReference = PlayerLedgerAccount.accountReference(query.ownerReference),
             currencyCode = query.currencyCode,
             afterSeq = afterSeq,
             limit = query.limit + 1, // Lookahead for hasMore

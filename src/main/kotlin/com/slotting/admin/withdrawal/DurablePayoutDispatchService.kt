@@ -678,7 +678,7 @@ class DurablePayoutDispatchService(
                 narration = "Compensating payout settlement release: $reason",
             ),
             JournalEntryDraft(
-                accountReference = "player:wallet:${intent.ownerId}",
+                accountReference = "PLAYER:${intent.ownerId}",
                 direction = JournalEntryDirection.DEBIT,
                 amountMinorUnits = intent.grossAmountMinorUnits,
                 currencyCode = intent.currencyCode,

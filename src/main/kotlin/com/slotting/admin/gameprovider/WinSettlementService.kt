@@ -417,7 +417,7 @@ class WinSettlementService(
                     currencyCode = command.currencyCode,
                 ),
                 SettlementLedgerLeg(
-                    accountReference = "PLAYER_WALLET:${command.tenantId}:${command.playerId}:${command.currencyCode}",
+                    accountReference = "PLAYER:${command.playerId}",
                     direction = "CREDIT",
                     amountMinorUnits = command.winAmountMinorUnits,
                     currencyCode = command.currencyCode,
@@ -575,7 +575,7 @@ class WinSettlementService(
         // Compensating ledger legs (reversed double-entry)
         val compensatingLegs = listOf(
             SettlementLedgerLeg(
-                accountReference = "PLAYER_WALLET:${command.tenantId}:${originalSettlement.playerId}:${originalSettlement.currencyCode}",
+                accountReference = "PLAYER:${originalSettlement.playerId}",
                 direction = "DEBIT",
                 amountMinorUnits = originalSettlement.winAmountMinorUnits,
                 currencyCode = originalSettlement.currencyCode,

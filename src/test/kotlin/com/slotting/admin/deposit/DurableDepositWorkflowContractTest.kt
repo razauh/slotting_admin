@@ -330,7 +330,7 @@ class DurableDepositWorkflowContractTest {
         val workflowStore = InMemoryDepositWorkflowStore()
         val ledgerStore = InMemoryLedgerJournalStore()
         val ledgerService = LedgerPostingService(ledgerStore, clock = clock)
-        val safepayAdapter = SafepayRaastAdapter()
+        val safepayAdapter = deterministicSafepayAdapter()
 
         val service = DurableDepositWorkflowService(
             workflowStore = workflowStore,
@@ -394,7 +394,7 @@ class DurableDepositWorkflowContractTest {
             paymentMethodStore = methodStore,
             sessions = sessionDir,
             ledgerPostingService = ledgerService,
-            providerPorts = mapOf("SAFEPAY_RAAST" to SafepayRaastAdapter()),
+            providerPorts = mapOf("SAFEPAY_RAAST" to deterministicSafepayAdapter()),
             credentialsResolver = { _, _ -> sampleCredentials },
             configResolver = { _, providerId -> sampleConfig.copy(providerId = providerId) },
             clock = clock,
@@ -463,7 +463,7 @@ class DurableDepositWorkflowContractTest {
             val workflowStore = InMemoryDepositWorkflowStore()
             val ledgerStore = InMemoryLedgerJournalStore()
             val alerts = InMemoryDepositReconciliationAlertSink()
-            val adapter = SafepayRaastAdapter()
+            val adapter = deterministicSafepayAdapter()
             val service = DurableDepositWorkflowService(
                 workflowStore = workflowStore,
                 paymentMethodStore = methodStore,
@@ -670,7 +670,7 @@ class DurableDepositWorkflowContractTest {
         val workflowStore = InMemoryDepositWorkflowStore()
         val ledgerStore = InMemoryLedgerJournalStore()
         val ledgerService = LedgerPostingService(ledgerStore, clock = clock)
-        val safepayAdapter = SafepayRaastAdapter()
+        val safepayAdapter = deterministicSafepayAdapter()
 
         val service = DurableDepositWorkflowService(
             workflowStore = workflowStore,

@@ -170,7 +170,7 @@ class WinSettlementTest {
         assertEquals(1500L, debitLeg.amountMinorUnits)
         assertEquals(1500L, creditLeg.amountMinorUnits)
         assertTrue(debitLeg.accountReference.startsWith("CASINO_PAYOUT_POOL"))
-        assertTrue(creditLeg.accountReference.startsWith("PLAYER_WALLET"))
+        assertEquals("PLAYER:$playerId", creditLeg.accountReference)
 
         // Verify audit and outbox events
         val audit = settlementStore.auditEvents.find { it.type == "WIN_SETTLEMENT_POSTED" }

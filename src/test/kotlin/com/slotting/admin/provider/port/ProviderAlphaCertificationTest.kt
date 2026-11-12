@@ -82,7 +82,7 @@ class ProviderAlphaCertificationTest {
 
         assertEquals(DepositIntentStatus.SETTLED, result.status)
         assertEquals(2, ledgerStore.findAllLegsForTenant(tenantId).size)
-        assertEquals(250_000L, ledgerStore.findBalance(tenantId, "player:wallet:${UUID.nameUUIDFromBytes("player".toByteArray())}", "PKR"))
+        assertEquals(250_000L, ledgerStore.findBalance(tenantId, "PLAYER:${UUID.nameUUIDFromBytes("player".toByteArray())}", "PKR"))
         assertEquals(-250_000L, ledgerStore.findBalance(tenantId, "gateway:clearing:JAZZCASH", "PKR"))
         val stored = workflowStore.findIntent(tenantId, intentId)
         assertEquals(providerReference, stored?.providerReference)

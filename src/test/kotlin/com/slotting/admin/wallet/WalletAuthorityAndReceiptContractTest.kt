@@ -76,7 +76,7 @@ class WalletAuthorityAndReceiptContractTest {
                     currencyCode = currency,
                     entries = listOf(
                         JournalEntryDraft("HOUSE:SOURCE", JournalEntryDirection.DEBIT, credits, currency),
-                        JournalEntryDraft(playerId, JournalEntryDirection.CREDIT, credits, currency),
+                        JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.CREDIT, credits, currency),
                     ),
                     idempotencyKey = "IDEM-CR-${UUID.randomUUID()}",
                     correlationId = "corr-credit",
@@ -92,7 +92,7 @@ class WalletAuthorityAndReceiptContractTest {
                     transactionReference = "TX-DEBIT-${UUID.randomUUID()}",
                     currencyCode = currency,
                     entries = listOf(
-                        JournalEntryDraft(playerId, JournalEntryDirection.DEBIT, debits, currency),
+                        JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.DEBIT, debits, currency),
                         JournalEntryDraft("HOUSE:SINK", JournalEntryDirection.CREDIT, debits, currency),
                     ),
                     idempotencyKey = "IDEM-DR-${UUID.randomUUID()}",

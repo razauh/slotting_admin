@@ -135,7 +135,7 @@ class JazzCashCallbackVerificationContractTest {
         assertTrue(replay.alreadyProcessed)
         assertEquals(first.ledgerTransactionReference, replay.ledgerTransactionReference)
         assertEquals(2, ledgerStore.findAllLegsForTenant(tenantId).size)
-        assertEquals(50_000L, ledgerStore.findBalance(tenantId, "player:wallet:${UUID.nameUUIDFromBytes("player".toByteArray())}", "PKR"))
+        assertEquals(50_000L, ledgerStore.findBalance(tenantId, "PLAYER:${UUID.nameUUIDFromBytes("player".toByteArray())}", "PKR"))
     }
 
     @Test

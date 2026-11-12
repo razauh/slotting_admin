@@ -648,7 +648,7 @@ class ChargebackDisputeService(
             if (dispute.recoveredFromWalletMinorUnits > 0L) {
                 entries.add(
                     JournalEntryDraft(
-                        accountReference = "player:wallet:${dispute.playerId}",
+                        accountReference = "PLAYER:${dispute.playerId}",
                         direction = JournalEntryDirection.CREDIT,
                         amountMinorUnits = dispute.recoveredFromWalletMinorUnits,
                         currencyCode = dispute.currencyCode,

@@ -108,7 +108,7 @@ class MigrationSafetyHarness private constructor(
         ).use { statement ->
             statement.setObject(1, UUID.randomUUID())
             statement.setString(2, tenantId)
-            statement.setString(3, "player:wallet:$schemaName")
+            statement.setString(3, "PLAYER:$schemaName")
             statement.setString(4, "PKR")
             statement.setLong(5, 25_000L)
             statement.setLong(6, 1L)
@@ -120,7 +120,7 @@ class MigrationSafetyHarness private constructor(
 
     private fun seedLedger(connection: Connection, tenantId: String, now: Timestamp) {
         val cashAccount = "cash:$schemaName"
-        val walletAccount = "player:wallet:$schemaName"
+        val walletAccount = "PLAYER:$schemaName"
         for (account in listOf(cashAccount, walletAccount)) {
             connection.prepareStatement(
                 "insert into ledger_account (account_id, tenant_id, account_reference, currency_code, account_type, status, created_at) values (?, ?, ?, ?, ?, ?, ?)",

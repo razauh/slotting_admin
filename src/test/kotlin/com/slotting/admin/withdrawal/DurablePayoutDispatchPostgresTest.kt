@@ -101,7 +101,7 @@ class DurablePayoutDispatchPostgresTest {
             "insert into wallet_projection(projection_id, tenant_id, owner_reference, currency_code, balance_minor_units) values (?, ?, ?, ?, ?)",
             UUID.randomUUID(),
             tenantId,
-            ownerId.toString(),
+            "PLAYER:$ownerId",
             currency,
             balance,
         )

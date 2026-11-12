@@ -475,7 +475,7 @@ class GameRefundRollbackService(
                 currencyCode = command.currencyCode,
             ),
             RefundRollbackLedgerLeg(
-                accountReference = "PLAYER_WALLET:${command.tenantId}:${command.playerId}:${command.currencyCode}",
+                accountReference = "PLAYER:${command.playerId}",
                 direction = "CREDIT",
                 amountMinorUnits = command.refundAmountMinorUnits,
                 currencyCode = command.currencyCode,
@@ -749,7 +749,7 @@ class GameRefundRollbackService(
                 // Reversal of WIN: Debit player wallet, Credit casino payout pool
                 listOf(
                     RefundRollbackLedgerLeg(
-                        accountReference = "PLAYER_WALLET:${command.tenantId}:${command.playerId}:${command.currencyCode}",
+                        accountReference = "PLAYER:${command.playerId}",
                         direction = "DEBIT",
                         amountMinorUnits = command.compensationAmountMinorUnits,
                         currencyCode = command.currencyCode,
@@ -772,7 +772,7 @@ class GameRefundRollbackService(
                         currencyCode = command.currencyCode,
                     ),
                     RefundRollbackLedgerLeg(
-                        accountReference = "PLAYER_WALLET:${command.tenantId}:${command.playerId}:${command.currencyCode}",
+                        accountReference = "PLAYER:${command.playerId}",
                         direction = "CREDIT",
                         amountMinorUnits = command.compensationAmountMinorUnits,
                         currencyCode = command.currencyCode,

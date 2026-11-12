@@ -412,7 +412,7 @@ class AlphaTc035ContractTest {
         assertEquals(intent.intentId.toString(), creditedEvent[2])
         assertEquals("PKR", creditedEvent[3])
 
-        assertEquals(50_000L, ledgerService.store.findBalance(tenantId, "player:wallet:$playerId", "PKR"))
+        assertEquals(50_000L, ledgerService.store.findBalance(tenantId, "PLAYER:$playerId", "PKR"))
         val (debits, credits) = journalTotals("PKR")
         assertEquals(debits, credits)
     }

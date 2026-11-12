@@ -146,7 +146,7 @@ class GameRefundRollbackTest {
         assertEquals(1000L, debitLeg.amountMinorUnits)
         assertEquals(1000L, creditLeg.amountMinorUnits)
         assertEquals("CASINO_HOLDING_POOL:$tenantId:$currencyUsd", debitLeg.accountReference)
-        assertEquals("PLAYER_WALLET:$tenantId:$playerId:$currencyUsd", creditLeg.accountReference)
+        assertEquals("PLAYER:$playerId", creditLeg.accountReference)
 
         // Verify audit and outbox events
         val auditEvents = refundRollbackStore.auditEvents.filter { it.resultId == refundResult.resultId }
@@ -222,7 +222,7 @@ class GameRefundRollbackTest {
         assertEquals(2, rollbackRecord.ledgerEntries.size)
         val rbDebitLeg = rollbackRecord.ledgerEntries.first { it.direction == "DEBIT" }
         val rbCreditLeg = rollbackRecord.ledgerEntries.first { it.direction == "CREDIT" }
-        assertEquals("PLAYER_WALLET:$tenantId:$player2Id:$currencyUsd", rbDebitLeg.accountReference)
+        assertEquals("PLAYER:$player2Id", rbDebitLeg.accountReference)
         assertEquals("CASINO_PAYOUT_POOL:$tenantId:$currencyUsd", rbCreditLeg.accountReference)
         assertEquals(1500L, rbDebitLeg.amountMinorUnits)
         assertEquals(1500L, rbCreditLeg.amountMinorUnits)

@@ -27,10 +27,10 @@ class PlayerWalletController(
             mapOf("error" to "UNAUTHENTICATED")
         )
 
-        val targetOwner = ownerReference ?: principal.id
+        val requestedOwner = ownerReference ?: principal.id
 
         // Strict cross-owner IDOR prevention
-        if (principal.kind == PrincipalKind.PLAYER && principal.id != targetOwner) {
+        if (principal.kind == PrincipalKind.PLAYER && principal.id != PlayerLedgerAccount.ownerId(requestedOwner)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 mapOf("error" to "FORBIDDEN", "message" to "Cross-owner access prohibited")
             )
@@ -39,7 +39,7 @@ class PlayerWalletController(
         val query = WalletSnapshotQuery(
             principal = principal,
             tenantId = tenantId,
-            ownerReference = targetOwner,
+            ownerReference = PlayerLedgerAccount.accountReference(requestedOwner),
             expectedLedgerVersion = expectedLedgerVersion,
             allowStale = allowStale,
         )
@@ -74,9 +74,9 @@ class PlayerWalletController(
             mapOf("error" to "UNAUTHENTICATED")
         )
 
-        val targetOwner = ownerReference ?: principal.id
+        val requestedOwner = ownerReference ?: principal.id
 
-        if (principal.kind == PrincipalKind.PLAYER && principal.id != targetOwner) {
+        if (principal.kind == PrincipalKind.PLAYER && principal.id != PlayerLedgerAccount.ownerId(requestedOwner)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 mapOf("error" to "FORBIDDEN", "message" to "Cross-owner access prohibited")
             )
@@ -85,7 +85,7 @@ class PlayerWalletController(
         val query = StatementPageQuery(
             principal = principal,
             tenantId = tenantId,
-            ownerReference = targetOwner,
+            ownerReference = PlayerLedgerAccount.accountReference(requestedOwner),
             currencyCode = currencyCode,
             cursor = cursor,
             limit = pageSize,

@@ -261,7 +261,7 @@ class AlphaTc038ContractTest {
         "select coalesce(sum(balance_minor_units), 0) from wallet_projection where tenant_id = ? and owner_reference = ?",
         Long::class.java,
         tenantId,
-        ownerId.toString(),
+        "PLAYER:$ownerId",
     ) ?: 0L
 
     private fun financialEvents(tenantId: String, correlationId: String): List<Sextuple<String, String, String?, String?, Long, String?>> =
@@ -387,7 +387,7 @@ class AlphaTc038ContractTest {
             "insert into wallet_projection(projection_id, tenant_id, owner_reference, currency_code, balance_minor_units) values (?, ?, ?, ?, ?)",
             UUID.randomUUID(),
             tenantId,
-            ownerId.toString(),
+            "PLAYER:$ownerId",
             "PKR",
             100_000L,
         )

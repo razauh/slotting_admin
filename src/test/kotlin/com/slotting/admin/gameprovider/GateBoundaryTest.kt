@@ -31,6 +31,10 @@ class GateBoundaryTest {
     private val playerId = UUID.randomUUID().toString()
     private lateinit var gameStore: InMemoryDurableGameWagerAndSettlementStore
     private lateinit var snapshot: AuthoritativeGameSnapshotAndEventService
+    private lateinit var gatedLedger: LedgerPostingService
+    private lateinit var gatedRegistration: InMemoryPlayerRegistrationStore
+    private lateinit var gatedEligibility: InMemoryServerEligibilityStore
+    private lateinit var gatedWallet: AuthoritativeWalletService
 
     private class FakeRepo(private val approved: Boolean) : DepositSubmissionRepository {
         override fun find(id: String): DepositSubmission? = null
@@ -85,6 +89,42 @@ class GateBoundaryTest {
         val registrationStore = InMemoryPlayerRegistrationStore()
         val eligibilityStore = InMemoryServerEligibilityStore()
         val store = InMemoryDurableGameWagerAndSettlementStore()
+        gatedLedger = ledgerService
+        gatedRegistration = registrationStore
+        gatedEligibility = eligibilityStore
+        gatedWallet = walletService
+        val playerUuid = UUID.fromString(playerId)
+        registrationStore.players[playerUuid] = com.slotting.admin.identity.PlayerRegistrationRecord(
+            playerId = playerUuid,
+            tenantId = tenantId,
+            emailHash = "email-hash-gate",
+            phoneHash = "phone-hash-gate",
+            maskedEmail = "gate@test.internal",
+            maskedPhone = "+1***0000",
+            jurisdiction = "DEFAULT",
+            riskScore = 0.0,
+            mfaRequired = false,
+            status = com.slotting.admin.identity.PlayerAccountStatus.ACTIVE,
+            createdAt = now.minusSeconds(86400),
+            updatedAt = now.minusSeconds(86400),
+        )
+        eligibilityStore.saveComplianceProfile(
+            com.slotting.admin.identity.PlayerComplianceProfile(
+                playerId = playerUuid,
+                tenantId = tenantId,
+                dateOfBirth = java.time.LocalDate.of(1995, 1, 1),
+                kycStatus = com.slotting.admin.identity.KycComplianceStatus.VERIFIED,
+                amlStatus = com.slotting.admin.identity.AmlComplianceStatus.CLEARED,
+                jurisdiction = "DEFAULT",
+                responsiblePlay = com.slotting.admin.identity.ResponsiblePlayProfile(
+                    playerId = playerUuid,
+                    selfExcluded = false,
+                    singleWagerLimitMinor = 50000L,
+                    dailyWagerLimitMinor = 200000L,
+                    currentDailyWagerMinor = 0L,
+                ),
+            ),
+        )
         val service = DurableGameWagerAndSettlementService(
             store = store,
             ledgerService = ledgerService,
@@ -136,6 +176,32 @@ class GateBoundaryTest {
     fun `approved deposit passes the gate`() {
         val response = gated(true).postCommand(tenantIdHeader = tenantId, request = request(), principalAttr = player)
         assertNotEquals(HttpStatus.FORBIDDEN, response.statusCode)
+    }
+
+    @Test
+    fun `control case - approved player bet mutates the store`() {
+        val (controller, store) = gatedWithStore(true)
+        gatedLedger.postTransaction(
+            com.slotting.admin.ledger.PostTransactionCommand(
+                principal = admin,
+                tenantId = tenantId,
+                transactionReference = "TX-GATE-DEP-1",
+                currencyCode = "PKR",
+                entries = listOf(
+                    com.slotting.admin.ledger.JournalEntryDraft("SYSTEM:CASH", com.slotting.admin.ledger.JournalEntryDirection.DEBIT, 50000L, "PKR"),
+                    com.slotting.admin.ledger.JournalEntryDraft("PLAYER:$playerId", com.slotting.admin.ledger.JournalEntryDirection.CREDIT, 50000L, "PKR"),
+                ),
+                idempotencyKey = "IDEM-GATE-DEP-1",
+                correlationId = "corr-gate-dep-1",
+                causationId = "caus-gate-dep-1",
+            ),
+        )
+        val before = store.findBetsForRound(tenantId, "AVIATOR", "round-gate-1").size
+
+        controller.postCommand(tenantIdHeader = tenantId, request = request(), principalAttr = player)
+
+        val after = store.findBetsForRound(tenantId, "AVIATOR", "round-gate-1").size
+        assertNotEquals(before, after)
     }
 
     @Test

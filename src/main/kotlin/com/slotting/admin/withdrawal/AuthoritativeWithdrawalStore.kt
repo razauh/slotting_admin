@@ -1,6 +1,7 @@
 package com.slotting.admin.withdrawal
 
 import com.slotting.admin.infra.VersionedCasHelper
+import com.slotting.admin.wallet.PlayerLedgerAccount
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
@@ -431,7 +432,7 @@ class JdbcAuthoritativeWithdrawalStore(private val jdbc: JdbcTemplate) : Authori
 
     override fun getAuthoritativeBalance(tenantId: String, ownerId: UUID, currencyCode: String): Long {
         val sql = "SELECT balance_minor_units FROM wallet_projection WHERE tenant_id = ? AND owner_reference = ? AND currency_code = ?"
-        return jdbc.query(sql, { rs, _ -> rs.getLong("balance_minor_units") }, tenantId, ownerId.toString(), currencyCode)
+        return jdbc.query(sql, { rs, _ -> rs.getLong("balance_minor_units") }, tenantId, PlayerLedgerAccount.accountReference(ownerId.toString()), currencyCode)
             .firstOrNull() ?: 0L
     }
 
@@ -445,7 +446,7 @@ class JdbcAuthoritativeWithdrawalStore(private val jdbc: JdbcTemplate) : Authori
             """.trimIndent(),
             amount,
             tenantId,
-            ownerId.toString(),
+            PlayerLedgerAccount.accountReference(ownerId.toString()),
             currencyCode,
             amount,
         )
@@ -463,7 +464,7 @@ class JdbcAuthoritativeWithdrawalStore(private val jdbc: JdbcTemplate) : Authori
             """.trimIndent(),
             amount,
             tenantId,
-            ownerId.toString(),
+            PlayerLedgerAccount.accountReference(ownerId.toString()),
             currencyCode,
         )
     }

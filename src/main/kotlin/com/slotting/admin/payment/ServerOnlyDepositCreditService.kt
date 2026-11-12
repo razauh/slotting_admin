@@ -365,7 +365,7 @@ class ServerOnlyDepositCreditService(
                     narration = "Gateway clearing debit for deposit ${command.paymentReference}",
                 ),
                 JournalEntryDraft(
-                    accountReference = "player:wallet:${command.playerId}",
+                    accountReference = "PLAYER:${command.playerId}",
                     direction = JournalEntryDirection.CREDIT,
                     amountMinorUnits = command.amountMinorUnits,
                     currencyCode = command.currencyCode,

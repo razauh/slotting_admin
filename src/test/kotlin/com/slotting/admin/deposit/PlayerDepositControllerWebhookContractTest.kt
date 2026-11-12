@@ -100,7 +100,7 @@ class PlayerDepositControllerWebhookContractTest {
 
         val workflowStore = InMemoryDepositWorkflowStore()
         val ledgerStore = InMemoryLedgerJournalStore()
-        val adapter = SafepayRaastAdapter()
+        val adapter = deterministicSafepayAdapter()
         val sessionDirectory = object : AdminSessionDirectory {
             override fun find(tenantId: String, principalId: String, sessionId: String) =
                 AdminSessionStatus(
@@ -217,7 +217,7 @@ class PlayerDepositControllerWebhookContractTest {
         assertEquals(1, ledgerStore.findAllTransactionsForTenant(tenantId).size)
         assertEquals(
             50_000L,
-            ledgerStore.findBalance(tenantId, "player:wallet:$playerId", "PKR"),
+            ledgerStore.findBalance(tenantId, "PLAYER:$playerId", "PKR"),
         )
         val inboxEvent = workflowStore.findInboxEvent(tenantId, providerId, eventId)
         assertEquals("PROCESSED", inboxEvent?.status)

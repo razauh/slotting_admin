@@ -502,7 +502,7 @@ open class DurableDepositWorkflowService(
                         narration = "Deposit gateway clearing debit for intent ${currentIntent.intentId}",
                     ),
                     JournalEntryDraft(
-                        accountReference = "player:wallet:${currentIntent.playerId}",
+                        accountReference = "PLAYER:${currentIntent.playerId}",
                         direction = JournalEntryDirection.CREDIT,
                         amountMinorUnits = currentIntent.amountMinorUnits,
                         currencyCode = currentIntent.currencyCode,
@@ -714,7 +714,7 @@ open class DurableDepositWorkflowService(
                                 narration = "Deposit reconciliation debit for intent ${currentIntent.intentId}",
                             ),
                             JournalEntryDraft(
-                                accountReference = "player:wallet:${currentIntent.playerId}",
+                                accountReference = "PLAYER:${currentIntent.playerId}",
                                 direction = JournalEntryDirection.CREDIT,
                                 amountMinorUnits = currentIntent.amountMinorUnits,
                                 currencyCode = currentIntent.currencyCode,

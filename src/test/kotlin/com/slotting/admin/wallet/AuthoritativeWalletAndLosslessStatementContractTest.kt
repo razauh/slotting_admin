@@ -166,7 +166,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE_SETTLEMENT", JournalEntryDirection.DEBIT, 5000L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 5000L, "USD"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 5000L, "USD"),
                 ),
                 idempotencyKey = "IDEM-DEP-USD",
                 correlationId = "corr-1",
@@ -183,7 +183,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "PKR",
                 entries = listOf(
                     JournalEntryDraft("HOUSE_SETTLEMENT", JournalEntryDirection.DEBIT, 8000L, "PKR"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 8000L, "PKR"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 8000L, "PKR"),
                 ),
                 idempotencyKey = "IDEM-DEP-EUR",
                 correlationId = "corr-2",
@@ -272,7 +272,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE", JournalEntryDirection.DEBIT, 10000L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 10000L, "USD", narration = "Deposit"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 10000L, "USD", narration = "Deposit"),
                 ),
                 idempotencyKey = "IDEM-STMT-1",
                 correlationId = "c1",
@@ -287,7 +287,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 transactionReference = "TX-STMT-2",
                 currencyCode = "USD",
                 entries = listOf(
-                    JournalEntryDraft("player-01", JournalEntryDirection.DEBIT, 3000L, "USD", narration = "Wager"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.DEBIT, 3000L, "USD", narration = "Wager"),
                     JournalEntryDraft("HOUSE", JournalEntryDirection.CREDIT, 3000L, "USD"),
                 ),
                 idempotencyKey = "IDEM-STMT-2",
@@ -304,7 +304,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE", JournalEntryDirection.DEBIT, 1500L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 1500L, "USD", narration = "Win payout"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 1500L, "USD", narration = "Win payout"),
                 ),
                 idempotencyKey = "IDEM-STMT-3",
                 correlationId = "c3",
@@ -403,7 +403,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE", JournalEntryDirection.DEBIT, 5000L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 5000L, "USD"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 5000L, "USD"),
                 ),
                 idempotencyKey = "IDEM-KEY-STMT-01",
                 correlationId = "c1",
@@ -450,7 +450,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE", JournalEntryDirection.DEBIT, 4000L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 4000L, "USD"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 4000L, "USD"),
                 ),
                 idempotencyKey = "IDEM-P1",
                 correlationId = "c1",
@@ -526,7 +526,7 @@ class AuthoritativeWalletAndLosslessStatementContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("HOUSE", JournalEntryDirection.DEBIT, 1000L, "USD"),
-                    JournalEntryDraft("player-01", JournalEntryDirection.CREDIT, 1000L, "USD"),
+                    JournalEntryDraft("PLAYER:player-01", JournalEntryDirection.CREDIT, 1000L, "USD"),
                 ),
                 idempotencyKey = "IDEM-CONC-1",
                 correlationId = "c1",

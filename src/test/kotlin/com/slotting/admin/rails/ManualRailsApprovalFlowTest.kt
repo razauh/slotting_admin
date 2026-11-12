@@ -124,7 +124,7 @@ class ManualRailsApprovalFlowTest {
         val credit = command.entries.single { it.direction == JournalEntryDirection.CREDIT }
         assertEquals(1000L, debit.amountMinorUnits)
         assertEquals(1000L, credit.amountMinorUnits)
-        assertTrue(credit.accountReference.contains("player:wallet:p1"))
+        assertTrue(credit.accountReference.contains("PLAYER:p1"))
         assertEquals(PrincipalKind.ADMIN, command.principal?.kind)
         assertEquals(setOf(AdminRole.SUPER_ADMIN), command.principal?.roles)
     }

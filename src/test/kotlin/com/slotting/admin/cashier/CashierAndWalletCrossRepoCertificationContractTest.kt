@@ -220,7 +220,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
                 currencyCode = "PKR",
                 entries = listOf(
                     JournalEntryDraft("SYSTEM_TREASURY", JournalEntryDirection.DEBIT, 750000L, "PKR"),
-                    JournalEntryDraft(testPlayerId.toString(), JournalEntryDirection.CREDIT, 750000L, "PKR"),
+                    JournalEntryDraft("PLAYER:${testPlayerId}", JournalEntryDirection.CREDIT, 750000L, "PKR"),
                 ),
                 idempotencyKey = "INIT-PKR-001",
                 correlationId = "corr-init-pkr",
@@ -235,7 +235,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
                 currencyCode = "USD",
                 entries = listOf(
                     JournalEntryDraft("SYSTEM_TREASURY", JournalEntryDirection.DEBIT, 250000L, "USD"),
-                    JournalEntryDraft(testPlayerId.toString(), JournalEntryDirection.CREDIT, 250000L, "USD"),
+                    JournalEntryDraft("PLAYER:${testPlayerId}", JournalEntryDirection.CREDIT, 250000L, "USD"),
                 ),
                 idempotencyKey = "INIT-INR-001",
                 correlationId = "corr-init-inr",
@@ -447,7 +447,7 @@ class CashierAndWalletCrossRepoCertificationContractTest {
         val json = result.response.contentAsString
         val root = objectMapper.readTree(json)
 
-        assertEquals(testPlayerId.toString(), root.get("ownerReference").asText())
+        assertEquals("PLAYER:${testPlayerId}", root.get("ownerReference").asText())
         assertEquals("FRESH", root.get("syncStatus").asText())
         val balances = root.get("currencyBalances")
         assertTrue(balances.isArray)

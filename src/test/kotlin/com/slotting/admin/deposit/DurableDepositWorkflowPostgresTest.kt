@@ -299,7 +299,7 @@ class DurableDepositWorkflowPostgresTest {
         assertEquals(1, ledgerCount(intent.intentId))
         assertEquals(
             50_000L,
-            JdbcLedgerJournalStore(jdbc).findBalance(tenantId, "player:wallet:${intent.playerId}", "PKR"),
+            JdbcLedgerJournalStore(jdbc).findBalance(tenantId, "PLAYER:${intent.playerId}", "PKR"),
         )
     }
 

@@ -439,7 +439,7 @@ class RefundReversalCompensationService(
         if (recoveredFromWalletMinorUnits > 0L) {
             journalEntries.add(
                 JournalEntryDraft(
-                    accountReference = "player:wallet:${command.playerId}",
+                    accountReference = "PLAYER:${command.playerId}",
                     direction = JournalEntryDirection.DEBIT,
                     amountMinorUnits = recoveredFromWalletMinorUnits,
                     currencyCode = command.currencyCode,

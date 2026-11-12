@@ -30,7 +30,7 @@ open class PayoutLedgerDebitPoster(
                 transactionReference = "TX-MANUAL-PAYOUT-$requestId",
                 currencyCode = "USD",
                 entries = listOf(
-                    JournalEntryDraft("player:wallet:$playerId", JournalEntryDirection.DEBIT, amount, "USD"),
+                    JournalEntryDraft("PLAYER:$playerId", JournalEntryDirection.DEBIT, amount, "USD"),
                     JournalEntryDraft("house:funding:clearing", JournalEntryDirection.CREDIT, net, "USD"),
                     JournalEntryDraft("revenue:processing-fee", JournalEntryDirection.CREDIT, fee, "USD"),
                 ),

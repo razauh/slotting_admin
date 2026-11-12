@@ -121,7 +121,7 @@ class OneLinkCallbackVerificationContractTest {
         assertTrue(replay.alreadyProcessed)
         assertEquals(first.ledgerTransactionReference, replay.ledgerTransactionReference)
         assertEquals(2, ledger.findAllLegsForTenant(tenantId).size)
-        assertEquals(50_000L, ledger.findBalance(tenantId, "player:wallet:${playerId()}", "PKR"))
+        assertEquals(50_000L, ledger.findBalance(tenantId, "PLAYER:${playerId()}", "PKR"))
 
         val (mismatchService, mismatchStore, mismatchLedger) = serviceFixture(intentAmount = 50_001L)
         val mismatch = runCatching {

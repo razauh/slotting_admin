@@ -39,7 +39,7 @@ class LedgerDepositCreditPoster(
                         currencyCode = "USD",
                     ),
                     JournalEntryDraft(
-                        accountReference = "player:wallet:$playerId",
+                        accountReference = "PLAYER:$playerId",
                         direction = JournalEntryDirection.CREDIT,
                         amountMinorUnits = minorUnits,
                         currencyCode = "USD",
