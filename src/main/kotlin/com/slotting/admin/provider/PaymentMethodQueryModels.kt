@@ -1,8 +1,6 @@
 package com.slotting.admin.provider
 
 import com.slotting.admin.auth.AuthenticatedPrincipal
-import com.slotting.admin.circuitbreaker.CircuitBreakerState
-import com.slotting.admin.circuitbreaker.ProviderCircuitBreakerStore
 import java.time.Instant
 
 enum class TransactionType { DEPOSIT, WITHDRAWAL }
@@ -102,15 +100,6 @@ fun interface ProviderStatusResolver {
     fun isProviderAvailable(tenantId: String, providerId: String): Boolean
 }
 
-class CircuitBreakerProviderStatusResolver(
-    private val breakerStore: ProviderCircuitBreakerStore
-) : ProviderStatusResolver {
-    override fun isProviderAvailable(tenantId: String, providerId: String): Boolean {
-        val breaker = breakerStore.findBreaker(tenantId, providerId) ?: return true
-        return breaker.state != CircuitBreakerState.OPEN
-    }
-}
-
 class DefaultProviderStatusResolver : ProviderStatusResolver {
     override fun isProviderAvailable(tenantId: String, providerId: String): Boolean = true
 }
@@ -141,14 +130,3 @@ open class PaymentMethodUnavailableException(
     val serverVersion: Long?,
     message: String,
 ) : RuntimeException(message)
-
-class ConfiguredProviderStatusResolver(
-    private val configService: PaymentProviderConfigService,
-) : ProviderStatusResolver {
-    override fun isProviderAvailable(tenantId: String, providerId: String): Boolean {
-        val provider = configService.listProviders(tenantId)
-            .firstOrNull { it.providerId.equals(providerId, ignoreCase = true) }
-            ?: return false
-        return provider.status == PaymentProviderStatus.ENABLED && provider.setupStatus == ProviderSetupState.READY
-    }
-}

@@ -55,7 +55,7 @@ enum class CanonicalBackendModule(
     PAYMENTS(
         id = "payments",
         description = "Payment port, gateway provider adapters, and cashier callbacks",
-        packages = setOf("com.slotting.admin.payment", "com.slotting.admin.provider")
+        packages = setOf("com.slotting.admin.provider")
     ),
     GAMES(
         id = "games",

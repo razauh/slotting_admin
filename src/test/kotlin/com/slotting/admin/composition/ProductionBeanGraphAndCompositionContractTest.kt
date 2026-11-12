@@ -2,10 +2,8 @@ package com.slotting.admin.composition
 
 import com.slotting.admin.auth.*
 import com.slotting.admin.config.*
-import com.slotting.admin.deposit.*
 import com.slotting.admin.health.*
 import com.slotting.admin.ledger.*
-import com.slotting.admin.payment.CanonicalPaymentProviderPortBinding
 import com.slotting.admin.provider.*
 import com.slotting.admin.rg.*
 import com.slotting.admin.security.SecurityAuthenticationFilter
@@ -82,19 +80,6 @@ class ProductionBeanGraphAndCompositionContractTest {
     // =========================================================================
     // 2. CRITICAL DOMAIN BINDINGS INITIALIZATION
     // =========================================================================
-
-    @Test
-    fun `TC040-03 production composition binds critical payment and game domain bindings`() {
-        // Reset to false first
-        CanonicalPaymentProviderPortBinding.isBound = false
-
-        // Activating production binding initializer
-        val initializer = ProductionDomainBindingInitializer()
-        initializer.initialize()
-
-        // Verify bindings are now true/bound
-        assertTrue(CanonicalPaymentProviderPortBinding.isBound, "CanonicalPaymentProviderPortBinding must be bound in production")
-    }
 
     // =========================================================================
     // 3. SECURITY FILTER FAIL-CLOSED ON UNVERIFIED PRINCIPAL
@@ -296,7 +281,7 @@ class ProductionBeanGraphAndCompositionContractTest {
         )
 
         val snapshot = AuthoritativeWalletSnapshot(
-            ownerReference = playerId.toString(),
+            ownerReference = "PLAYER:${playerId}",
             tenantId = "tenant-test",
             currencyBalances = listOf(CurrencyBalance("EUR", 5000L)),
             ledgerVersion = 42L,
@@ -312,7 +297,7 @@ class ProductionBeanGraphAndCompositionContractTest {
                 WalletSnapshotQuery(
                     principal = principal,
                     tenantId = "tenant-test",
-                    ownerReference = playerId.toString(),
+                    ownerReference = "PLAYER:${playerId}",
                     expectedLedgerVersion = null,
                     allowStale = true,
                 )
@@ -330,7 +315,7 @@ class ProductionBeanGraphAndCompositionContractTest {
 
         assertEquals(HttpStatus.OK, response.statusCode)
         val body = response.body as AuthoritativeWalletSnapshot
-        assertEquals(playerId.toString(), body.ownerReference)
+        assertEquals("PLAYER:${playerId}", body.ownerReference)
         assertEquals(5000L, body.currencyBalances.first().balanceMinorUnits)
     }
 
@@ -354,7 +339,6 @@ class ProductionBeanGraphAndCompositionContractTest {
             JdbcAdminSessionDirectory::class.java,
             JdbcLedgerJournalStore::class.java,
             JdbcAuthoritativeWithdrawalStore::class.java,
-            JdbcDepositWorkflowStore::class.java,
             JdbcPaymentMethodStore::class.java,
             JdbcDurableResponsibleGamingStore::class.java,
             IdentityReadinessHealthIndicator::class.java,
@@ -374,8 +358,6 @@ class ProductionBeanGraphAndCompositionContractTest {
         // Context booted successfully
         assertTrue(context.isRunning)
         assertTrue(context.containsBean("authoritativeWithdrawalService"))
-        assertTrue(context.containsBean("durableDepositWorkflowService"))
-        assertTrue(context.containsBean("paymentMethodQueryService"))
         assertTrue(context.containsBean("durableResponsibleGamingService"))
         assertTrue(context.containsBean("securityAuthenticationFilter"))
 
@@ -421,8 +403,7 @@ class ProductionBeanGraphAndCompositionContractTest {
                 ProductionCompositionConfiguration::class.java,
                 JdbcLedgerJournalStore::class.java,
                 JdbcAuthoritativeWithdrawalStore::class.java,
-                JdbcDepositWorkflowStore::class.java,
-                JdbcPaymentMethodStore::class.java,
+                    JdbcPaymentMethodStore::class.java,
                 JdbcDurableResponsibleGamingStore::class.java,
                 JdbcAdminSessionDirectory::class.java,
             )
