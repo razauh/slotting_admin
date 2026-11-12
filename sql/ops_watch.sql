@@ -12,7 +12,10 @@ create table if not exists public.ops_notices (
 create index if not exists ops_notices_severity_created_idx
     on public.ops_notices (severity, created_utc desc);
 
-revoke all on public.ops_notices from anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then execute 'revoke all on public.ops_notices from anon'; end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then execute 'revoke all on public.ops_notices from authenticated'; end if;
+end $$;
 
 create table if not exists public.ops_decisions (
     item_name text primary key,
@@ -23,7 +26,10 @@ create table if not exists public.ops_decisions (
     updated_utc timestamptz not null default now()
 );
 
-revoke all on public.ops_decisions from anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then execute 'revoke all on public.ops_decisions from anon'; end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then execute 'revoke all on public.ops_decisions from authenticated'; end if;
+end $$;
 
 insert into public.ops_decisions (item_name, owner, status, due_date, reopen_trigger) values
     ('JWT_KEYS_TIMELINE', null, 'UNSCHEDULED', null, 'platform JWT secret rotation announced or edge rejection observed'),

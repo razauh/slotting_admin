@@ -1,3 +1,13 @@
+do $$
+begin
+  if to_regclass('storage.buckets') is null or to_regclass('storage.objects') is null then
+    raise notice 'storage schema absent; skipping storage policies';
+    return;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    raise notice 'authenticated role absent; skipping storage policies';
+    return;
+  end if;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
     ('player-documents', 'player-documents', false, 10485760, array['application/pdf', 'image/png', 'image/jpeg']),
@@ -47,3 +57,4 @@ using (
     and (storage.foldername(name))[1] = (select auth.jwt() ->> 'tenant_id')
     and (storage.foldername(name))[2] = (select auth.jwt() ->> 'player_id')
 );
+end $$;

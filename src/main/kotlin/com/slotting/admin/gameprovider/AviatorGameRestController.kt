@@ -253,6 +253,8 @@ class AviatorGameRestController(
             handleAuthFailure(e)
         } catch (e: SessionStoreOutageException) {
             ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("error" to "SERVICE_UNAVAILABLE"))
+        } catch (e: com.slotting.admin.rails.NoVerifiedDepositException) {
+            com.slotting.admin.rails.DepositRequiredRejection.response(e)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("error" to (e.message ?: "UNKNOWN_ERROR")))
         }

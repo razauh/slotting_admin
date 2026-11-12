@@ -52,6 +52,15 @@ insert into public.manual_rails_settings (id, deposit_rate_pkr_per_usd, payout_r
 values (1, 1.0000, 1.0000, 0.00, 7)
 on conflict (id) do nothing;
 
-revoke all on public.funding_accounts from anon, authenticated;
-revoke all on public.deposit_submissions from anon, authenticated;
-revoke all on public.manual_rails_settings from anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then execute 'revoke all on public.funding_accounts from anon'; end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then execute 'revoke all on public.funding_accounts from authenticated'; end if;
+end $$;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then execute 'revoke all on public.deposit_submissions from anon'; end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then execute 'revoke all on public.deposit_submissions from authenticated'; end if;
+end $$;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then execute 'revoke all on public.manual_rails_settings from anon'; end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then execute 'revoke all on public.manual_rails_settings from authenticated'; end if;
+end $$;

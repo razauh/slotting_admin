@@ -49,12 +49,18 @@ class OpsWatchCatchup(
             return
         }
         val now = clock.instant()
-        if (state.stampDaily(now.minus(26, ChronoUnit.HOURS))) {
+        val dailyStamped = runCatching { state.stampDaily(now.minus(26, ChronoUnit.HOURS)) }
+            .onFailure { log.warn("ops_watch_catchup phase=daily skipped={}", it.javaClass.simpleName) }
+            .getOrDefault(false)
+        if (dailyStamped) {
             log.info("ops_watch_catchup phase=daily action=fire")
             runCatching { scheduler.runDailyNow() }
                 .onFailure { log.warn("ops_watch_catchup phase=daily failed={}", it.javaClass.simpleName) }
         }
-        if (state.stampWeekly(now.minus(8, ChronoUnit.DAYS))) {
+        val weeklyStamped = runCatching { state.stampWeekly(now.minus(8, ChronoUnit.DAYS)) }
+            .onFailure { log.warn("ops_watch_catchup phase=weekly skipped={}", it.javaClass.simpleName) }
+            .getOrDefault(false)
+        if (weeklyStamped) {
             log.info("ops_watch_catchup phase=weekly action=fire")
             runCatching { scheduler.runWeeklyNow() }
                 .onFailure { log.warn("ops_watch_catchup phase=weekly failed={}", it.javaClass.simpleName) }
