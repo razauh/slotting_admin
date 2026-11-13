@@ -260,4 +260,17 @@ class SupabaseJwtBridgeTest {
         mac.init(SecretKeySpec(secret, "HmacSHA256"))
         return mac.doFinal(input.toByteArray(StandardCharsets.UTF_8))
     }
+
+    @Test
+    fun issuesForDurableLoginSessionWithoutAPlayerSessionStoreLookup() {
+        val sessionId = UUID.fromString("00000000-0000-0000-0000-0000000013b1")
+        val bridge = SupabaseJwtBridgeService(InMemoryPlayerSessionStore(), provider, fixedClock)
+        val result = bridge.issueForSession(tenantA, playerA, sessionId, now.plus(Duration.ofMinutes(10)))
+        val claims = decode(result.token.split(".")[1])
+        assertEquals(playerA.toString(), claims["sub"])
+        assertEquals(tenantA, claims["tenant_id"])
+        assertEquals(sessionId.toString(), claims["session_id"])
+        assertEquals("authenticated", claims["aud"])
+        assertEquals(now.plus(Duration.ofMinutes(10)).epochSecond, (claims["exp"] as Number).toLong())
+    }
 }

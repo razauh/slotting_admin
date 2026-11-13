@@ -64,7 +64,9 @@ data class TokenResponseDto(
     @param:JsonProperty("issued_at_epoch_ms") @get:JsonProperty("issued_at_epoch_ms")
     val issuedAtEpochMs: Long,
     @param:JsonProperty("id_token") @get:JsonProperty("id_token")
-    val idToken: String? = null
+    val idToken: String? = null,
+    @param:JsonProperty("realtime_hint_token") @get:JsonProperty("realtime_hint_token")
+    val realtimeHintToken: String? = null
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

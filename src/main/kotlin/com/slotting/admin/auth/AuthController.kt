@@ -16,9 +16,23 @@ import java.util.UUID
 @RequestMapping("/auth")
 class AuthController(
     private val authService: DurableAuthService,
-    private val adminMfaAuthenticator: AdminMfaAuthenticator? = null
+    private val adminMfaAuthenticator: AdminMfaAuthenticator? = null,
+    private val hintTokens: com.slotting.admin.identity.RealtimeHintTokenService? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
+
+    private fun attachHintToken(resp: TokenResponseDto): TokenResponseDto {
+        val issuer = hintTokens ?: return resp
+        val playerId = runCatching { UUID.fromString(resp.playerId) }.getOrNull() ?: return resp
+        val sessionId = runCatching { UUID.fromString(resp.sessionId) }.getOrNull() ?: return resp
+        val token = issuer.issue(
+            tenantId = resp.tenantId,
+            playerId = playerId,
+            sessionId = sessionId,
+            sessionExpiresAt = Instant.now().plusSeconds(resp.expiresInSeconds),
+        ) ?: return resp
+        return resp.copy(realtimeHintToken = token)
+    }
 
     @PostMapping("/token")
     fun token(@RequestBody body: String): ResponseEntity<Any> {
@@ -47,7 +61,7 @@ class AuthController(
                     ResponseEntity.ok()
                         .header("Cache-Control", "no-store")
                         .header("Pragma", "no-cache")
-                        .body(resp)
+                        .body(attachHintToken(resp))
                 }
                 "refresh_token" -> {
                     val req = AuthContractCodec.parseTokenRefreshRequest(body)
@@ -55,7 +69,7 @@ class AuthController(
                     ResponseEntity.ok()
                         .header("Cache-Control", "no-store")
                         .header("Pragma", "no-cache")
-                        .body(resp)
+                        .body(attachHintToken(resp))
                 }
                 else -> {
                     error(HttpStatus.BAD_REQUEST, "unsupported_grant_type", "UNSUPPORTED_GRANT_TYPE", "Unsupported grant_type: $grantType", false)

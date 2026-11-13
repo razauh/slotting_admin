@@ -22,6 +22,10 @@ import com.slotting.admin.rails.LedgerDepositCreditPoster
 import com.slotting.admin.rails.ManualRailsApprovalFlow
 import com.slotting.admin.rails.ManualRailsService
 import com.slotting.admin.rails.SubmissionStatus
+import com.slotting.admin.realtime.RealtimeHint
+import com.slotting.admin.realtime.RealtimeHintTransport
+import com.slotting.admin.realtime.RealtimePublishService
+import com.slotting.admin.realtime.RoundHintPublisher
 import com.slotting.admin.wallet.AuthoritativeWalletService
 import com.slotting.admin.wallet.InMemoryAuthoritativeWalletStore
 import org.junit.jupiter.api.Test
@@ -35,6 +39,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DepositToBetLoopProofTest {
+    private class RecordingHintTransport : RealtimeHintTransport {
+        val batches = mutableListOf<Pair<String, List<RealtimeHint>>>()
+        override fun send(channel: String, hints: List<RealtimeHint>) {
+            batches.add(channel to hints)
+        }
+    }
+
     private val now = Instant.parse("2026-11-12T12:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private val tenantId = "tenant-loop"
@@ -159,6 +170,8 @@ class DepositToBetLoopProofTest {
                 ),
             ),
         )
+        val hintTransport = RecordingHintTransport()
+        val hintPublisher = RoundHintPublisher(RealtimePublishService(hintTransport), enabled = true)
         val gameService = DurableGameWagerAndSettlementService(
             store = gameStore,
             ledgerService = ledgerService,
@@ -166,6 +179,7 @@ class DepositToBetLoopProofTest {
             eligibilityStore = eligibilityStore,
             adminPrincipal = admin,
             clock = clock,
+            roundHintPublisher = hintPublisher,
             depositGate = DepositGate(repository),
         )
         val fairnessStore = InMemoryFairnessEvidenceStore()
@@ -212,6 +226,22 @@ class DepositToBetLoopProofTest {
         assertEquals(600L, ledgerStore.findBalance(tenantId, "PLAYER:$playerId", "USD"))
         assertEquals(400L, ledgerStore.findBalance(tenantId, "ESCROW:GAME:$gameId", "USD"))
 
+        gameService.createOrUpdateRound(
+            CreateOrUpdateRoundCommand(
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                phase = GameRoundPhase.FLYING,
+                roundVersion = 2L,
+                expectedVersion = 1L,
+            ),
+        )
+        val hintBatch = hintTransport.batches.singleOrNull()
+        assertTrue(hintBatch != null, "expected one committed phase hint batch")
+        assertEquals("tenant:$tenantId:player:$playerId", hintBatch!!.first)
+        assertEquals("round-loop-1", hintBatch.second.single().payload["roundId"])
+        assertEquals("FLYING", hintBatch.second.single().payload["phase"])
+
         val playerLegs = ledgerStore.findAllLegsForTenant(tenantId).filter { it.accountReference.contains(playerId) }
         assertEquals(2, playerLegs.size)
         assertTrue(playerLegs.all { it.accountReference == "PLAYER:$playerId" })
@@ -232,6 +262,22 @@ class DepositToBetLoopProofTest {
                 timestampMillis = now.toEpochMilli(),
                 createdAt = now,
                 roundVersion = 1L,
+            ),
+        )
+        eventJournalStore.saveEvent(
+            GameEventRecord(
+                eventId = UUID.randomUUID(),
+                tenantId = tenantId,
+                gameId = gameId,
+                roundId = roundId,
+                sequenceId = 2L,
+                eventName = "gameState",
+                payloadJson = "{}",
+                targetScope = "ROUND",
+                targetOwnerId = null,
+                timestampMillis = now.toEpochMilli(),
+                createdAt = now,
+                roundVersion = 2L,
             ),
         )
         val invariants = AviatorFinancialInvariantChecker(ledgerStore, gameStore, eventJournalStore, fairnessStore)

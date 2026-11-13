@@ -151,6 +151,46 @@ class SupabaseJwtBridgeService(
         )
     }
 
+    fun issueForSession(
+        tenantId: String,
+        playerId: UUID,
+        sessionId: UUID,
+        sessionExpiresAt: Instant,
+    ): SupabaseJwtIssueResult {
+        if (!enabled) {
+            throw IllegalStateException("Supabase JWT bridge is disabled")
+        }
+        require(tenantId.isNotBlank()) { "tenantId must not be blank" }
+        val now = clock.instant()
+        if (!now.isBefore(sessionExpiresAt)) {
+            throw IllegalArgumentException("session is expired")
+        }
+        val expiresAt = minOf(sessionExpiresAt, now.plus(ttl))
+        if (!expiresAt.isAfter(now)) {
+            throw IllegalArgumentException("token expiry must be in the future")
+        }
+        val tokenId = UUID.randomUUID()
+        val key = signingKeys.activeKey()
+        val claims = buildClaims(tenantId, playerId, sessionId, tokenId, now, expiresAt)
+        val header = linkedMapOf<String, Any>(
+            "alg" to "HS256",
+            "typ" to "JWT",
+        )
+        val headerPart = base64Url(mapper.writeValueAsBytes(header))
+        val payloadPart = base64Url(mapper.writeValueAsBytes(claims))
+        val signature = base64Url(hmacSha256(key.secret, "$headerPart.$payloadPart"))
+        return SupabaseJwtIssueResult(
+            token = "$headerPart.$payloadPart.$signature",
+            tokenId = tokenId.toString(),
+            tenantId = tenantId,
+            playerId = playerId,
+            sessionId = sessionId,
+            issuedAt = now,
+            expiresAt = expiresAt,
+            claims = claims,
+        )
+    }
+
     fun validate(token: String, expectedTenantId: String? = null): SupabaseJwtValidationResult {
         if (!enabled) {
             return SupabaseJwtValidationResult(valid = false, reason = "DISABLED")
@@ -227,11 +267,20 @@ class SupabaseJwtBridgeService(
         tokenId: UUID,
         issuedAt: Instant,
         expiresAt: Instant,
+    ): Map<String, Any> = buildClaims(tenantId, session.playerId, sessionId, tokenId, issuedAt, expiresAt)
+
+    private fun buildClaims(
+        tenantId: String,
+        playerId: UUID,
+        sessionId: UUID,
+        tokenId: UUID,
+        issuedAt: Instant,
+        expiresAt: Instant,
     ): Map<String, Any> = linkedMapOf<String, Any>(
-        "sub" to session.playerId.toString(),
+        "sub" to playerId.toString(),
         "tenant_id" to tenantId,
         "role" to "authenticated",
-        "player_id" to session.playerId.toString(),
+        "player_id" to playerId.toString(),
         "session_id" to sessionId.toString(),
         "jti" to tokenId.toString(),
         "aud" to "authenticated",
