@@ -121,6 +121,26 @@ class JdbcAdminAuditStore(private val jdbc: JdbcTemplate) : AdminAuditStore {
         )
     }
 
+    @Transactional
+    override fun saveEvent(
+        resultId: UUID,
+        tenantId: String,
+        eventType: String,
+        occurredAt: Instant,
+        correlationId: String,
+        causationId: String,
+        redactedDetails: String,
+    ) {
+        jdbc.update(
+            "insert into admin_operation(result_id, tenant_id, operation_type, created_at) values (?, ?, ?, ?)",
+            resultId, tenantId, "RAILS_AUDIT", java.sql.Timestamp.from(occurredAt)
+        )
+        jdbc.update(
+            "insert into admin_audit_event(event_id, result_id, tenant_id, event_type, occurred_at, correlation_id, causation_id, redacted_details) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
+            UUID.randomUUID(), resultId, tenantId, eventType.take(64), java.sql.Timestamp.from(occurredAt), correlationId.take(128), causationId.take(128), redactedDetails
+        )
+    }
+
     private fun ResultSet.toResult(): Pair<String, AuditQueryResult> {
         val id = getObject("result_id", UUID::class.java)
         val res = AuditQueryResult(

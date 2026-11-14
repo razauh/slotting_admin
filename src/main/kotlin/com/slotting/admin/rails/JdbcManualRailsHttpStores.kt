@@ -1,5 +1,7 @@
 package com.slotting.admin.rails
 
+import com.slotting.admin.audit.AdminAuditService
+import com.slotting.admin.audit.AdminAuditStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
@@ -157,8 +159,20 @@ class JdbcPayoutReceiptStore(private val jdbc: JdbcTemplate) : PayoutReceiptStor
 }
 
 @Repository
-class Slf4jRailsAuditRecorder : RailsAuditRecorder {
+class Slf4jRailsAuditRecorder(
+    store: AdminAuditStore,
+    clock: java.time.Clock = java.time.Clock.systemUTC(),
+) : RailsAuditRecorder {
     private val logger = org.slf4j.LoggerFactory.getLogger(Slf4jRailsAuditRecorder::class.java)
+    private val mapper = com.fasterxml.jackson.databind.ObjectMapper()
+    private val audit = AdminAuditService(
+        com.slotting.admin.auth.AdminRbacPolicy(true),
+        object : com.slotting.admin.auth.AdminSessionDirectory {
+            override fun find(tenantId: String, principalId: String, sessionId: String): com.slotting.admin.auth.AdminSessionStatus? = null
+        },
+        store,
+        clock,
+    )
 
     override fun record(entry: RailsAuditEntry) {
         logger.info(
@@ -171,5 +185,25 @@ class Slf4jRailsAuditRecorder : RailsAuditRecorder {
             entry.newValue,
             entry.occurredAt,
         )
+        val details = mapper.writeValueAsString(
+            mapOf(
+                "action" to entry.action,
+                "subjectId" to entry.subjectId,
+                "oldValue" to entry.oldValue,
+                "newValue" to entry.newValue,
+            )
+        )
+        runCatching {
+            audit.recordEvent(
+                tenantId = entry.tenantId,
+                eventType = "RAILS_${entry.action}",
+                occurredAt = entry.occurredAt,
+                correlationId = "rails:${entry.subjectId}",
+                causationId = "admin:${entry.adminId}",
+                redactedDetails = details,
+            )
+        }.onFailure { failure ->
+            logger.warn("rails_audit_persist_failed action={} reason={}", entry.action, failure.javaClass.simpleName)
+        }
     }
 }

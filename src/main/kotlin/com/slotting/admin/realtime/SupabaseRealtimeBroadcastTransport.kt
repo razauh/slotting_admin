@@ -7,17 +7,25 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+
+sealed interface RealtimeBroadcastFailure {
+    data class Unauthorized(val status: Int) : RealtimeBroadcastFailure
+    data class Rejected(val status: Int) : RealtimeBroadcastFailure
+    data class Unavailable(val detail: String) : RealtimeBroadcastFailure
+}
 
 fun interface BroadcastHttpSender {
-    fun post(url: String, authorization: String, body: String): Int
+    fun post(url: String, apikey: String, authorization: String, body: String): Int
 }
 
 class HttpBroadcastSender(
-    private val client: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(100)).build(),
+    private val client: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build(),
 ) : BroadcastHttpSender {
-    override fun post(url: String, authorization: String, body: String): Int {
+    override fun post(url: String, apikey: String, authorization: String, body: String): Int {
         val request = HttpRequest.newBuilder(URI.create(url))
-            .timeout(Duration.ofMillis(100))
+            .timeout(Duration.ofSeconds(5))
+            .header("apikey", apikey)
             .header("Authorization", authorization)
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -29,6 +37,7 @@ class HttpBroadcastSender(
 class SupabaseRealtimeBroadcastTransport(
     private val baseUrl: String,
     private val serviceRoleKey: String,
+    private val apikey: String,
     private val sender: BroadcastHttpSender = HttpBroadcastSender(),
     private val maxAttempts: Int = 2,
     private val retryDelayMillis: Long = 50,
@@ -36,6 +45,7 @@ class SupabaseRealtimeBroadcastTransport(
 ) : RealtimeHintTransport {
     val sent = AtomicLong()
     val failed = AtomicLong()
+    val lastFailure = AtomicReference<RealtimeBroadcastFailure?>(null)
 
     override fun send(channel: String, hints: List<RealtimeHint>) {
         if (hints.isEmpty()) {
@@ -43,14 +53,23 @@ class SupabaseRealtimeBroadcastTransport(
         }
         val body = body(channel, hints)
         val url = "${baseUrl.trimEnd('/')}/realtime/v1/api/broadcast"
+        lastFailure.set(null)
         repeat(maxAttempts) { attempt ->
             try {
-                val status = sender.post(url, "Bearer $serviceRoleKey", body)
+                val status = sender.post(url, apikey, "Bearer $serviceRoleKey", body)
                 if (status in 200..299) {
                     sent.incrementAndGet()
                     return
                 }
+                lastFailure.set(
+                    if (status == 401 || status == 403) {
+                        RealtimeBroadcastFailure.Unauthorized(status)
+                    } else {
+                        RealtimeBroadcastFailure.Rejected(status)
+                    }
+                )
             } catch (error: Exception) {
+                lastFailure.set(RealtimeBroadcastFailure.Unavailable("broadcast request failed"))
             }
             if (attempt < maxAttempts - 1) {
                 try {

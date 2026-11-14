@@ -22,14 +22,15 @@ class RealtimeHintConfiguration {
     fun realtimeHintTransport(
         @Value("\${SLOTTING_SUPABASE_URL:}") baseUrl: String,
         @Value("\${SUPABASE_SERVICE_ROLE_KEY:}") serviceRoleKey: String,
+        @Value("\${SUPABASE_ANON_KEY:}") apikey: String,
     ): RealtimeHintTransport {
-        if (baseUrl.isBlank() || serviceRoleKey.isBlank()) {
+        if (baseUrl.isBlank() || serviceRoleKey.isBlank() || apikey.isBlank()) {
             logger.warn("realtime_hint_transport_disabled reason=missing_configuration")
             return object : RealtimeHintTransport {
                 override fun send(channel: String, hints: List<com.slotting.admin.realtime.RealtimeHint>) = Unit
             }
         }
-        return SupabaseRealtimeBroadcastTransport(baseUrl = baseUrl, serviceRoleKey = serviceRoleKey)
+        return SupabaseRealtimeBroadcastTransport(baseUrl = baseUrl, serviceRoleKey = serviceRoleKey, apikey = apikey)
     }
 
     @Bean

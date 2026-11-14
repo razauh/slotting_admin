@@ -79,6 +79,18 @@ interface AdminAuditStore {
         audit: AuditEvent,
         outbox: OutboxEvent,
     )
+
+    fun saveEvent(
+        resultId: UUID,
+        tenantId: String,
+        eventType: String,
+        occurredAt: Instant,
+        correlationId: String,
+        causationId: String,
+        redactedDetails: String,
+    ) {
+        throw UnsupportedOperationException("audit event writes are not supported by this store")
+    }
 }
 
 class AdminAuditService(
@@ -87,6 +99,27 @@ class AdminAuditService(
     private val store: AdminAuditStore,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    fun recordEvent(
+        tenantId: String,
+        eventType: String,
+        occurredAt: Instant,
+        correlationId: String,
+        causationId: String,
+        redactedDetails: String,
+    ): UUID {
+        val resultId = UUID.randomUUID()
+        store.saveEvent(
+            resultId = resultId,
+            tenantId = tenantId,
+            eventType = eventType.take(64),
+            occurredAt = occurredAt,
+            correlationId = correlationId.take(128),
+            causationId = causationId.take(128),
+            redactedDetails = redactedDetails,
+        )
+        return resultId
+    }
+
     @Synchronized
     fun operate(command: AuditQueryCommand): AuditQueryResult {
         // 1. Authorize principal and context BEFORE idempotency lookup or disclosure
